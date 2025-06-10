@@ -26,11 +26,15 @@
                     </div>
                 </header>
             @endisset
-
+ апвіфораплвіфопалофвіпа івфолал іфваіфвлапліфвопалівопаліфопавлівопалфі
             <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+            <div id="app">
+                <Toast />
+
+                <main>
+                    {{ $slot }}
+                </main>
+            </div>
         </div>
     </body>
 </html>
