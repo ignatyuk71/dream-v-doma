@@ -1,92 +1,104 @@
 <template>
   <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="fw-bold">🏥️ Продукти</h2>
-      <a href="/admin/products/create" class="btn btn-outline-primary btn-sm">
-        ➕ Додати продукт
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="fw-bold">🛍️ Продукти</h2>
+      <a href="/admin/products/create" class="btn btn-primary">
+        + Додати продукт
       </a>
     </div>
 
     <div class="card shadow-sm border-0">
-      <div class="card-body p-0">
-        <table class="table table-hover mb-0 align-middle">
+      <div class="table-responsive">
+        <table class="table table-hover">
           <thead class="table-light">
             <tr>
-              <th style="width: 100px">SKU</th>
-              <th>Назва</th>
-              <th style="width: 100px"> Ціна </th>
-              <th style="width: 80px"> Статус </th>
-              <th style="width: 80px"> Кількість </th>
-              <th style="width: 100px"> Дата </th>
-              <th class="text-end" style="width: 100px"> Дії </th>
+              <th><input type="checkbox" disabled /></th>
+              <th>Продукт</th>
+              <th>Категорія</th>
+              <th>Stock</th>
+              <th>SKU</th>
+              <th>Ціна</th>
+              <th>К-сть</th>
+              <th>Статус</th>
+              <th class="text-end">Дії</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="product in products"
-              :key="product.id"
-              @click="toggleVariants(product.id)"
-              class="product-row"
-              style="cursor: pointer"
-            >
-              <td>{{ product.sku }}</td>
+            <tr v-for="product in products" :key="product.id">
+              <td><input type="checkbox" /></td>
               <td>
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center">
                   <img
                     v-if="mainImage(product)"
                     :src="mainImage(product)"
-                    class="rounded border"
-                    style="width: 48px; height: 48px; object-fit: cover"
+                    class="rounded me-2"
+                    style="width: 40px; height: 40px; object-fit: cover"
                   />
-                  <div v-else class="bg-secondary rounded" style="width: 48px; height: 48px"></div>
-                  <div class="fw-semibold">
-                    {{ product.translations[0]?.name || '—' }}
+                  <div>
+                    <div class="fw-semibold">{{ product.translations[0]?.name || '—' }}</div>
+                    <small class="text-muted">{{ product.sku }}</small>
                   </div>
                 </div>
               </td>
-              <td>{{ formatPrice(product.price) }} грн</td>
               <td>
-                <span :class="['badge', product.status ? 'bg-success' : 'bg-danger']">
-                  {{ product.status ? 'ON' : 'OFF' }}
+                <span class="badge bg-light text-dark">{{ product.category?.name || '—' }}</span>
+              </td>
+              <td>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" :checked="product.status" disabled />
+                </div>
+              </td>
+              <td>{{ product.sku }}</td>
+              <td>{{ formatPrice(product.price) }} грн</td>
+              <td>{{ product.quantity_in_stock || 0 }}</td>
+              <td>
+                <span
+                  class="badge"
+                  :class="{
+                    'bg-success': product.status,
+                    'bg-warning': !product.status && product.quantity_in_stock > 0,
+                    'bg-danger': product.quantity_in_stock === 0
+                  }"
+                >
+                  {{ product.status ? 'Publish' : (product.quantity_in_stock === 0 ? 'Inactive' : 'Scheduled') }}
                 </span>
               </td>
-              <td>{{ product.quantity_in_stock || 0 }}</td>
-              <td>{{ formatDate(product.created_at) }}</td>
               <td class="text-end">
-                <a :href="`/admin/products/${product.id}/edit`" class="btn btn-sm btn-outline-primary me-2"> ✏️ </a>
-                <form
-                    :id="`delete-form-${product.id}`"
-                    :action="`/admin/products/${product.id}`"
-                    method="POST"
-                    class="d-inline"
-                  >
+                <div class="btn-group">
+                  <a :href="`/admin/products/${product.id}/edit`" class="btn btn-sm btn-outline-secondary" title="Edit">✏️</a>
+
+                  <div class="dropdown">
+                    <button
+                      class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                    >
+                      ⋯
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="#" @click.prevent="downloadProduct(product.id)">
+                          <i class="bi bi-download me-2"></i> 📥 Download
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item text-danger" href="#" @click.prevent="confirmDelete(product.id)">
+                          <i class="bi bi-trash me-2"></i> 🗑️ Delete
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="#" @click.prevent="duplicateProduct(product.id)">
+                          <i class="bi bi-files me-2"></i> 📄 Duplicate
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <form :id="`delete-form-${product.id}`" :action="`/admin/products/${product.id}`" method="POST" class="d-none">
                     <input type="hidden" name="_method" value="DELETE" />
                     <input type="hidden" name="_token" :value="csrf" />
-                    <button type="button" class="btn btn-sm btn-outline-danger" @click="confirmDelete(product.id)">🗑️</button>
                   </form>
-
-              </td>
-            </tr>
-            <tr
-              v-for="product in products"
-              :key="'v-' + product.id"
-              :id="'variants-' + product.id"
-              class="variant-row"
-              style="display: none; background-color: #fff"
-            >
-              <td colspan="7" class="px-4 pb-3">
-                <div class="small text-muted mb-2">Варіації товару:</div>
-                <div class="d-flex flex-column gap-2">
-                  <div
-                    v-for="variant in product.variants"
-                    :key="variant.id"
-                    class="d-flex justify-content-between border rounded p-2 small bg-light flex-wrap"
-                  >
-                    <div><span>🔯 РОЗМІР:</span> <strong>{{ variant.size }}</strong></div>
-                    <div><span>🎨 КОЛІР:</span> <strong>{{ variant.color }}</strong></div>
-                    <div><span>💰 ЦІНА:</span> <strong>{{ variant.price_override || '—' }} грн</strong></div>
-                    <div><span>📦 КІЛЬКІСТЬ:</span> <strong>{{ variant.quantity }}</strong></div>
-                  </div>
                 </div>
               </td>
             </tr>
@@ -113,16 +125,6 @@ const mainImage = (product) => {
   return img?.full_url || null
 }
 
-const toggleVariants = (id) => {
-  document.querySelectorAll('.variant-row').forEach((el) => {
-    if (!el.id.includes(id)) el.style.display = 'none'
-  })
-  const row = document.getElementById('variants-' + id)
-  if (row) {
-    row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row'
-  }
-}
-
 const confirmDelete = (id) => {
   if (confirm('Ви впевнені, що хочете видалити цей продукт?')) {
     localStorage.setItem('toastMessage', JSON.stringify({
@@ -132,12 +134,19 @@ const confirmDelete = (id) => {
     document.getElementById(`delete-form-${id}`).submit()
   }
 }
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('uk-UA')
-}
 
 const formatPrice = (price) => {
   return Number(price).toFixed(2)
+}
+
+const downloadProduct = (id) => {
+  showToast(`⬇️ Завантаження продукту #${id}`, 'info')
+  // Тут можна реалізувати реальне завантаження, якщо потрібно
+}
+
+const duplicateProduct = (id) => {
+  showToast(`📄 Продукт #${id} продубльовано`, 'success')
+  // Тут можеш реалізувати запит на дублювання, якщо є бекендова логіка
 }
 
 onMounted(() => {
@@ -153,3 +162,16 @@ onMounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.table td, .table th {
+  vertical-align: middle;
+}
+.table-responsive {
+  overflow: visible !important;
+}
+
+.dropdown-menu {
+  z-index: 1050;
+}
+</style>
