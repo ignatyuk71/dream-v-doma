@@ -34,5 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'nova_poshta' => [
+    'api_key' => env('NOVA_POSHTA_API_KEY'),
+    ],
 
 ];

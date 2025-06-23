@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\CategoryController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\Api\InstagramPostController;
+use App\Http\Controllers\Api\NovaPoshtaController;
 
 Route::get('/', function () {
     return view('home');
@@ -12,6 +14,39 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::get('/api/products', [\App\Http\Controllers\ProductController::class, 'home']);
+Route::get('/api/instagram-posts', [InstagramPostController::class, 'index']);
+
+Route::get('/nova-poshta/cities', [NovaPoshtaController::class, 'searchCities']);
+Route::get('/nova-poshta/warehouses', [NovaPoshtaController::class, 'getWarehouses']);
+
+
+Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'ua|ru']], function () {
+    Route::get('/', fn () => view('home'));
+    Route::get('/about', [\App\Http\Controllers\PageController::class, 'about'])->name('about');
+
+    // API — вже всередині локалі
+    Route::get('/api/products', [\App\Http\Controllers\ProductController::class, 'home']);
+    Route::get('/api/categories', [\App\Http\Controllers\Api\CategoryController::class, 'index']);
+    Route::get('/api/products/{slug}', [\App\Http\Controllers\Api\ProductController::class, 'show']);
+    
+
+    // Сторінка товару
+    Route::get('/product/{slug}', [\App\Http\Controllers\ProductController::class, 'show']);
+
+    Route::get('/checkout', function () {
+        return view('checkout');
+    })->name('checkout');
+    Route::get('/thank-you', function () {
+        return view('thank-you');
+    })->name('thank-you');
+   
+    Route::get('/category/{slug}', [CategoryController::class, 'show'])->name('category.show');
+
+});
+
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -36,8 +71,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/products/{product}/edit', [ProductController::class, 'edit'])->name('admin.products.edit');
     Route::put('/admin/products/{product}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/admin/products/{product}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
-
-
+    
 });
+
+
 
 require __DIR__.'/auth.php';

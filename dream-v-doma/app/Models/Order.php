@@ -37,4 +37,12 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    /**
+     * 🔗 Доставка замовлення
+     */
+    public function delivery()
+    {
+        return $this->hasOne(OrderDelivery::class);
+    }
 }

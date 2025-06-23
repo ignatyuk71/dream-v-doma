@@ -4,7 +4,7 @@
         @if ($level > 0)
             <span class="text-secondary">↳</span>
         @endif
-        {{ $category->translations->firstWhere('locale', 'uk')?->name ?? '-' }}
+        {{ $category->translations->firstWhere('locale', 'ua')?->name ?? '-' }}
     </td>
     <td><code>{{ $category->slug }}</code></td>
     <td>

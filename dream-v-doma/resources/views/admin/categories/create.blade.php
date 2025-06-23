@@ -10,7 +10,7 @@
         <!-- Вкладки -->
         <ul class="nav nav-tabs mb-3" id="langTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="uk-tab" data-bs-toggle="tab" data-bs-target="#uk" type="button" role="tab">Українська</button>
+                <button class="nav-link active" id="ua-tab" data-bs-toggle="tab" data-bs-target="#ua" type="button" role="tab">Українська</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="ru-tab" data-bs-toggle="tab" data-bs-target="#ru" type="button" role="tab">Російська</button>
@@ -19,22 +19,22 @@
 
         <div class="tab-content" id="langTabsContent">
             <!-- Українська -->
-            <div class="tab-pane fade show active" id="uk" role="tabpanel">
-                <input type="hidden" name="translations[uk][locale]" value="uk">
+            <div class="tab-pane fade show active" id="ua" role="tabpanel">
+                <input type="hidden" name="translations[ua][locale]" value="ua">
 
                 <div class="mb-3">
-                    <label class="form-label">Назва (uk)</label>
-                    <input type="text" name="translations[uk][name]" class="form-control" required>
+                    <label class="form-label">Назва (ua)</label>
+                    <input type="text" name="translations[ua][name]" class="form-control" required>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Meta Title (uk)</label>
-                    <input type="text" name="translations[uk][meta_title]" class="form-control" required>
+                    <label class="form-label">Meta Title (ua)</label>
+                    <input type="text" name="translations[ua][meta_title]" class="form-control" required>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Meta Description (uk)</label>
-                    <textarea name="translations[uk][meta_description]" class="form-control" required></textarea>
+                    <label class="form-label">Meta Description (ua)</label>
+                    <textarea name="translations[ua][meta_description]" class="form-control" required></textarea>
                 </div>
             </div>
 
@@ -71,7 +71,7 @@
         </div>
 
         <div class="form-check form-switch mb-3">
-            <input type="hidden" name="status" value="0"> {{-- обов'язково --}}
+            <input type="hidden" name="status" value="0">
             <input class="form-check-input" type="checkbox" name="status" value="1" id="statusSwitch" checked>
             <label class="form-check-label" for="statusSwitch">Активна</label>
         </div>

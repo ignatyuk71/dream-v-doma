@@ -45,4 +45,20 @@ class ProductController extends Controller
     {
         return response()->json(\App\Models\Category::all());
     }
+
+    public function show($locale, $slug)
+    {
+        $product = Product::with([
+            'images',
+            'variants',
+            'translations' => fn($q) => $q->where('locale', $locale),
+            'reviews',
+            'categories.translations' => fn($q) => $q->where('locale', $locale),
+        ])
+        ->whereHas('translations', fn($q) => $q->where('slug', $slug)->where('locale', $locale))
+        ->firstOrFail();
+
+        return response()->json($product);
+    }
+
 }

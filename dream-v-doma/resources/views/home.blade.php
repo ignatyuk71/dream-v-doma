@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-  <div id="app">
+    <cart-offcanvas></cart-offcanvas>
     <home-page />
-  </div>
 @endsection

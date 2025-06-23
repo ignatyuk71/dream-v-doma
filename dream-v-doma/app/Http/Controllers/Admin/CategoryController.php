@@ -26,7 +26,7 @@ class CategoryController extends Controller
         $validated = $request->validated();
 
         // Беремо назву українською для slug
-        $slugSource = $validated['translations']['uk']['name'] ?? 'category';
+        $slugSource = $validated['translations']['ua']['name'] ?? 'category';
 
         $category = Category::create([
             'parent_id' => $validated['parent_id'] ?? null,
@@ -53,7 +53,7 @@ class CategoryController extends Controller
     {
         $validated = $request->validated();
     
-        $slugSource = $validated['translations']['uk']['name'] ?? 'category';
+        $slugSource = $validated['translations']['ua']['name'] ?? 'category';
     
         $category->update([
             'parent_id' => $validated['parent_id'] ?? null,
