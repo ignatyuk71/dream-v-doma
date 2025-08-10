@@ -1,38 +1,45 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <title>@yield('title', 'Адмінка')</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>@yield('title', 'Адмінка')</title>
 
-    {{-- Стили --}}
-    <link href="{{ asset('/css/volt.css') }}" rel="stylesheet">
-    <link href="{{ asset('/css/all.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('/css/app.css') }}" rel="stylesheet">
-    <link href="{{ asset('/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('/vendor/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('/vendor/notyf/notyf.min.css') }}" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    @vite('resources/js/app.js')
+
+  <!-- Стилі Bootstrap та шрифти -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> 
+
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+
+@vite(['resources/js/admin/index.js', 'resources/js/admin/index.css'])
+
+  @stack('styles')
 </head>
 <body>
-    {{-- Vue-контейнер тільки для Toast --}}
-    <div id="app">
-        <Toast />
+    <div class="d-flex min-vh-100">
+
+      {{-- Бокове меню --}}
+      @include('admin.layouts.nav')
+
+      {{-- Основний контент --}}
+      <main class="content-wrapper">
+        @include('admin.layouts.topbar')
+
+     
+        @yield('content')
+       
+
+        @include('admin.layouts.footer')
+      </main>
+
     </div>
-    <div id="toast-root"></div>
 
-    <div class="d-flex">
-        @include('admin.layouts.sidenav')
-
-        <main class="content flex-grow-1">
-            @include('admin.layouts.nav')
-            @include('admin.layouts.topbar')
-            @yield('content')
-            @include('admin.layouts.footer2')
-        </main>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Скрипти Bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  @stack('scripts')
 </body>
 </html>

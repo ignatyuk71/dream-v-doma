@@ -1,10 +1,2 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-body {
-    font-family: 'Manrope', sans-serif;
-  }
-.offcanvas-backdrop {
-    display: none !important;
-  }
+

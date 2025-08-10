@@ -1,5 +1,7 @@
 @extends('admin.layouts.app')
 
 @section('content')
-    <div id="product-form" data-categories='@json($categories)'></div>
+<div id="app">
+  <product-form />
+</div>
 @endsection

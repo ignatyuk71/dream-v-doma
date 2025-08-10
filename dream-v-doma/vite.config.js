@@ -7,14 +7,18 @@ export default defineConfig({
   resolve: {
     alias: {
       vue: 'vue/dist/vue.esm-bundler.js',
-      '@': path.resolve(__dirname, 'resources/js') // ✅ ДОДАЙ ОЦЕ
-    }
+      '@': path.resolve(__dirname, 'resources/js'),
+    },
   },
   plugins: [
     laravel({
-      input: ['resources/css/app.css', 'resources/js/app.js'],
-      refresh: true
+      input: [
+        'resources/js/app.js',               // фронт
+        'resources/js/admin/index.js',       // ✅ адмінка js
+        'resources/js/admin/index.css'       // ✅ адмінка css (в одному input)
+      ],
+      refresh: true,
     }),
-    vue()
-  ]
+    vue(),
+  ],
 })

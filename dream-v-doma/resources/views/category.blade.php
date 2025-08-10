@@ -2,18 +2,19 @@
 
 @section('content')
 
-<topbar></topbar>
-<cart-offcanvas></cart-offcanvas>
+  {{-- Topbar --}}
+  @include('home.topbar')
 
-<div class="container-lg">
-    <navbar></navbar>
-</div>
-<div id="category-page"
-     data-category='@json($category)'
-     data-products='@json($category->products)'
-     data-slug="{{ $category->translations->firstWhere('locale', app()->getLocale())?->slug }}">
-</div>
+  {{-- Navbar --}}
+  <div class="container-lg">
+    @include('components.navbar')
+  </div>
 
-<footer-component></footer-component>
+  {{-- Контент категорії --}}
+  @include('home.category.category-page')
+
+
+  {{-- Footer --}}
+  @include('home.footer')
 
 @endsection

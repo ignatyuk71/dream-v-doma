@@ -24,16 +24,16 @@
   "add_to_cart": "В корзину",
   "add_to_wishlist": "В избранное",
   "compare": "Сравнить",
-  "checkout_breadcrumbs": "Ваш заказ",
   "currency": "грн",
+  "checkout_breadcrumbs": "Ваш заказ",
   "added_to_cart": "добавлено в корзину",
   "continue_shopping": "Продолжить покупки",
   "checkout_cart": "Оформить заказ",
   "checkout": {
     "breadcrumbs": {
-    "home": "Главная",
-    "checkout": "Оформление заказа",
-    "thank_you": "Спасибо за ваш заказ!"
+      "home": "Главная",
+      "checkout": "Оформление заказа",
+      "thank_you": "Спасибо за ваш заказ!"
     },
     "contact": {
       "title": "Контактная информация",
@@ -61,8 +61,8 @@
       "postomat_help": "Укажите номер почтомата. Например: 5011, 5022...",
       "courier_address_label": "Адрес доставки",
       "courier_address_help": "Улица, дом, квартира...",
-      "loading_cities": "Завантаження міст...",
-      "loading_warehouses": "Завантаження відділень..."
+      "loading_cities": "Загрузка городов...",
+      "loading_warehouses": "Загрузка отделений..."
     },
     "payment": {
       "label": "Способ оплаты",
@@ -94,7 +94,42 @@
       "enter_address": "Введите адрес доставки",
       "select_warehouse": "Выберите отделение или почтомат"
     }
-    
+  },
+  "instagram.title": "Наш Instagram",
+  "instagram.subtitle": "Делимся атмосферой, которую создаём каждый день",
+  "recommended_products": "Рекомендованные товары",
+  "product.description": "Описание",
+  "product.delivery_and_returns": "Доставка и возврат",
+  "product.reviews": "Отзывы",
+  "product.characteristics": "Характеристики",
+  "review": {
+    "leave_a_review": "Оставить отзыв",
+    "your_name": "Ваше имя",
+    "your_name_required": "Укажите ваше имя!",
+    "rating": "Оценка",
+    "select_rating": "Выберите оценку",
+    "rating_required": "Выберите оценку!",
+    "review_text": "Отзыв",
+    "review_text_required": "Напишите ваш отзыв!",
+    "photo": "Фото (1 изображение)",
+    "photo_note": "Можно загрузить только одно изображение.",
+    "cancel": "Отменить",
+    "submit": "Отправить отзыв",
+    "overall_rating": "Средняя оценка",
+    "reviews_count": "{{count}} отзывов",
+    "stars": "{{count}} звёзд{{suffix}}",
+    "modal_title": "Оставить отзыв",
+    "modal_close": "Закрыть",
+    "review_unavailable": "Описание недоступно"
+  },
+  "specs": {
+    "title": "Характеристики",
+    "fields": {
+      "size": "Размер",
+      "toe_type": "Тип носка",
+      "color": "Цвет",
+      "material": "Материал",
+      "sole": "Подошва"
+    }
   }
-
 }

@@ -17,7 +17,16 @@ return new class extends Migration
             $table->decimal('price', 10, 2);
             $table->integer('quantity_in_stock')->default(0);
             $table->boolean('status')->default(true); // активний чи ні
+            $table->boolean('is_popular')->default(false); // популярний товар
             $table->text('meta_description')->nullable();
+            
+            // 👇 Додаємо зв’язок із size_guides
+            $table->foreignId('size_guide_id')
+                ->nullable()
+                ->default(null)
+                ->constrained('size_guides')
+                ->nullOnDelete(); // якщо сітку видалять — лишиться null
+
             $table->timestamps();
         });
     }

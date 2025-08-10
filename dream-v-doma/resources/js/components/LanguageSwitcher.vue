@@ -9,8 +9,8 @@
     </a>
     <ul class="dropdown-menu fs-sm" style="--cz-dropdown-spacer: .5rem">
       <li>
-        <a class="dropdown-item" href="#" @click.prevent="changeLang('ua')">
-          <img src="/public/assets/img/flags/ua.svg" class="flex-shrink-0 me-2" width="20" alt="Українська">
+        <a class="dropdown-item" href="#" @click.prevent="changeLang('uk')">
+          <img src="/public/assets/img/flags/uk.svg" class="flex-shrink-0 me-2" width="20" alt="Українська">
           Українська
         </a>
       </li>
@@ -26,12 +26,15 @@
 
 <script>
 export default {
+  props: {
+    category: {
+      type: Object,
+      default: null
+    }
+  },
   data() {
     return {
-      currentLang: window.location.pathname.split('/')[1] || 'ua',
-      product: null,
-      categoryTranslations: [],
-      categorySlug: null
+      currentLang: window.location.pathname.split('/')[1] || 'uk'
     }
   },
   computed: {
@@ -39,59 +42,35 @@ export default {
       return `/assets/img/flags/${this.currentLang}.svg`
     },
     currentLangLabel() {
-      return this.currentLang === 'ua' ? 'Українська' : 'русский'
-    }
-  },
-  mounted() {
-    // Продукт
-    const el = document.getElementById('product-page')
-    if (el && el.dataset.product) {
-      try {
-        this.product = JSON.parse(el.dataset.product)
-        console.log('✅ Продукт зчитано:', this.product)
-      } catch (e) {
-        console.warn('❌ Не вдалося зчитати продукт', e)
-      }
-    }
-
-    // Категорія
-    const catEl = document.getElementById('category-page')
-    if (catEl && catEl.dataset.translations) {
-      try {
-        this.categoryTranslations = JSON.parse(catEl.dataset.translations)
-        this.categorySlug = catEl.dataset.slug
-        console.log('✅ Категорія зчитана:', this.categorySlug)
-      } catch (e) {
-        console.warn('❌ Не вдалося зчитати категорію', e)
-      }
+      return this.currentLang === 'uk' ? 'Українська' : 'русский'
     }
   },
   methods: {
     changeLang(lang) {
-      // Якщо є продукт — редірект на правильний slug
-      if (this.product?.translations) {
-        const translated = this.product.translations.find(t => t.locale === lang)
+      // DEBUG: показуємо всі переклади
+      console.log('category.translations:', this.category?.translations);
+
+      if (this.category?.translations?.length) {
+        const translated = this.category.translations.find(t => t.locale === lang)
+        // DEBUG: показуємо знайдений переклад
+        console.log('Шукаємо slug для мови:', lang, '| Знайшли:', translated);
+
         if (translated?.slug) {
-          window.location.href = `/${lang}/product/${translated.slug}`
+          window.location.href = `/${lang}/${translated.slug}`
           return
         }
       }
 
-      // Якщо є категорія — редірект на правильний slug
-      if (this.categoryTranslations.length && this.categorySlug) {
-        const translated = this.categoryTranslations.find(t => t.locale === lang)
-        if (translated?.slug) {
-          window.location.href = `/${lang}/category/${translated.slug}`
-          return
-        }
-      }
-
-      // Інакше просто змінюємо мову в URL
+      // fallback: просто змінити lang у url
       const pathParts = window.location.pathname.split('/')
       pathParts[1] = lang
       const newUrl = pathParts.join('/') + window.location.search + window.location.hash
       window.location.href = newUrl
     }
+  },
+  mounted() {
+    // DEBUG: показати всі дані при завантаженні компонента
+    console.log('Category prop при mount:', this.category);
   }
 }
 </script>

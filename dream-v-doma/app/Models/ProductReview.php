@@ -12,8 +12,9 @@ class ProductReview extends Model
     protected $fillable = [
         'product_id',
         'author_name',
-        'content',
         'rating',
+        'content',
+        'photo_path',
         'is_approved',
     ];
 

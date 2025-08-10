@@ -1,0 +1,192 @@
+{
+  "reviews": "відгуків",
+  "available": "В наявності",
+  "productcolor": "Колір",
+  "productsize": "Розмір",
+  "productsize_guide": "Таблиця розмірів",
+  "productchoose_size": "Оберіть розмір",
+  "home": "Головна",
+  "About Us": "Про нас",
+  "category_men": "Чоловіки",
+  "about_demo_text": "Це демонстраційна сторінка для перевірки локалізації.",
+  "current_language": "Поточна мова",
+  "productdescription": "Опис",
+  "productdelivery_and_returns": "Доставка і повернення",
+  "productreviews": "Відгуки",
+  "product_code": "Код товару",
+  "shopping_cart": "Кошик",
+  "cart_empty": "Кошик порожній",
+  "subtotal": "Разом",
+  "view_cart": "Переглянути кошик",
+  "open_cart": "Кошик",
+  "buy_more_to_free_shipping": "Додайте ще для безкоштовної доставки:",
+  "remove_from_cart": "Видалити з кошика",
+  "add_to_cart": "У кошик",
+  "add_to_wishlist": "До обраного",
+  "compare": "Порівняти",
+  "currency": "грн",
+  "checkout_breadcrumbs": "Ваше замовлення",
+  "added_to_cart": "додано до кошика",
+  "continue_shopping": "Продовжити покупки",
+  "checkout_cart": "Оформити замовлення",
+  "checkout": {
+    "breadcrumbs": {
+      "home": "Головна",
+      "checkout": "Оформлення замовлення",
+      "thank_you": "Дякуємо за ваше замовлення!"
+    },
+    "contact": {
+      "title": "Контактна інформація",
+      "first_name": "Ім’я",
+      "last_name": "Прізвище",
+      "email_optional": "Email (необов’язково)",
+      "placeholder_first_name": "Ваше ім’я",
+      "placeholder_last_name": "Ваше прізвище",
+      "placeholder_email": "email@example.com"
+    },
+
+    "delivery": {
+      "title": "Нова Пошта",
+      "label": "—",
+      "method_label": "Спосіб доставки",
+      "branch": "У відділення",
+      "postomat": "У поштомат",
+      "courier": "Кур'єром",
+      "city_label": "Населений пункт",
+      "city_help": "Введіть назву міста або села. Наприклад: Київ, Харків, Ковель",
+      "city_placeholder": "Почніть вводити назву...",
+      "city_not_found": "Такий населений пункт не знайдено",
+      "warehouse_label": "Відділення",
+      "postomat_label": "Поштомат",
+      "warehouse_help": "Укажіть номер відділення. Наприклад: 1, 22, 114...",
+      "postomat_help": "Укажіть номер поштомату. Наприклад: 5011, 5022...",
+      "courier_address_label": "Адреса доставки",
+      "courier_address_help": "Вулиця, будинок, квартира...",
+      "loading_cities": "Завантаження міст...",
+      "loading_warehouses": "Завантаження відділень..."
+    },
+
+    "payment": {
+      "label": "Спосіб оплати",
+      "card": "💳 Оплата карткою онлайн (незабаром)",
+      "cod": "💵 Оплата при отриманні",
+      "invoice": "🧾 Оплата за реквізитами (на рахунок ФОП або карту)",
+      "cod_note": "До оплати включена вартість товару — {subtotal} грн, доставка — {deliveryCost} грн, плюс комісія за післяплату {codFee} грн.",
+      "invoice_note": "Вам буде надіслано рахунок на оплату товару — {subtotal} грн. На пошті ви сплачуєте лише доставку — {deliveryCost} грн."
+    },
+
+    "order": {
+      "button": "Оформити замовлення",
+      "summary_title": "Моє замовлення",
+      "quantity": "x{quantity}",
+      "amount": "Сума",
+      "delivery": "Доставка ({label})",
+      "cod_fee": "* Комісія за післяплату: {codFee} грн",
+      "bonuses": "Бонуси",
+      "promo_code_label": "У мене є промокод",
+      "promo_placeholder": "Промокод",
+      "promo_button": "Застосувати",
+      "total": "До сплати"
+    },
+
+    "validation": {
+      "required_field": "{field} обов’язкове для заповнення",
+      "required": "обов’язкове поле",
+      "invalid_phone": "Невірний номер телефону",
+      "select_city": "Оберіть місто доставки",
+      "select_payment": "Оберіть спосіб оплати",
+      "enter_address": "Введіть адресу доставки",
+      "select_warehouse": "Оберіть відділення або поштомат"
+    }
+  },
+
+  "instagram.title": "Наш Instagram",
+  "instagram.subtitle": "Ділимося атмосферою, яку створюємо щодня",
+  "recommended_products": "Рекомендовані товари",
+
+  "review": {
+    "leave_a_review": "Залишити відгук",
+    "your_name": "Ваше ім’я",
+    "your_name_required": "Укажіть ваше ім’я!",
+    "rating": "Оцінка",
+    "select_rating": "Оберіть оцінку",
+    "rating_required": "Оберіть оцінку!",
+    "review_text": "Відгук",
+    "review_text_required": "Напишіть ваш відгук!",
+    "photo": "Фото (1 зображення)",
+    "photo_note": "Можна завантажити лише одне зображення.",
+    "cancel": "Скасувати",
+    "submit": "Надіслати відгук",
+    "overall_rating": "Середня оцінка",
+    "reviews_count": "{{count}} відгуків",
+    "stars": "{{count}} зірок{{suffix}}",
+    "modal_title": "Залишити відгук",
+    "modal_close": "Закрити",
+    "review_unavailable": "Опис недоступний"
+  },
+  "specs": {
+    "title": "Характеристики",
+    "fields": {
+      "size": "Розмір",
+      "toe_type": "Тип носка",
+      "color": "Колір",
+      "material": "Матеріал",
+      "sole": "Підошва"
+    }
+  },
+
+
+  "product.description": "Опис",
+  "product.delivery_and_returns": "Доставка і повернення",
+  "product.reviews": "Відгуки",
+  "product.characteristics": "Характеристики",
+  "review.leave_a_review": "Залишити відгук",
+  "review.modal_title": "Залишити відгук",
+  "review.modal_close": "Закрити",
+  "review.your_name": "Ваше ім’я",
+  "review.your_name_required": "Укажіть ваше ім’я!",
+  "review.rating": "Оцінка",
+  "review.select_rating": "Оберіть оцінку",
+  "review.rating_required": "Оберіть оцінку!",
+  "review.review_text": "Відгук",
+  "review.review_text_required": "Напишіть ваш відгук!",
+  "review.photo": "Фото (1 зображення)",
+  "review.photo_note": "Можна завантажити лише одне зображення.",
+  "review.cancel": "Скасувати",
+  "review.submit": "Надіслати відгук",
+  "review.overall_rating": "Середня оцінка",
+  "review.reviews_count": "{{count}} відгуків",
+  "review.stars": "{{count}} зірок{{suffix}}",
+  "review.review_unavailable": "Опис недоступний",
+
+
+
+  "product.code": "Код товару",
+  "product.available": "В наявності",
+  "product.review_singular": "відгук",
+  "product.review_few": "відгуки",
+  "product.review_many": "відгуків",
+
+  "product.color": "Колір",
+  "product.size": "Розмір",
+  "product.size_guide": "Таблиця розмірів",
+  "product.choose_size": "Оберіть розмір",
+
+  "product.expect_order_between": "Очікуйте на замовлення в період",
+  "product.free_shipping_note": "Безкоштовна доставка та повернення:",
+  "product.free_shipping_limit": "Для всіх замовлень від 1000 грн",
+
+  "product.featured_section_title": "Рекомендовані товари",
+  "product.best_sellers": "Хіти продажу",
+  "product.new_arrivals": "Новинки",
+  "product.sale_items": "Розпродаж",
+  "product.top_rated": "Найкраще оцінені",
+
+  "product.no_size_guide": "Розмірна сітка відсутня.",
+
+  "product.length_cm": "Довжина (см)",
+
+  "View all": "Переглянути всі позиції"
+
+
+}

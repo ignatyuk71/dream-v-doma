@@ -44,7 +44,7 @@
   
       <!-- Кількість + Кнопки -->
       <div class="d-flex flex-wrap flex-sm-nowrap flex-md-wrap flex-lg-nowrap gap-3 gap-lg-2 gap-xl-3 mb-4">
-        <AddToCartButton :product="product" @added="$emit('added', $event)" />
+
       </div>
       
   
@@ -56,7 +56,6 @@
   
   <script setup>
   import ProductVariants from './ProductVariants.vue'
-  import AddToCartButton from './AddToCartButton.vue'
   import ProductDelivery from './ProductDelivery.vue'
   
   defineProps({

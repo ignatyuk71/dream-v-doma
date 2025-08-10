@@ -14,9 +14,13 @@ return new class extends Migration
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('parent_id')->nullable()->constrained('categories')->nullOnDelete();
-            $table->string('locale', 5)->default('ua')->index();
-            $table->string('slug')->unique();
+            $table->integer('sort_order')->default(0);
             $table->boolean('status')->default(true);
+        
+            // Ось ці поля — просто без after()
+            $table->unsignedInteger('home_sort_order')->nullable()->default(0);
+            $table->boolean('show_on_home')->default(false);
+        
             $table->timestamps();
         });
     }

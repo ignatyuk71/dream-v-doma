@@ -25,7 +25,7 @@ class OrderController extends Controller
             'phone' => 'required|string|max:30',
             'email' => 'nullable|email|max:255',
             // Локаль для перекладів
-            'locale' => 'nullable|string|in:ua,ru,en',
+            'locale' => 'nullable|string|in:uk,ru,en',
             // Дані доставки
             'type' => 'required|string|in:branch,postomat,courier',
             'city' => 'required|array',
@@ -72,8 +72,7 @@ class OrderController extends Controller
                 'notes' => $data['notes'] ?? '',
             ]);
 
-            $locale = $data['locale'] ?? app()->getLocale() ?: 'ua';
-            \Log::info('Поточна локаль: ' . $locale);
+            $locale = $data['locale'] ?? app()->getLocale() ?: 'uk';
             foreach ($data['cartItems'] as $item) {
                 $product = Product::find($item['id']);
                 $translation = null;

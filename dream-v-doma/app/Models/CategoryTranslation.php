@@ -13,15 +13,15 @@ class CategoryTranslation extends Model
         'category_id',
         'locale',
         'name',
+        'description', // ← Додаємо опис
         'meta_title',
         'meta_description',
+        'slug',
     ];
 
-    /**
-     * Зв’язок: переклад належить категорії
-     */
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 }
+

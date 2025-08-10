@@ -1,5 +1,7 @@
 @extends('admin.layouts.app')
 
 @section('content')
-  <div id="product-list" data-products="{{ json_encode($products) }}"></div>
+<div id="product-index-app">
+  <product-index />
+</div>
 @endsection

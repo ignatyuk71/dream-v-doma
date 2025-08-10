@@ -1,0 +1,277 @@
+
+html, body, .admin-app {
+  font-family: 'Inter', 'Segoe UI', 'Arial', 'Helvetica Neue', Arial, sans-serif !important;
+  font-weight: 500; /* якщо треба "напівжирний" ефект як на кнопці */
+  letter-spacing: 0.01em; /* (не обов'язково, для більш сучасного вигляду) */
+}
+
+/* Анімація при натисканні */
+.animate-press {
+  transition: transform 0.15s ease-in-out;
+}
+.animate-press:active {
+  transform: scale(0.97);
+}
+
+.content-wrapper {
+  flex-grow: 1;
+  padding: 2rem;
+}
+
+.card {
+  border-radius: 5px;
+  background: #fff;
+  /* “Повітряна” тінь */
+  box-shadow: 0 0 24px 0 rgba(0,0,0,0.12), 
+              0 6px 24px 0 rgba(0,0,0,0.10), 
+              0 2px 8px 0 rgba(0,0,0,0.07);
+  /* Для білого “світла” по краях */
+  position: relative;
+  overflow: visible;
+}
+
+
+
+/* Сайдбар */
+.sidebar {
+  min-width: 220px;
+  background-color: #fff;
+  border-right: 1px solid #e5e7eb;
+}
+
+.sidebar .nav-link {
+  color: #566a7f;
+  position: relative;
+  padding-left: 1.5rem;
+  transition: color 0.2s ease-in-out;
+}
+
+.sidebar .nav-link:hover {
+  color: #1f2937;
+}
+
+/* Активна лінка без сірого фону, з фіолетовою точкою */
+
+
+.sidebar .nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: 6px; /* 🔁 зсув вліво */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;   /* 🔁 менше */
+    height: 6px;  /* 🔁 менше */
+    background-color: #5e48f0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(94, 72, 240, 0.15);
+  }
+  
+  .sidebar .nav-link.active {
+    font-weight: 500; /* 🔁 менш жирний */
+  }
+
+
+
+.form-label {
+    font-weight: 500;
+    font-size: 14px;
+  }
+  
+  .mb-3 {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .top-actions .btn {
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 6px;
+  }
+  
+  .btn-primary {
+    background: #7367f0;
+    border-color: #7367f0;
+  }
+  
+  .btn-gradient {
+    background: linear-gradient(to right, #7367f0, #00dbde);
+    border: none;
+    color: white;
+    font-size: 14px;
+    border-radius: 6px;
+    padding: 10px;
+  }
+  
+  .dropzone,
+  .dropzone-box {
+    background: #f5f5f9;
+    border: 1px dashed #d9d9e3;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    color: #878a99;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .editor-toolbar button {
+    background: #f5f5f9;
+    border: 1px solid #d9d9e3;
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    margin-right: 4px;
+  }
+  
+  .editor-toolbar button.active {
+    background: #7367f0;
+    color: white;
+    border-color: #7367f0;
+  }
+  
+  /* Стилі для зображень */
+  .image-preview {
+    width: 220px;
+    height: 220px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+  }
+  
+  .image-item {
+    position: relative;
+  }
+  
+  .image-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(255, 0, 0, 0.8);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    line-height: 20px;
+    text-align: center;
+    font-size: 14px;
+  }
+  
+  .image-item .badge-main {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background: #7367f0;
+    color: white;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  
+  
+  
+  
+  
+  
+  
+  .remove-block {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ff4d4f;
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    line-height: 20px;
+    font-size: 14px;
+    text-align: center;
+    cursor: pointer;
+    margin-top: -20px; /* Переміщаємо кнопку на верх */
+  }
+  
+  .remove-block:hover {
+    background: #ff2a2a;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .desc-block {
+    border: 1px solid #e0e0e0;
+    background: #f9f9fb;
+    padding: 15px;
+    border-radius: 8px;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+  
+  
+  /* Стилі для зображення з текстом справа або зліва */
+  .image-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .image-item .desc-text {
+    flex: 1;
+   
+    overflow-y: auto;
+    padding-right: 10px;
+  }
+  
+  .image-item .desc-image {
+    width: 50%;
+   
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  
+  .desc-img-preview {
+    width: 70%;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  
+  
+  
+  /* Стиль для категорій */
+  /* Стиль для категорій */
+  
+  
+  /* Стиль для категорій */
+  #categorySelect {
+    width: 100%;
+    height: 40px;
+    border-radius: 6px;
+    font-size: 14px;
+    padding: 10px;
+  }
+  
+  .category-tag {
+    display: inline-block;
+    background-color: #7367f0;
+    color: white;
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 20px;
+    font-size: 14px;
+  }
+  
+  .category-tag button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    margin-left: 8px;
+    cursor: pointer;
+  }
+  
+  #categorySelection select {
+    width: 100%;
+    height: 100px;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 14px;
+  }
+  

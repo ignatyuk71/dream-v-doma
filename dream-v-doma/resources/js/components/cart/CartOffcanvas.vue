@@ -1,19 +1,29 @@
 <template>
   <div class="offcanvas offcanvas-end pb-sm-2 px-sm-2" id="shoppingCart" tabindex="-1" aria-labelledby="shoppingCartLabel" style="width: 500px">
     <!-- Header -->
-    <div class="offcanvas-header flex-column align-items-start py-3 pt-lg-4">
-      <div class="d-flex align-items-center justify-content-between w-100 mb-3 mb-lg-4">
-        <h4 class="offcanvas-title" id="shoppingCartLabel">{{ $t('shopping_cart') }}</h4>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-      </div>
-      <p class="fs-sm">
-        {{ $t('buy_more_to_free_shipping') }}
-        <span class="text-dark-emphasis fw-semibold">{{ remainingAmount }} грн</span>
-      </p>
-      <div class="progress w-100" role="progressbar" aria-label="Free shipping progress" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100" style="height: 4px">
-        <div class="progress-bar bg-dark rounded-pill" :style="{ width: progress + '%' }"></div>
-      </div>
+<div class="offcanvas-header flex-column align-items-start py-3 pt-lg-4">
+  <div class="d-flex align-items-center justify-content-between w-100 mb-3 mb-lg-4">
+    <h4 class="offcanvas-title" id="shoppingCartLabel">{{ $t('shopping_cart') }}</h4>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div v-if="remainingAmount === 0" class="alert alert-success w-100 py-2 px-3 fs-sm d-flex align-items-center gap-2 mb-3 rounded-2">
+    <i class="ci-check-circle fs-lg text-success"></i>
+    <span>Вітаємо! Ваше замовлення відповідає умовам безкоштовної доставки.</span>
+  </div>
+
+  <div v-else>
+    <p class="fs-sm">
+      {{ $t('buy_more_to_free_shipping') }}
+      <span class="text-dark-emphasis fw-semibold">{{ remainingAmount }} грн</span>
+    </p>
+    <div class="progress w-100" role="progressbar" aria-label="Free shipping progress"
+         :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100" style="height: 4px">
+      <div class="progress-bar bg-dark rounded-pill" :style="{ width: progress + '%' }"></div>
     </div>
+  </div>
+</div>
+
 
     <!-- Items -->
     
@@ -61,19 +71,19 @@
         <span class="h6 mb-0">{{ subtotal }} грн</span>
       </div>
       <div class="d-flex gap-2 w-100">
-          <button
-            class="btn btn-outline-secondary w-100"
-            data-bs-dismiss="offcanvas"
-          >
-            {{ $t('continue_shopping') }}
-          </button>
-          <a
+        <button
+          class="btn btn-outline-secondary btn-sm px-3 py-2 w-100"
+          data-bs-dismiss="offcanvas"
+        >
+          {{ $t('continue_shopping') }}
+        </button>
+        <a
           :href="`/${$i18n.locale}/checkout`"
-            class="btn btn-dark w-100"
-          >
-            {{ $t('checkout_cart') }}
-          </a>
-</div>
+          class="btn btn-dark btn-sm px-3 py-2 w-100"
+        >
+          {{ $t('checkout_cart') }}
+        </a>
+      </div>
     </div>
   </div>
 </template>

@@ -10,21 +10,33 @@ class CategoryController extends Controller
     {
         app()->setLocale($locale);
 
-        $category = Category::with([
-                'translations',
-                'products.images',
-                'products.translations',
-            ])
-            ->whereHas('translations', fn($q) => $q->where('slug', $slug))
+        // НЕ фільтруй translations по locale, витягуй ВСІ!
+        $category = Category::with('translations')
+            ->whereHas('translations', function ($q) use ($locale, $slug) {
+                $q->where('locale', $locale)
+                ->where('slug', $slug);
+            })
             ->firstOrFail();
 
-        // Якщо це JSON-запит (через axios/fetch)
-        if (request()->wantsJson() || request()->ajax()) {
-            return response()->json($category);
-        }
+        // 2. Для активної мови беремо потрібний переклад (для назви, і т.д.)
+        $translation = $category->translations->firstWhere('locale', $locale);
+        $categorySlug = $translation?->slug ?? $category->id;
 
-        // Інакше — Blade
-        return view('category', compact('category'));
+        // 3. Продукти категорії — переклади тягни тільки для потрібної мови, картинки теж
+        $products = $category->products()
+            ->where('status', true)
+            ->with(['translations' => function ($q) use ($locale) {
+                $q->where('locale', $locale);
+            }, 'images'])
+            ->get();
+
+        return view('category', [
+            'category' => $category,    // ВСІ переклади йдуть у Vue!
+            'products' => $products,
+            'slug' => $categorySlug,
+        ]);
     }
 
+
+    
 }
