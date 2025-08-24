@@ -1,16 +1,11 @@
 deployment:
   tasks:
-      - echo "🚀 Deploy started at $(date)" > /home/ignat016/deploy-test.log
-    - echo "✅ Repo path: $PWD" >> /home/ignat016/deploy-test.log
-    
-    - export REPO="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
+    - export SRC="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
     - export TARGET="/home/ignat016/dream-v-doma"
     - export PUBLIC="/home/ignat016/public_html"
 
-    # створюємо папки
     - /bin/mkdir -p "$TARGET" "$PUBLIC"
 
-    # 1) Синхронізуємо код з репо -> робоча папка
     - /bin/rsync -a --delete \
         --exclude='/.git' \
         --exclude='/.cpanel.yml' \
@@ -18,17 +13,15 @@ deployment:
         --exclude='/vendor' \
         --exclude='/storage/app/*' \
         --exclude='/storage/logs/*' \
-        "$REPO"/ "$TARGET"/
+        "$SRC"/ "$TARGET"/
 
-    # 2) Laravel команди (БЕЗ міграцій)
     - cd "$TARGET"
-    - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
+    - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader || /usr/bin/composer install --no-dev --optimize-autoloader || true
     - php artisan key:generate --force || true
     - php artisan storage:link || true
-    - php artisan config:cache
-    - php artisan route:cache
-    - php artisan view:cache
-    - /bin/chmod -R 775 storage bootstrap/cache
+    - php artisan config:cache || true
+    - php artisan route:cache  || true
+    - php artisan view:cache   || true
+    - /bin/chmod -R 775 storage bootstrap/cache || true
 
-    # 3) Публічні файли в public_html
     - /bin/rsync -a --delete "$TARGET/public/" "$PUBLIC/"
