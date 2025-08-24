@@ -1,4 +1,4 @@
-@extends('admin.layouts.app')
+@extends('admin.layouts.vuexy')
 
 @section('content')
 <div class="filters mb-4 card p-4" style="border-radius:8px;">

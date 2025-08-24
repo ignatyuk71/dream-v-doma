@@ -13,12 +13,37 @@ return new class extends Migration
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
-            $table->foreignId('product_id')->nullable()->constrained('products')->onDelete('set null');
-            $table->string('product_name'); // дублюємо на випадок змін після замовлення
-            $table->integer('quantity')->default(1);
-            $table->decimal('price', 10, 2); // ціна на момент замовлення
+
+            // Посилання на замовлення
+            $table->foreignId('order_id')
+                ->constrained('orders')
+                ->cascadeOnDelete();
+
+            // Продукт (може бути видалений у каталозі — тоді залишаємо null)
+            $table->foreignId('product_id')
+                ->nullable()
+                ->constrained('products')
+                ->nullOnDelete();
+
+            // Варіант продукту (розмір/колір) — теж nullable на випадок змін у каталозі
+            $table->foreignId('product_variant_id')
+                ->nullable()
+                ->constrained('product_variants')
+                ->nullOnDelete();
+
+            // Знімок даних на момент покупки
+            $table->string('product_name');       // локалізована назва
+            $table->string('variant_sku', 100)->nullable();
+            $table->string('size', 50)->nullable();
+            $table->string('color', 50)->nullable();
+            $table->string('image_url', 512)->nullable();
+            $table->json('attributes_json')->nullable(); // запас для майбутніх атрибутів
+
+            // Кількість і ціни (за одиницю та по рядку)
+            $table->unsignedInteger('quantity')->default(1);
+            $table->decimal('price', 10, 2); // ціна за одиницю на момент покупки
             $table->decimal('total', 10, 2); // price * quantity
+
             $table->timestamps();
         });
     }

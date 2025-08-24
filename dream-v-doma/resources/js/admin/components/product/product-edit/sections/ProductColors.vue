@@ -284,6 +284,7 @@ function productLabel(option) {
   return option.sku ? `${option.name} (SKU: ${option.sku})` : option.name
 }
 
+
 function customFilter(option, search) {
   if (!search) return true
   const name = (option.name || '').toLowerCase()

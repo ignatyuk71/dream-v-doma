@@ -12,20 +12,27 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
-        'product_name',
+        'product_variant_id', // 🔗 варіант
+        'product_name',       // snapshot назви
+        'variant_sku',        // snapshot артикулу варіанта
+        'size',               // snapshot розміру
+        'color',              // snapshot кольору
+        'image_url',          // snapshot зображення
+        'attributes_json',    // інші атрибути (JSON)
         'quantity',
         'price',
         'total',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'total' => 'decimal:2',
-        'quantity' => 'integer',
+        'price'           => 'decimal:2',
+        'total'           => 'decimal:2',
+        'quantity'        => 'integer',
+        'attributes_json' => 'array',
     ];
 
     /**
-     * 🔗 Замовлення, до якого належить цей товар
+     * Замовлення, до якого належить позиція
      */
     public function order()
     {
@@ -33,10 +40,18 @@ class OrderItem extends Model
     }
 
     /**
-     * 🔗 Продукт, який було замовлено (може бути null)
+     * Продукт (може бути null, якщо видалений)
      */
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Варіант продукту (може бути null, якщо видалений)
+     */
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 }

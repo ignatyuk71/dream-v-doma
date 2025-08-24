@@ -26,8 +26,8 @@
   </li>
 </ul>
 
-
-<div id="stock-progress" data-product='@json($product)'></div>
+  <!-- Прогрес до безкоштовної доставки -->
+  <div id="stock-progress" class="mt-2"></div>
 
   <div class="accordion" id="infoAccordion">
     <!-- 🚚 Доставка -->

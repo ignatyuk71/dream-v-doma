@@ -4,82 +4,89 @@
 
     <!-- Форма додавання кольору (зверху) -->
     <div class="color-form shadow-sm rounded-3 p-3 mb-4 bg-light">
-  <div class="row g-3">
-    <div class="col-12 col-md-6">
-      <input
-        v-model="form.color"
-        type="text"
-        class="form-control mb-3"
-        placeholder="Назва кольору"
-      />
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <input
+            v-model="form.color"
+            type="text"
+            class="form-control mb-3"
+            placeholder="Назва кольору"
+          />
+        </div>
+
+        <div class="col-12">
+          <Multiselect
+            v-model="form.product"
+            :options="products"
+            :searchable="true"
+            :custom-label="productLabel"
+            :filter="customFilter"
+            :close-on-select="true"
+            :clear-on-select="true"
+            :preserve-search="true"
+            placeholder="Виберіть продукт"
+            label="name"
+            track-by="id"
+            class="mb-3 multiselect-fullwidth"
+          >
+            <!-- СПИСОК: мініатюра + назва + SKU -->
+            <template #option="{ option }">
+              <div class="d-flex align-items-center gap-3 w-100 py-1">
+                <img
+                  v-if="getImage(option)"
+                  :src="fullImageUrl(getImage(option))"
+                  alt=""
+                  style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px;"
+                />
+                <div class="d-flex flex-column flex-grow-1 min-w-0">
+                  <span class="fw-semibold text-truncate">{{ getTitle(option) }}</span>
+                  <small v-if="getSku(option)" class="text-muted">SKU: {{ getSku(option) }}</small>
+                </div>
+              </div>
+            </template>
+
+            <!-- ВИБРАНЕ: мініатюра + назва (і SKU в дужках) -->
+            <template #singleLabel="{ option }">
+              <div class="d-flex align-items-center gap-2 min-w-0">
+                <img
+                  v-if="getImage(option)"
+                  :src="fullImageUrl(getImage(option))"
+                  alt=""
+                  style="width: 38px; height: 38px; object-fit: cover; border-radius: 7px;"
+                />
+                <span class="text-truncate">
+                  {{ getTitle(option) }}<template v-if="getSku(option)"> (SKU: {{ getSku(option) }})</template>
+                </span>
+              </div>
+            </template>
+          </Multiselect>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <input type="file" class="form-control mb-3" @change="onImageChange" />
+          <img v-if="form.image" :src="form.image" alt="" class="color-img-preview mb-2" />
+        </div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button
+          v-if="editIndex === null"
+          class="btn btn-primary flex-fill d-flex align-items-center justify-content-center gap-2"
+          @click="addColor"
+        >
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+          Додати колір
+        </button>
+        <button
+          v-else
+          class="btn btn-success flex-fill d-flex align-items-center justify-content-center gap-2"
+          @click="saveEdit"
+        >
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+          Зберегти зміни
+        </button>
+      </div>
     </div>
-
-    <div class="col-12">
-      <Multiselect
-        v-model="form.product"
-        :options="products"
-        :searchable="true"
-        :custom-label="productLabel"
-        :filter="customFilter"
-        :close-on-select="true"
-        :clear-on-select="true"
-        :preserve-search="true"
-        placeholder="Виберіть продукт"
-        label="name"
-        track-by="id"
-        class="mb-3 multiselect-fullwidth"
-      >
-        <template #option="{ option }">
-          <div class="d-flex align-items-center gap-3">
-            <img
-              v-if="option.image"
-              :src="option.image"
-              alt=""
-              style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px;"
-            />
-            <span class="fw-bold fs-5">{{ productLabel(option) }}</span>
-          </div>
-        </template>
-        <template #singleLabel="{ option }">
-          <div class="d-flex align-items-center gap-2">
-            <img
-              v-if="option.image"
-              :src="option.image"
-              alt=""
-              style="width: 38px; height: 38px; object-fit: cover; border-radius: 7px;"
-            />
-            <span>{{ productLabel(option) }}</span>
-          </div>
-        </template>
-      </Multiselect>
-    </div>
-
-    <div class="col-12 col-md-6">
-      <input type="file" class="form-control mb-3" @change="onImageChange" />
-      <img v-if="form.image" :src="form.image" alt="" class="color-img-preview mb-2" />
-    </div>
-  </div>
-
-  <div class="mt-3 d-flex gap-2">
-    <button
-      v-if="editIndex === null"
-      class="btn btn-primary flex-fill d-flex align-items-center justify-content-center gap-2"
-      @click="addColor"
-    >
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-      Додати колір
-    </button>
-    <button
-      v-else
-      class="btn btn-success flex-fill d-flex align-items-center justify-content-center gap-2"
-      @click="saveEdit"
-    >
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-      Зберегти зміни
-    </button>
-  </div>
-</div>
-
 
     <!-- Список кольорів (знизу) -->
     <div class="color-list">
@@ -112,7 +119,7 @@
             </div>
             <div class="color-actions d-flex flex-column align-items-center justify-content-center gap-2 position-absolute end-0 top-0 mt-2 me-2">
               <button class="btn-action btn-edit" @click="startEdit(index)" title="Редагувати">
-                <svg width="24" height="24" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M15.232 5.232a2.828 2.828 0 1 1 4 4L7.5 21H3v-4.5l12.232-12.268z"/></svg>
+                <svg width="24" height="24" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M15.232 5.232a2.828 2.828 0 1 1 4 4L7.5 21H3v-4.5л12.232-12.268z"/></svg>
               </button>
               <button class="btn-action btn-remove" @click="removeColor(index)" title="Видалити">
                 <svg width="24" height="24" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
@@ -125,9 +132,8 @@
         Ще не додано жодного кольору
       </div>
     </div>
-</div>
+  </div>
 </template>
-
 
 <script setup>
 import { ref, reactive, watch, onMounted } from 'vue'
@@ -162,11 +168,36 @@ onMounted(async () => {
   }
 })
 
+// ---------- ХЕЛПЕРИ ДЛЯ ПОЛІВ ВІД БЕКЕНДА ----------
+function getTitle(p) {
+  return p?.name || p?.title || p?.product_name || (p?.translations?.[0]?.title ?? p?.translations?.[0]?.name) || ''
+}
+function getSku(p) {
+  return p?.sku ?? p?.article ?? p?.code ?? ''
+}
+function getImage(p) {
+  return (
+    p?.image ||
+    p?.image_url ||
+    p?.image_path ||
+    p?.thumbnail ||
+    p?.preview ||
+    (Array.isArray(p?.images) ? (p.images[0]?.url || p.images[0]?.path) : '')
+  )
+}
+function fullImageUrl(path) {
+  if (!path) return ''
+  if (/^data:/i.test(path)) return path
+  if (path.startsWith('http') || path.startsWith('/storage/') || path.startsWith('/')) return path
+  if (path.startsWith('//')) return `${window.location.protocol}${path}`
+  return '/storage/' + path.replace(/^\/+/, '')   // <— ВАЖЛИВО: /^\/+/
+}
+
 // Пошук по назві або артикулу (sku)
-function customFilter(option, search, label) {
+function customFilter(option, search) {
   if (!search) return true
-  const name = (option.name || '').toLowerCase()
-  const sku = (option.sku || '').toLowerCase()
+  const name = (getTitle(option) || '').toLowerCase()
+  const sku = (getSku(option) || '').toLowerCase()
   const q = search.toLowerCase()
   return name.includes(q) || sku.includes(q)
 }
@@ -174,10 +205,9 @@ function customFilter(option, search, label) {
 // Відображення: назва + sku (якщо є)
 function productLabel(option) {
   if (!option) return ''
-  if (option.sku) {
-    return `${option.name} (SKU: ${option.sku})`
-  }
-  return option.name
+  const t = getTitle(option)
+  const s = getSku(option)
+  return s ? `${t} (SKU: ${s})` : t
 }
 
 const form = reactive({
@@ -227,7 +257,7 @@ function saveEdit() {
   colors.value[editIndex.value] = {
     ...colors.value[editIndex.value],
     color: form.color,
-    linked_product_id: form.product.id, // <--- тільки ID!
+    linked_product_id: form.product.id,
     product: form.product,
     image: form.image
   }
@@ -251,10 +281,9 @@ function onImageChange(event) {
 function resetForm() {
   form.color = ''
   form.product = null
-  form.image = null
+  form.image = ''
 }
 </script>
-
 
 <style scoped>
 .color-img-preview {
@@ -281,14 +310,9 @@ function resetForm() {
 .btn-edit:hover { background: #e0ebff; }
 .btn-remove:hover { background: #ffeaea; color: #dc2626; }
 .color-card { min-height: 52px; }
-:deep(.multiselect) {
-  min-width: 100%;
-}
+:deep(.multiselect) { min-width: 100%; }
 
-
-.color-list {
-  min-height: 150px;
-}
+.color-list { min-height: 150px; }
 .color-card {
   transition: box-shadow .18s;
   box-shadow: 0 1.5px 16px #e3e9fa;
@@ -311,16 +335,29 @@ function resetForm() {
 .btn-edit:hover { background: #e0ebff; }
 .btn-remove:hover { background: #ffeaea; }
 
+/* Multiselect на всю ширину */
 :deep(.multiselect-fullwidth .multiselect) {
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
 }
 
+/* Ширина випадайки */
 :deep(.multiselect__content-wrapper) {
   min-width: 420px !important;
   max-width: 100% !important;
 }
 
-
+/* Підсвітка як на макеті + без “Press enter …” */
+:deep(.multiselect__option--highlight) {
+  background: #34b57a !important;
+  color: #fff !important;
+}
+:deep(.multiselect__option--highlight:after) {
+  content: '' !important;
+}
+:deep(.multiselect__option--selected) {
+  background: #eaf5ff !important;
+  color: inherit !important;
+}
 </style>

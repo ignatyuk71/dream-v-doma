@@ -14,9 +14,8 @@
     {{-- Hero Banner --}}
     @include('home.hero-banner')
 
-    <div class="container-lg">
-
-      @include('home.featured-products')
+   
+    @include('home.featured-products')
 
       {{-- Special Offers --}}
       @include('home.special-offers')
@@ -33,7 +32,7 @@
 
         @include('home.shared.instagram-feed')
 
-</div>
+
 
   </main>
   

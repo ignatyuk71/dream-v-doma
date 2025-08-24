@@ -91,4 +91,19 @@ class Product extends Model
             'product_attribute_value_id'
         )->with('translations', 'attribute.translations');
     }
+
+    // 🔗 Головне фото
+    public function mainImage()
+    {
+        return $this->hasOne(ProductImage::class)->where('is_main', true);
+    }
+
+    // 🔗 Отримати головне фото або fallback
+    public function getMainImageUrlAttribute()
+    {
+        return optional($this->mainImage ?? $this->images->first())->full_url
+            ?? asset('assets/img/placeholder.svg');
+    }
+
+
 }

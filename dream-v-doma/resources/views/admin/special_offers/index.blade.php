@@ -1,176 +1,143 @@
-@extends('admin.layouts.app')
+@extends('admin.layouts.vuexy')
 
 @section('content')
-<div class="filters mb-4 card p-4" style="border-radius:8px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h5 fw-bold mb-0">Спеціальні пропозиції</h2>
-        <a href="{{ route('admin.special_offers.create') }}" class="btn btn-primary d-flex align-items-center gap-1">
-            <i class="bi bi-plus-lg"></i> <span>Додати пропозицію</span>
-        </a>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Акційні банери</h4>
+    <a href="{{ route('admin.special_offers.create') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i> Додати банер
+    </a>
+  </div>
+
+  @if($special_offers->isEmpty())
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center text-muted py-5">
+        Акційних банерів ще немає.
+      </div>
     </div>
+  @else
+    <div class="d-flex flex-column gap-3">
+      @foreach($special_offers as $offer)
+        <div class="d-flex align-items-center gap-3 p-3 rounded border bg-white shadow-sm hover-shadow-sm transition">
 
-    <div class="d-flex flex-wrap gap-3">
-        @forelse($special_offers as $offer)
-        <div class="banner-card special-offer-card d-flex align-items-center gap-4 p-3 mb-2 w-100" style="border-radius:10px; box-shadow:0 2px 8px #0001; background:#fff;">
-          <div style="width: 200px; flex-shrink:0;">
-                @if($offer->preview_path)
-                    <img src="{{ asset($offer->preview_path) }}" alt="На ногах" class="offer-img" style="border-radius:4px;object-fit:cover;">
-                @else
-                    <div class="offer-img-placeholder">—</div>
-                @endif
+          {{-- Дві картинки (в один рядок) --}}
+          <div class="d-flex align-items-center gap-2" style="width:260px; flex-shrink:0;">
+            <div class="border rounded overflow-hidden" style="width:150px; height:150px;">
+              <img src="{{ asset($offer->preview_path ?? $offer->image_path) }}"
+                   alt="{{ $offer->title }}"
+                   style="width:100%; height:100%; object-fit:cover;">
             </div>
-            <div style="width: 200px; flex-shrink:0;">
-                @if($offer->image_path)
-                    <img src="{{ asset($offer->image_path) }}" alt="{{ $offer->title }}" class="offer-img" style="border-radius:4px;object-fit:cover;">
-                @else
-                    <div class="offer-img-placeholder">—</div>
-                @endif
+            <div class="border rounded overflow-hidden" style="width:100px; height:100px;">
+              <img src="{{ asset($offer->image_path) }}"
+                   alt="{{ $offer->title }}"
+                   style="width:100%; height:100%; object-fit:cover;">
             </div>
+          </div>
 
+          {{-- Інфо --}}
+          <div class="flex-grow-1">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <span class="fw-semibold">ID: {{ $offer->id }}</span>
+              @if($offer->is_active)
+                <span class="badge bg-success">Опубліковано</span>
+              @else
+                <span class="badge bg-secondary">Чернетка</span>
+              @endif
 
+              <span class="fw-bold text-primary">{{ number_format($offer->price, 2) }} $</span>
 
-            <div class="flex-grow-1">
-                <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
-                    <div class="offer-id text-muted small">ID: <b>{{ $offer->id }}</b></div>
-                    <span class="badge px-2 {{ $offer->is_active ? 'status-publish' : 'status-inactive' }}">
-                        {{ $offer->is_active ? 'Опубліковано' : 'Неактивний' }}
-                    </span>
-                    <span class="offer-price text-muted ms-3">
-                        Ціна: {{ number_format($offer->price, 2) }} $
-                    </span>
-                    @if($offer->old_price)
-                        <span class="text-decoration-line-through text-muted ms-2">
-                            {{ number_format($offer->old_price, 2) }} $
-                        </span>
-                    @endif
-                    @if($offer->discount)
-                        <span class="badge bg-danger ms-2">{{ $offer->discount }}%</span>
-                    @endif
-                    @if($offer->expires_at)
-                        <span class="badge bg-info text-dark ms-2">
-                            До завершення: {{ $offer->remaining_time }}
-                        </span>
-                    @endif
-                </div>
+              @if($offer->old_price)
+                <span class="text-muted text-decoration-line-through">
+                  {{ number_format($offer->old_price, 2) }} $
+                </span>
+              @endif
 
-                <div class="offer-title mb-1 text-dark fw-semibold">
-                    {{ $offer->title ?? '— Без назви —' }}
-                </div>
-
-                <div class="offer-subtitle text-muted small mb-1">
-                    {{ $offer->subtitle ?? '—' }}
-                </div>
-
-                <div class="offer-button-link">
-                    @if($offer->button_text)
-                        <span class="btn btn-sm btn-light border px-3 me-2" style="pointer-events:none;">{{ $offer->button_text }}</span>
-                    @endif
-                    @if($offer->button_link)
-                        <a href="{{ $offer->button_link }}" target="_blank" class="text-muted small" style="text-decoration:underline;">
-                            {{ \Illuminate\Support\Str::limit($offer->button_link, 38) }}
-                        </a>
-                    @else
-                        <span class="text-muted small">—</span>
-                    @endif
-                </div>
+              @if($offer->discount)
+                <span class="badge bg-danger">{{ $offer->discount }}%</span>
+              @endif
             </div>
 
-            <div class="offer-actions d-flex align-items-center gap-2 ms-auto">
-                <a href="{{ route('admin.special_offers.edit', $offer) }}" class="btn btn-light btn-sm border edit-btn" title="Редагувати">
-                    <i class="bi bi-pencil-square"></i>
+            @if($offer->expires_at)
+              <div class="text-success small mb-1">
+                <i class="bi bi-clock me-1"></i>
+                До завершення: {{ $offer->expires_at->diffForHumans() }}
+              </div>
+            @endif
+
+            <div class="text-muted small mb-1">
+              {{ $offer->title }}
+            </div>
+
+            @if($offer->button_link)
+              <div class="small">
+                <a href="{{ $offer->button_link }}" target="_blank" class="text-decoration-underline">
+                  {{ $offer->button_link }}
                 </a>
-                <form action="{{ route('admin.special_offers.destroy', $offer) }}" method="POST" style="display:inline-block;">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-light btn-sm border dots-menu" title="Видалити"
-                        onclick="return confirm('Видалити цю пропозицію?')">
-                        <i class="bi bi-trash"></i>
-                    </button>
+              </div>
+            @endif
+          </div>
+
+          {{-- Дії (олівець + три крапки) --}}
+          <div class="ms-auto d-flex align-items-center gap-2">
+            {{-- Edit --}}
+            <a href="{{ route('admin.special_offers.edit', $offer) }}"
+               class="btn btn-light btn-icon rounded-circle shadow-sm" title="Редагувати">
+               <i class="bi bi-pencil-square"></i>
+            </a>
+
+            {{-- Dropdown --}}
+            <div class="dropdown">
+              <button class="btn btn-light btn-icon rounded-circle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+
+              <div class="dropdown-menu dropdown-menu-end shadow border-0 py-2">
+                {{-- Download основного/превʼю зображення --}}
+                <a href="{{ asset($offer->preview_path ?? $offer->image_path) }}" download
+                   class="dropdown-item d-flex align-items-center gap-2">
+                  <i class="bi bi-download fs-5"></i>
+                  <span>Download</span>
+                </a>
+
+                {{-- Delete --}}
+                <form action="{{ route('admin.special_offers.destroy', $offer) }}" method="POST"
+                      onsubmit="return confirm('Видалити банер?')">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
+                    <i class="bi bi-trash fs-5"></i>
+                    <span>Delete</span>
+                  </button>
                 </form>
+
+                {{-- Duplicate (показуємо, якщо є маршрут) --}}
+                @if(\Illuminate\Support\Facades\Route::has('admin.special_offers.duplicate'))
+                  <form action="{{ route('admin.special_offers.duplicate', $offer) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="dropdown-item d-flex align-items-center gap-2">
+                      <i class="bi bi-files fs-5"></i>
+                      <span>Duplicate</span>
+                    </button>
+                  </form>
+                @endif
+              </div>
             </div>
+          </div>
 
         </div>
-        @empty
-        <div class="w-100 text-center text-muted py-4">Спеціальних пропозицій ще немає.</div>
-        @endforelse
+      @endforeach
     </div>
+  @endif
 </div>
 @endsection
 
-@push('styles')
+@push('page-styles')
 <style>
-.banner-card:hover {
-    box-shadow: 0 4px 30px #2221 !important;
-}
-.special-offer-card {
-    transition: box-shadow .18s;
-}
-.special-offer-card:hover {
-    box-shadow: 0 4px 32px #292b7717;
-}
-.offer-img {
-    width: 200px !important;
-    height: auto;
-    max-height: 350px;
-    border-radius: 8px;
-    object-fit: cover;
-    display: block;
-}
-.offer-img-placeholder {
-    width: 100%;
-   
-    background: #f5f6f9;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #999;
-    font-size: 32px;
-    font-weight: 700;
-}
-.offer-title {
-    font-size: 16px;
-    line-height: 1.2;
-    font-weight: 600;
-}
-.offer-subtitle {
-    font-size: 13px;
-    line-height: 1.1;
-}
-.offer-id {
-    letter-spacing: 1px;
-}
-.status-publish {
-    background-color: #e9fdf0 !important;
-    color: #22c55e !important;
-}
-.status-inactive {
-    background-color: #ffecec !important;
-    color: #ef4444 !important;
-}
-.offer-actions .btn {
-    border-radius: 8px !important;
-    padding: 5px 12px !important;
-    font-size: 16px;
-    transition: background 0.12s;
-}
-.edit-btn:hover, .dots-menu:hover {
-    background: #f2f2f5 !important;
-    color: #1f2937 !important;
-}
-@media (max-width: 768px) {
-    .special-offer-card {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 14px;
-    }
-    .offer-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-    .filters.mb-4.card.p-4 {
-        padding: 1rem !important;
-    }
-}
+  .btn-icon{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%!important}
+  .btn-icon .bi{font-size:1.1rem;line-height:1}
+  .dropdown-menu .dropdown-item{padding:.5rem .75rem}
+  .dropdown-menu .bi{width:1.25rem;text-align:center}
+  .transition{transition:box-shadow .15s ease, background-color .15s ease, color .15s ease}
+  .hover-shadow-sm:hover{box-shadow:0 .5rem 1rem rgba(0,0,0,.06)!important}
 </style>
 @endpush

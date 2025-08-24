@@ -42,59 +42,33 @@
 
   @push('styles')
   <style>
-    .new-price {
-      color: #f45b5b; /* або #e53935 якщо хочеш трохи глибший червоний */
-      font-size: 1.75rem;
-      font-weight: bold;
-    }
-    .old-price {
-      color: #333;
-      font-size: 1.25rem;
-      position: relative;
-    }
-    .old-price::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 0;
-      width: 100%;
-      height: 1px;
-      background-color: #f45b5b; /* така ж червона риска */
-      transform: translateY(-50%);
-    }
+    .new-price { color:#f45b5b; font-size:1.75rem; font-weight:bold; }
+    .old-price { color:#333; font-size:1.25rem; position:relative; }
+    .old-price::after { content:''; position:absolute; top:50%; left:0; width:100%; height:1px; background-color:#f45b5b; transform:translateY(-50%); }
   </style>
-@endpush
-
+  @endpush
 
   @push('scripts')
   <script>
     window.productVariants = @json($product->variants);
     window.basePrice = {{ $product->price }};
-
     document.addEventListener('DOMContentLoaded', function () {
       const variants = window.productVariants;
       const basePrice = parseFloat(window.basePrice);
-
       const priceEl = document.getElementById('product-price');
       const oldPriceEl = document.getElementById('product-old-price');
       const sizeSelect = document.querySelector('select[name="size"]');
-
       if (!priceEl || !oldPriceEl || !sizeSelect) return;
-
       const formatPrice = (price) => {
         const num = parseFloat(price);
         return (num % 1 === 0 ? num.toFixed(0) : num.toFixed(2)) + ' грн';
       };
-
       sizeSelect.addEventListener('change', function () {
         const selectedSize = this.value;
         const match = variants.find(v => v.size === selectedSize);
-
         const newPrice = match?.price_override ?? basePrice;
         priceEl.textContent = formatPrice(newPrice);
-
         const oldPrice = parseFloat(match?.old_price ?? 0);
-
         if (oldPrice > 0) {
           oldPriceEl.textContent = formatPrice(oldPrice);
           oldPriceEl.classList.remove('d-none');
@@ -107,7 +81,60 @@
   </script>
   @endpush
 
-  <!-- Кнопка + Варіанти доставки -->
-  <div id="add-to-cart" data-product='@json($product)'></div>
+  @php
+    $currentLocale = app()->getLocale();
+
+    // Переклад продукту (для name+slug)
+    $tr = $product->translations->firstWhere('locale', $currentLocale)
+          ?? $product->translations->first();
+    $productSlug = $tr?->slug ?? (string)$product->id;
+
+    // Основна категорія (для categorySlug)
+    $category = $product->categories->first();
+    $catTr = $category?->translations->firstWhere('locale', $currentLocale)
+            ?? $category?->translations->first();
+    $categorySlug = $catTr?->slug ?? (string)($category?->id ?? '');
+
+    // Готовий URL: /{locale}/{categorySlug}/{productSlug} (без /product/)
+    $productUrl = $categorySlug
+      ? url($currentLocale . '/' . $categorySlug . '/' . $productSlug)
+      : url($currentLocale . '/product/' . $productSlug); // fallback на випадок відсутності категорії
+
+    $payload = [
+      'id'    => $product->id,
+      'slug'  => $productSlug,
+      'url'   => $productUrl,  // віддаємо готовий лінк
+      'price' => $product->price,
+      'name'  => $tr?->name ?? '—',
+      'images' => $product->images->map(fn($img) => [
+        'full_url' => asset(ltrim($img->url, '/')),
+      ])->values(),
+      'translations' => $product->translations->map(fn($t) => [
+        'locale' => $t->locale,
+        'name'   => $t->name,
+      ])->values(),
+      'variants' => $product->variants->map(fn($v) => [
+        'id'             => $v->id,
+        'size'           => $v->size,
+        'color'          => $v->color,
+        'price_override' => $v->price_override,
+        'old_price'      => $v->old_price ?? null,
+      ])->values(),
+    ];
+  @endphp
+
+  {{-- 🔎 попереджувальний банер, якщо не знайшли categorySlug --}}
+  @if (empty($categorySlug))
+    <div class="alert alert-warning my-2">
+      ⚠️ Для цього товару не знайдено <code>categorySlug</code>. Використано резервний шлях <code>/{{ $currentLocale }}/product/{{ $productSlug }}</code>.
+    </div>
+  @endif
+
+  <!-- Кнопка "У кошик" -->
+  <div class="mt-3">
+    <div id="add-to-cart" data-product='@json($payload)'></div>
+  </div>
+
+  <!-- Варіанти доставки -->
   @include('home.product-page.product-delivery', ['product' => $product])
 </div>

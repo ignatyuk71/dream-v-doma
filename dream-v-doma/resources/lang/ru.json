@@ -179,7 +179,9 @@
   "product.no_size_guide": "Таблица размеров отсутствует.",
   "product.length_cm": "Длина (см)",
 
-  "View all": "Смотреть все"
+  "category.view_all": "Смотреть все",
+  "pagination.previous": "Предыдущая",
+  "pagination.next": "Следующая"
 
   
 

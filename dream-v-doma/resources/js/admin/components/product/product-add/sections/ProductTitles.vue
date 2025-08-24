@@ -17,20 +17,6 @@
     </div>
 
     <div class="mb-3">
-      <label class="form-label">Slug (укр)</label>
-      <input type="text"
-             class="form-control"
-             :class="{ 'is-invalid': errors.slug_uk }"
-             name="slug_uk"
-             v-model="form.slug_uk"
-             @input="clearError('slug_uk')"
-      >
-      <div v-if="errors.slug_uk" class="invalid-feedback">
-        {{ errors.slug_uk }}
-      </div>
-    </div>
-
-    <div class="mb-3">
       <label class="form-label">Назва (рос)</label>
       <input type="text"
              class="form-control"
@@ -44,19 +30,6 @@
       </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Slug (рос)</label>
-      <input type="text"
-             class="form-control"
-             :class="{ 'is-invalid': errors.slug_ru }"
-             name="slug_ru"
-             v-model="form.slug_ru"
-             @input="clearError('slug_ru')"
-      >
-      <div v-if="errors.slug_ru" class="invalid-feedback">
-        {{ errors.slug_ru }}
-      </div>
-    </div>
   </div>
 </template>
 

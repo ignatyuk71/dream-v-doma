@@ -42,10 +42,28 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'uk|ru']], functio
     Route::get('/thank-you', fn () => view('thank-you'))->name('thank-you');
 
 
-    // 📂 Категорія (SEO-friendly, без "category" у URL)
-    Route::get('/{category}', [CategoryController::class, 'show'])->name('category.show');
-     // Товар (другим!)
-    Route::get('/{category}/{product}', [\App\Http\Controllers\ProductController::class, 'show'])->name('products.show');
+    // 1) Категорія з фільтрами (другий сегмент починається з rozmir-|kolir-|tsina-)
+    Route::get('/{category}/{filters}', [\App\Http\Controllers\CategoryController::class, 'show'])
+        ->where([
+            'category' => '[A-Za-z0-9\-_]+',
+            'filters'  => '(?:rozmir|kolir|tsina).+', // ← ключове обмеження
+        ])
+        ->name('category.filtered');
+
+    // 2) Товар (звичайний двосегментний URL категорія/продукт)
+    Route::get('/{category}/{product}', [\App\Http\Controllers\ProductController::class, 'show'])
+        ->where([
+            'category' => '[A-Za-z0-9\-_]+',
+            'product'  => '[A-Za-z0-9\-_]+',
+        ])
+        ->name('products.show');
+
+    // 3) Чиста категорія
+    Route::get('/{category}', [\App\Http\Controllers\CategoryController::class, 'show'])
+        ->where([
+            'category' => '[A-Za-z0-9\-_]+',
+        ])
+        ->name('category.show');
 
 });
 

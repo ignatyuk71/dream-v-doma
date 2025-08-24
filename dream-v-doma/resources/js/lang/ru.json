@@ -16,8 +16,8 @@
   "product_code": "Код товара",
   "shopping_cart": "Корзина",
   "cart_empty": "Корзина пуста",
-  "subtotal": "Итого",
-  "view_cart": "Посмотреть корзину",
+  "subtotal": "Итого по товарам",
+  "view_cart": "Перейти в корзину",
   "open_cart": "Корзина",
   "buy_more_to_free_shipping": "Добавьте ещё для бесплатной доставки:",
   "remove_from_cart": "Удалить из корзины",
@@ -29,6 +29,13 @@
   "added_to_cart": "добавлено в корзину",
   "continue_shopping": "Продолжить покупки",
   "checkout_cart": "Оформить заказ",
+
+  "policy": "Политика конфиденциальности",
+  "terms": "Пользовательское соглашение",
+  "pcs": "шт.",
+  "item_one": "товар",
+  "items": "товары",
+
   "checkout": {
     "breadcrumbs": {
       "home": "Главная",
@@ -44,6 +51,7 @@
       "placeholder_last_name": "Ваша фамилия",
       "placeholder_email": "email@example.com"
     },
+
     "delivery": {
       "title": "Новая Почта",
       "label": "—",
@@ -64,27 +72,46 @@
       "loading_cities": "Загрузка городов...",
       "loading_warehouses": "Загрузка отделений..."
     },
+
     "payment": {
       "label": "Способ оплаты",
       "card": "💳 Оплата картой онлайн (скоро)",
       "cod": "💵 Оплата при получении",
       "invoice": "🧾 Оплата по реквизитам (на счёт ФЛП или карту)",
-      "cod_note": "К оплате включена стоимость товара — {subtotal} грн, доставка — {deliveryCost} грн, плюс комиссия за наложенный платёж {codFee} грн.",
-      "invoice_note": "Вам будет выслан счёт на оплату товара — {subtotal} грн. На почте вы оплачиваете только доставку — {deliveryCost} грн."
+      "cod_note": "К оплате включена стоимость товаров — {subtotal} грн, доставка — {deliveryCost} грн, плюс комиссия за наложенный платёж {codFee} грн.",
+      "invoice_note": "Вам будет отправлен счёт на оплату товаров — {subtotal} грн. На почте вы оплачиваете только доставку — {deliveryCost} грн."
     },
+
     "order": {
-      "button": "Оформить заказ",
-      "summary_title": "Мой заказ",
-      "quantity": "x{quantity}",
+      "size": "Размер",
+      "quantity": "Количество: {quantity}",
       "amount": "Сумма",
       "delivery": "Доставка ({label})",
-      "cod_fee": "* Комиссия за наложенный платёж: {codFee} грн",
+      "cod_fee": "Комиссия за наложенный платёж: {codFee}",
+      "cod_fee_short": "Комиссия наложенного платежа:",
       "bonuses": "Бонусы",
-      "promo_code_label": "У меня есть промокод",
-      "promo_placeholder": "Промокод",
+      "promo_code_label": "Использовать промокод",
+      "promo_placeholder": "Введите промокод",
       "promo_button": "Применить",
-      "total": "К оплате"
+      "promo_title": "Промокоды",
+      "promo_add": "Добавить",
+      "promo_applied": "Промокод применён",
+      "total": "Итого",
+      "summary_title": "Ваш заказ",
+      "order_title": "Заказ",
+      "on_amount": "на сумму:",
+      "by_carrier": "по тарифам перевозчика",
+      "edit_items": "Редактировать товары",
+      "terms_hint": "Подтверждая заказ, я принимаю условия:",
+      "button": "Подтвердить заказ",
+
+      "item_one": "товар",
+      "item_few": "товара",
+      "free_shipping_msg": "Поздравляем! Ваш заказ соответствует условиям бесплатной доставки.",
+      "item_many": "товаров",
+      "free": "БЕСПЛАТНО"
     },
+
     "validation": {
       "required_field": "{field} обязательно для заполнения",
       "required": "обязательное поле",
@@ -95,13 +122,11 @@
       "select_warehouse": "Выберите отделение или почтомат"
     }
   },
+
   "instagram.title": "Наш Instagram",
   "instagram.subtitle": "Делимся атмосферой, которую создаём каждый день",
-  "recommended_products": "Рекомендованные товары",
-  "product.description": "Описание",
-  "product.delivery_and_returns": "Доставка и возврат",
-  "product.reviews": "Отзывы",
-  "product.characteristics": "Характеристики",
+  "recommended_products": "Рекомендуемые товары",
+
   "review": {
     "leave_a_review": "Оставить отзыв",
     "your_name": "Ваше имя",
@@ -113,7 +138,7 @@
     "review_text_required": "Напишите ваш отзыв!",
     "photo": "Фото (1 изображение)",
     "photo_note": "Можно загрузить только одно изображение.",
-    "cancel": "Отменить",
+    "cancel": "Отмена",
     "submit": "Отправить отзыв",
     "overall_rating": "Средняя оценка",
     "reviews_count": "{{count}} отзывов",
@@ -122,6 +147,7 @@
     "modal_close": "Закрыть",
     "review_unavailable": "Описание недоступно"
   },
+
   "specs": {
     "title": "Характеристики",
     "fields": {
@@ -131,5 +157,52 @@
       "material": "Материал",
       "sole": "Подошва"
     }
-  }
+  },
+
+  "product.description": "Описание",
+  "product.delivery_and_returns": "Доставка и возврат",
+  "product.reviews": "Отзывы",
+  "product.characteristics": "Характеристики",
+
+  "product.code": "Код товара",
+  "product.available": "В наличии",
+  "product.review_singular": "отзыв",
+  "product.review_few": "отзыва",
+  "product.review_many": "отзывов",
+
+  "product.color": "Цвет",
+  "product.size": "Размер",
+  "product.size_guide": "Таблица размеров",
+  "product.choose_size": "Выберите размер",
+
+  "product.expect_order_between": "Ожидайте заказ в период",
+  "product.free_shipping_note": "Бесплатная доставка и возврат:",
+  "product.free_shipping_limit": "Для всех заказов от 1000 грн",
+
+  "product.featured_section_title": "Рекомендованные товары",
+  "product.best_sellers": "Хиты продаж",
+  "product.new_arrivals": "Новинки",
+  "product.sale_items": "Распродажа",
+  "product.top_rated": "Лучшие оценки",
+
+  "product.no_size_guide": "Размерная сетка отсутствует.",
+  "product.length_cm": "Длина (см)",
+
+  "category.view_all": "Смотреть все позиции",
+  "pagination.previous": "Назад",
+  "pagination.next": "Вперёд",
+  "Фільтри та сортування": "Фильтры и сортировка",
+  "Показати фільтри": "Показать фильтры",
+  "Фільтри не застосовано": "Фильтры не применены",
+  "Очистити всі": "Очистить все",
+
+  "Ціна": "Цена",
+  "Без обмежень": "Без ограничений",
+  "Розмір": "Размер",
+  "Колір": "Цвет",
+
+  "Каталог": "Каталог",
+  "Головна": "Главная",
+  "Знайдено": "Найдено",
+  "товарів": "товаров"
 }

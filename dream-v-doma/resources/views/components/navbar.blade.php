@@ -20,6 +20,13 @@
         padding-right: 8px !important;
       }
     }
+
+    /* стилі підкатегорій у мобільному меню */
+    .mobile-subcat a.nav-link {
+      font-weight: 400;
+      font-size: 0.95rem;
+      padding-left: 1.25rem;
+    }
   </style>
 @endpush
 
@@ -53,8 +60,8 @@
         <i class="ci-heart animate-target"></i>
         <span class="visually-hidden">Wishlist</span>
       </a>
-      <!-- Cart button -->
-      <cart-items></cart-items>
+      <!-- Cart button (Vue mount point) -->
+      <div data-component="cart-button"></div>
     </div>
   </div>
 
@@ -69,20 +76,75 @@
       <div class="offcanvas-body pt-1 pb-3 py-lg-0">
         <div class="container pb-lg-2 px-0 px-lg-3">
           <div class="position-relative d-lg-flex align-items-center justify-content-between">
-            <!-- Language switcher (якщо є) -->
+
+            <!-- Language switcher -->
             <div class="dropdown pb-lg-2">
-              <language-switcher
-                :product='@json($product ?? null)'
-                :category='@json($category ?? null)'>
-              </language-switcher>
+              <div data-component="language-switcher"
+                   data-props='@json([
+                      "product" => $product ?? null,
+                      "category" => $category ?? null
+                   ])'>
+              </div>
             </div>
 
-            <!-- Navbar nav (динаміка з бази) -->
-            <ul class="navbar-nav position-relative me-xl-n5">
+            <!-- ===== МОБІЛЬНЕ МЕНЮ: просто всі категорії ===== -->
+            <ul class="navbar-nav d-lg-none">
+              @foreach($menuCategories as $category)
+                @php $cid = 'mcat-'.$loop->index; @endphp
+
+                <li class="nav-item border-bottom">
+                  @if(!empty($category['children']) && count($category['children']))
+                    <!-- Батьківська категорія: лише відкриває підкатегорії -->
+                    <button
+                      class="nav-link w-100 text-start fw-semibold py-3 d-flex align-items-center justify-content-between"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#{{ $cid }}"
+                      aria-expanded="false"
+                      aria-controls="{{ $cid }}"
+                    >
+                      <span>{{ $category['name'] }}</span>
+                      <i class="ci-chevron-down ms-2"></i>
+                    </button>
+
+                    <div class="collapse" id="{{ $cid }}">
+                      <ul class="nav flex-column border-start ps-3 ms-3 mb-2">
+                        @foreach($category['children'] as $child)
+                          <li class="nav-item">
+                            <a class="nav-link py-2" href="{{ url($locale.'/'.$child['slug']) }}">
+                              {{ $child['name'] }}
+                            </a>
+                          </li>
+                        @endforeach
+                      </ul>
+                    </div>
+                  @else
+                    <!-- Категорія без підкатегорій: звичайне посилання -->
+                    <a class="nav-link fw-semibold py-3 d-block" href="{{ url($locale.'/'.$category['slug']) }}">
+                      {{ $category['name'] }}
+                    </a>
+                  @endif
+                </li>
+              @endforeach
+
+              {{-- Інформ. сторінки --}}
+              @isset($pages)
+                @foreach($pages as $page)
+                  <li class="nav-item border-bottom">
+                    <a class="nav-link py-3 d-block" href="{{ url($locale.'/page/'.$page['slug']) }}">
+                      {{ $page['title'] }}
+                    </a>
+                  </li>
+                @endforeach
+              @endisset
+            </ul>
+
+            <!-- ===== ДЕСКТОПНЕ МЕНЮ: як було (НЕ чіпав) ===== -->
+            <ul class="navbar-nav position-relative me-xl-n5 d-none d-lg-flex">
               @foreach($menuCategories as $category)
                 <li class="nav-item dropdown pb-lg-2 me-lg-n1 me-xl-0">
                   @if($category['children'] && count($category['children']))
-                    <a class="nav-link dropdown-toggle"  role="button" data-bs-toggle="dropdown" data-bs-trigger="hover" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" data-bs-trigger="hover" aria-expanded="false">
                       {{ $category['name'] }}
                     </a>
                     <div class="dropdown-menu p-4" style="--cz-dropdown-spacer: .75rem">
@@ -110,7 +172,7 @@
                 </li>
               @endforeach
 
-              {{-- Інформ. сторінки, якщо потрібно --}}
+              {{-- Інформ. сторінки --}}
               @isset($pages)
                 @foreach($pages as $page)
                   <li class="nav-item pb-lg-2 me-lg-n2 me-xl-0">
@@ -122,7 +184,7 @@
               @endisset
             </ul>
 
-            <!-- Search toggle -->
+            <!-- Search toggle (desktop only) -->
             <button type="button" class="btn btn-outline-secondary justify-content-start w-100 px-3 mb-lg-2 ms-3 d-none d-lg-inline-flex" style="max-width: 240px" data-bs-toggle="offcanvas" data-bs-target="#searchBox" aria-controls="searchBox">
               <i class="ci-search fs-base ms-n1 me-2"></i>
               <span class="text-body-tertiary fw-normal">{{ __('Пошук') }}</span>
@@ -131,7 +193,7 @@
         </div>
       </div>
 
-      <!-- Account & Wishlist (mobile) -->
+      <!-- Account & Wishlist (mobile only) -->
       <div class="offcanvas-header border-top px-0 py-3 mt-3 d-md-none">
         <div class="nav nav-justified w-100">
           <a class="nav-link border-end" href="">

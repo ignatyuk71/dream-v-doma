@@ -1,121 +1,198 @@
-<nav id="sidebarMenu" class="sidebar d-lg-block bg-gray-800 text-white collapse" data-simplebar>
-  <div class="sidebar-inner px-2 pt-3">
-    <ul class="nav flex-column pt-3 pt-md-0">
-      <li class="nav-item">
-        <a href="/dashboard" class="nav-link d-flex align-items-center">
-          <span class="sidebar-icon me-3">
-            <img src="/assets/img/brand/light.svg" height="20" width="20" alt="Volt Logo">
-          </span>
-          <span class="mt-1 ms-1 sidebar-text">
-            Volt Laravel
-          </span>
-        </a>
-      </li>
-      <li class="nav-item {{ Request::segment(1) == 'dashboard' ? 'active' : '' }}">
-        <a href="/dashboard" class="nav-link">
-          <span class="sidebar-icon"> <svg class="icon icon-xs me-2" fill="currentColor" viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
-              <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
-            </svg></span></span>
-          <span class="sidebar-text">Dashboard</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <span class="nav-link collapsed d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-          data-bs-target="#submenu-laravel" aria-expanded="true">
-          <span>
-            <span class="sidebar-icon"><i class="fab fa-laravel me-2" style="color: #fb503b;"></i></span>
-            <span class="sidebar-text" style="color: #fb503b;">🛍️ Товари та послуги</span>
-          </span>
-          <span class="link-arrow"><svg class="icon icon-sm" fill="currentColor" viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg">
-              <path fill-rule="evenodd"
-                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                clip-rule="evenodd"></path>
-            </svg></span>
-        </span>
-        <div class="multi-level collapse show" role="list" id="submenu-laravel" aria-expanded="false">
-          <ul class="flex-column nav">
-            <li class="nav-item {{ Request::segment(1) == 'profile' ? 'active' : '' }}">
-              <a href="{{ route('admin.products.index') }}" class="nav-link">
-                <span class="sidebar-text">Позиції </span>
-              </a>
-            </li>
-            <li class="nav-item {{ Request::segment(1) == 'users' ? 'active' : '' }}">
-              <a href="{{ route('admin.categories.index') }}" class="nav-link">
-                <span class="sidebar-text">Категорії	</span>
-              </a>
-            </li>
-            
-            <li class="nav-item {{ Request::segment(1) == 'users' ? 'active' : '' }}">
-              <a href="{{ route('admin.categories.index') }}" class="nav-link">
-                <span class="sidebar-text">Акції та промокоди		</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </li>
-      <li class="nav-item {{ Request::segment(1) == 'transactions' ? 'active' : '' }}">
-        <a href="/transactions" class="nav-link">
-          <span class="sidebar-icon"><svg class="icon icon-xs me-2" fill="currentColor" viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path>
-              <path fill-rule="evenodd"
-                d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"
-                clip-rule="evenodd"></path>
-            </svg></span>
-          <span class="sidebar-text">Замовлення</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <span class="nav-link collapsed d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-          data-bs-target="#submenu-pages">
-          <span>
-            <span class="sidebar-icon"><svg class="icon icon-xs me-2" fill="currentColor" viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg">
-                <path fill-rule="evenodd"
-                  d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z"
-                  clip-rule="evenodd"></path>
-                <path d="M15 7h1a2 2 0 012 2v5.5a1.5 1.5 0 01-3 0V7z"></path>
-              </svg></span>
-            <span class="sidebar-text">Page examples</span>
-          </span>
-          <span class="link-arrow"><svg class="icon icon-sm" fill="currentColor" viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg">
-              <path fill-rule="evenodd"
-                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                clip-rule="evenodd"></path>
-            </svg></span>
-        </span>
-        <div class="multi-level collapse" role="list" id="submenu-pages" aria-expanded="false">
-          <ul class="flex-column nav">
-            <li class="nav-item">
-              <a class="nav-link" href="1">
-                <span class="sidebar-text">Відгуки</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="1">
-                <span class="sidebar-text">Клієнти	</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="1">
-                <span class="sidebar-text">1111</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="1">
-                <span class="sidebar-text">11111</span>
-              </a>
-            </li>
-            
-          </ul>
-        </div>
-      </li>
+<!-- Menu -->
+@php
+  $isDashboard  = request()->routeIs('admin.dashboard');
 
-      
-    </ul>
+  $isProducts   = request()->routeIs('admin.products.*');
+  $isCategories = request()->routeIs('admin.categories.*');
+  $isProductsGrp= $isProducts || $isCategories;
+
+  $isOrders     = request()->routeIs('admin.orders.*');
+  $isCustomers  = request()->routeIs('admin.customers.*');
+
+  $isBannersInsta = request()->routeIs('admin.instagram-posts.*');
+  $isBannersMain  = request()->routeIs('admin.banners.*');
+  $isSpecial      = request()->routeIs('admin.special_offers.*');
+  $isBannersGrp   = $isBannersInsta || $isBannersMain || $isSpecial;
+
+  $isReviews   = request()->routeIs('admin.reviews.*');
+  $isSettings  = request()->routeIs('admin.settings.*');
+  $isMail      = request()->routeIs('admin.mail.*');
+  $isChat      = request()->routeIs('admin.chat.*');
+  $isUsers     = request()->routeIs('admin.users.*');
+@endphp
+
+<aside id="layout-menu" class="layout-menu menu-vertical menu">
+  <div class="app-brand demo">
+    <a href="{{ route('admin.dashboard') }}" class="app-brand-link">
+      <span class="app-brand-logo demo">
+        <span class="text-primary">
+          <!-- SVG як у демо -->
+          <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M0.00172773 0V6.85398C0.00172773 6.85398 -0.133178 9.01207 1.98092 10.8388L13.6912 21.9964L19.7809 21.9181L18.8042 9.88248L16.4951 7.17289L9.23799 0H0.00172773Z" fill="currentColor"/>
+            <path opacity="0.06" fill-rule="evenodd" clip-rule="evenodd" d="M7.69824 16.4364L12.5199 3.23696L16.5541 7.25596L7.69824 16.4364Z" fill="#161616"/>
+            <path opacity="0.06" fill-rule="evenodd" clip-rule="evenodd" d="M8.07751 15.9175L13.9419 4.63989L16.5849 7.28475L8.07751 15.9175Z" fill="#161616"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M7.77295 16.3566L23.6563 0H32V6.88383C32 6.88383 31.8262 9.17836 30.6591 10.4057L19.7824 22H13.6938L7.77295 16.3566Z" fill="currentColor"/>
+          </svg>
+        </span>
+      </span>
+      <span class="app-brand-text demo menu-text fw-bold ms-2">DREAM V DOMA</span>
+    </a>
+
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+      <i class="icon-base ti menu-toggle-icon d-none d-xl-block"></i>
+      <i class="icon-base ti tabler-x d-block d-xl-none"></i>
+    </a>
   </div>
-</nav>
+
+  <div class="menu-inner-shadow"></div>
+
+  <ul class="menu-inner py-1">
+
+    <!-- Головна -->
+    <li class="menu-item {{ $isDashboard ? 'active' : '' }}">
+      <a href="{{ route('admin.dashboard') }}" class="menu-link">
+        <i class="menu-icon icon-base ti tabler-smart-home"></i>
+        <div data-i18n="Dashboard">Головна</div>
+      </a>
+    </li>
+
+    <!-- Товари -->
+    <li class="menu-item {{ $isProductsGrp ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon icon-base ti tabler-shopping-cart"></i>
+        <div data-i18n="Products">Товари</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('admin.products.index') ? 'active' : '' }}">
+          <a href="{{ route('admin.products.index') }}" class="menu-link">
+            <div data-i18n="Product List">Список</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('admin.products.create') ? 'active' : '' }}">
+          <a href="{{ route('admin.products.create') }}" class="menu-link">
+            <div data-i18n="Add Product">Додати</div>
+          </a>
+        </li>
+        <li class="menu-item {{ $isCategories ? 'active' : '' }}">
+          <a href="{{ route('admin.categories.index') }}" class="menu-link">
+            <div data-i18n="Category List">Категорії</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
+    <!-- Замовлення -->
+    <li class="menu-item {{ $isOrders ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon icon-base ti tabler-file-dollar"></i>
+        <div data-i18n="Orders">Замовлення</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('admin.orders.index') ? 'active' : '' }}">
+          <a href="" class="menu-link">
+            <div data-i18n="Order List">Список</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('admin.orders.show') ? 'active' : '' }}">
+          <a href="" class="menu-link">
+            <div data-i18n="Order Details">Деталі</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+    
+    <li class="menu-item {{ $isChat ? 'active' : '' }}">
+      <a href="" class="menu-link">
+        <i class="menu-icon icon-base ti tabler-message-circle"></i>
+        <div data-i18n="Chat">Чат</div>
+      </a>
+    </li>
+
+
+    <!-- Банери -->
+    <li class="menu-item {{ $isBannersGrp ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+      <i class="bi bi-image me-2"></i> 
+        <div data-i18n="Banners">Банери</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ $isBannersInsta ? 'active' : '' }}">
+          <a href="{{ route('admin.instagram-posts.index') }}" class="menu-link">
+            <div data-i18n="Instagram Posts">Inst-пости</div>
+          </a>
+        </li>
+        <li class="menu-item {{ $isBannersMain ? 'active' : '' }}">
+          <a href="{{ route('admin.banners.index') }}" class="menu-link">
+            <div data-i18n="Home Banner">Банер головна</div>
+          </a>
+        </li>
+        <li class="menu-item {{ $isSpecial ? 'active' : '' }}">
+          <a href="{{ route('admin.special_offers.index') }}" class="menu-link">
+            <div data-i18n="Special Offers">Акційні банери</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
+    <!-- Окремі пункти -->
+    <li class="menu-item {{ $isReviews ? 'active' : '' }}">
+      <a href="" class="menu-link">
+        <i class="menu-icon icon-base ti tabler-messages"></i>
+        <div data-i18n="Reviews">Відгуки</div>
+      </a>
+    </li>
+
+    <li class="menu-item {{ $isSettings ? 'active' : '' }}">
+      <a href="" class="menu-link">
+        <i class="menu-icon icon-base ti tabler-settings"></i>
+        <div data-i18n="Settings">Налаштування</div>
+      </a>
+    </li>
+
+
+        <!-- Клієнти -->
+    <li class="menu-item {{ $isCustomers ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon icon-base ti tabler-users"></i>
+        <div data-i18n="Customers">Клієнти</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('admin.customers.index') ? 'active' : '' }}">
+          <a href="" class="menu-link">
+            <div data-i18n="All Customers">Список</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('admin.customers.show') ? 'active' : '' }}">
+          <a href="" class="menu-link">
+            <div data-i18n="Profile">Профіль</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
+    <li class="menu-item {{ $isMail ? 'active' : '' }}">
+      <a href="" class="menu-link">
+        <i class="menu-icon icon-base ti tabler-mail"></i>
+        <div data-i18n="Mail">Пошта</div>
+      </a>
+    </li>
+
+
+
+    <li class="menu-item {{ $isUsers ? 'active' : '' }}">
+      <a href="" class="menu-link">
+        <i class="menu-icon icon-base ti tabler-user"></i>
+        <div data-i18n="Users">Користувачі</div>
+      </a>
+    </li>
+
+  </ul>
+</aside>
+
+<div class="menu-mobile-toggler d-xl-none rounded-1">
+  <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large text-bg-secondary p-2 rounded-1">
+    <i class="ti tabler-menu icon-base"></i>
+    <i class="ti tabler-chevron-right icon-base"></i>
+  </a>
+</div>
+<!-- / Menu -->

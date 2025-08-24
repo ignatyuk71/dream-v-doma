@@ -1,90 +1,93 @@
 <template>
-  <div class="filters mb-4 card" style="border-radius:5px;">
-    <table class="table align-middle">
-      <thead>
-        <tr>
-          <th><input type="checkbox" /></th>
-          <th>Product</th>
-          <th>Category</th>
-          <th>Stock</th>
-          <th>SKU</th>
-          <th>Price</th>
-          <th>Qty</th>
-          <th>Status</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(product, idx) in products" :key="product.id">
-          <td><input type="checkbox" /></td>
-          <td>
-            <div class="d-flex align-items-center">
-              <img :src="product.image" class="avatar" />
-              <div>
-                <div class="product-name">{{ product.name }}</div>
-                <div class="product-sub">{{ product.brand }}</div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <span class="d-flex align-items-center">
-              <i class="bi bi-headphones me-2 text-danger"></i>{{ product.category_name }}
-            </span>
-          </td>
-          <td>
-            <div
-              :class="['toggle-switch', { active: product.status == 1 }]"
-              @click="toggleStatus(product)"
-              style="cursor: pointer;"
-              title="Змінити статус"
-            ></div>
-          </td>
-          <td>{{ product.sku }}</td>
-          <td>{{ product.price }}</td>
-          <td>{{ product.qty }}</td>
-          <td>
-            <span :class="['status-badge', statusClass(product.status)]">
-              {{ statusLabel(product.status) }}
-            </span>
-          </td>
-          <td class="actions-cell">
-            <a
-              :href="`/admin/products/${product.id}/edit`"
-              class="edit-btn text-dark"
-              title="Редагувати"
-            >
-              <i class="bi bi-pencil-square"></i>
-            </a>
-            <button
-              class="dots-menu"
-              @click="openMenu(idx)"
-              type="button"
-              title="Ще дії"
-            >
-              <i class="bi bi-three-dots-vertical"></i>
-            </button>
-            <div
-              v-if="menuOpen === idx"
-              class="dropdown-menu show"
-              @mouseleave="closeMenu"
-            >
-              <a class="dropdown-item" @click.prevent="download(product)">
-                <i class="bi bi-download me-2"></i> Download
-              </a>
-              <a
-                class="dropdown-item text-danger"
-                @click.prevent="deleteProduct(product)"
-              >
-                <i class="bi bi-trash me-2"></i> Delete
-              </a>
-              <a class="dropdown-item" @click.prevent="duplicate(product)">
-                <i class="bi bi-files me-2"></i> Duplicate
-              </a>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th><input type="checkbox" /></th>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Stock</th>
+              <th>SKU</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(product, idx) in products" :key="product.id">
+              <td><input type="checkbox" /></td>
+
+              <!-- Product -->
+              <td>
+                <div class="d-flex align-items-center">
+                  <img :src="product.image" class="avatar me-3"/>
+                  <div class="min-w-0">
+                    <div class="fw-medium text-truncate">{{ product.name }}</div>
+                    <small class="text-muted text-truncate">{{ product.brand }}</small>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Category -->
+              <td>{{ product.category_name }}</td>
+
+              <!-- Stock (toggle) -->
+              <td>
+                <div
+                  :class="['toggle-switch', { active: product.status == 1 }]"
+                  @click="toggleStatus(product)"
+                  title="Змінити статус"
+                ></div>
+              </td>
+
+              <!-- SKU -->
+              <td>{{ product.sku }}</td>
+
+              <!-- Price -->
+              <td>{{ product.price }}</td>
+
+              <!-- Qty -->
+              <td>{{ product.qty }}</td>
+
+              <!-- Status -->
+              <td>
+                <span :class="['badge', statusClass(product.status)]">
+                  {{ statusLabel(product.status) }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-end">
+                <div class="dropdown">
+                  <button
+                    type="button"
+                    class="btn p-0 dropdown-toggle hide-arrow"
+                    data-bs-toggle="dropdown"
+                  >
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-end">
+                    <a class="dropdown-item" :href="`/admin/products/${product.id}/edit`">
+                      <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                    <a class="dropdown-item" href="javascript:void(0);" @click.prevent="duplicate(product)">
+                      <i class="bi bi-files me-1"></i> Duplicate
+                    </a>
+                    <hr class="dropdown-divider"/>
+                    <a class="dropdown-item text-danger" href="javascript:void(0);" @click.prevent="deleteProduct(product)">
+                      <i class="bi bi-trash me-1"></i> Delete
+                    </a>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -175,18 +178,10 @@ export default {
 
 
   
-<style scoped>/* Таблиця */
-.dropdown-menu.show {
-  position: fixed !important;
-  top: auto !important;
-  bottom: auto !important;
+<style scoped>
 
-  z-index: 2000 !important;
-  max-height: none !important;
-  overflow: visible !important;
-  transform: translate(calc(100% - 180px), 90px) !important; /* зміщення вправо і вниз */
-}
-  .toggle-switch {
+
+.toggle-switch {
   width: 38px;
   height: 20px;
   background-color: #e5e7eb;
@@ -205,70 +200,28 @@ export default {
   left: 2px;
   transition: all 0.3s ease;
 }
-.toggle-switch.active {
-  background-color: #22c55e;
-}
+
 .toggle-switch.active::before {
   transform: translateX(18px);
 }
-
-  .table {
-    width: 100%;
-    border-collapse: collapse; /* Щоб лінії були суцільні */
-    background-color: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(17, 38, 146, 0.05);
-  }
   
-  .table th,
-  .table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #e4e6f1;
-    vertical-align: middle;
-    font-size: 14px;
-    color: #374151;
-  }
-  
-  .table th {
+Ї.table th {
     color: #6b7280;
     font-weight: 600;
     text-transform: uppercase;
     background: #f9fafb;
   }
-  
-  .table tbody tr:last-child td {
-    border-bottom: none; /* Прибрати лінію у останнього рядка */
-  }
+
   
   /* Аватар */
   .avatar {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 8px;
     object-fit: cover;
     margin-right: 12px;
   }
-  
-  /* Ім'я товару */
-  .product-name {
-    font-weight: 600;
-    color: #111827;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 300px;
-  }
-  
-  /* Підназва */
-  .product-sub {
-    font-size: 13px;
-    color: #6b7280;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 300px;
-  }
+
   
   /* Статус */
   .status-badge {
@@ -295,30 +248,7 @@ export default {
     color: #ef4444;
   }
   
-  /* Перемикач статусу */
-  .toggle-switch {
-    width: 38px;
-    height: 20px;
-    background-color: #e5e7eb;
-    border-radius: 999px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-  }
-  
-  .toggle-switch::before {
-    content: '';
-    width: 16px;
-    height: 16px;
-    background-color: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
+
   
   .toggle-switch.active {
     background-color: #6366f1;
@@ -328,98 +258,6 @@ export default {
     transform: translateX(18px);
   }
   
-  /* Колонки дій */
-  .actions-cell {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    position: relative;
-    min-width: 140px;
-  }
-  
-  /* Кнопка редагування */
-  .edit-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    transition: background 0.15s;
-    color: #374151;
-  }
-  
-  .edit-btn:hover {
-    background: #f2f2f5;
-    color: #1f2937;
-  }
-  
-  /* Кнопка меню */
-  .dots-menu {
-    border: none;
-    background: #f2f2f5;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    padding: 0;
-    cursor: pointer;
-    transition: background 0.2s;
-    color: #374151;
-    box-shadow: none !important;
-  }
-  
-  .dots-menu:hover,
-  .dots-menu:focus {
-    background: #ebebfa;
-    color: #6366f1;
-    outline: none;
-  }
-  
-  /* Випадаюче меню */
-  .dropdown-menu.show {
-    display: block;
-    min-width: 180px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 16px rgba(40, 50, 130, 0.12);
-    padding: 0.5rem 0;
-    margin-top: 6px;
-    position: absolute;
-    right: 0;
-    top: 42px;
-    z-index: 20;
-  }
-  
-  /* Пункти меню */
-  .dropdown-item {
-    padding: 10px 22px;
-    font-size: 15px;
-    color: #232335;
-    background: none;
-    border: none;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    transition: background 0.15s;
-  }
-  
-  .dropdown-item:hover {
-    background: #f6f6fa;
-  }
-  
-  .dropdown-item.text-danger {
-    color: #d62424;
-  }
   
   </style>
   

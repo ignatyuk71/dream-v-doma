@@ -1,6 +1,6 @@
 @php
     $images = $product->images;
-    $hasMultiple = $images->count() >= 4;
+    $hasMultiple = $images->count() >= 3;
 
     $mainSwiperOptions = json_encode([
         'loop' => $hasMultiple,
@@ -16,7 +16,7 @@
     $thumbsSwiperOptions = json_encode([
         'loop' => $hasMultiple,
         'spaceBetween' => 12,
-        'slidesPerView' => 4,
+        'slidesPerView' => 2,
         'watchSlidesProgress' => true,
         'breakpoints' => [
             340 => ['slidesPerView' => 4],

@@ -1,4 +1,4 @@
-@extends('admin.layouts.app')
+@extends('admin.layouts.vuexy')
 
 @section('content')
 <div id="category-add-app">

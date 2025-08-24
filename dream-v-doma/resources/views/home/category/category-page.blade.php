@@ -24,50 +24,67 @@
           <div class="position-relative d-flex flex-column flex-sm-row align-items-center h-100 rounded-5 overflow-hidden px-5 px-sm-0 pe-sm-4">
             <span class="position-absolute top-0 start-0 w-100 h-100 d-none-dark rtl-flip" style="background: linear-gradient(90deg, #accbee 0%, #e7f0fd 100%)"></span>
             <div class="position-relative z-1 text-center text-sm-start pt-4 pt-sm-0 ps-xl-4 mt-2 mt-sm-0 order-sm-2">
-              <h2 class="h3 mb-2">iPhone 14</h2>
-              <p class="fs-sm text-light-emphasis mb-sm-4">Apple iPhone 14 128GB Blue</p>
-              <a class="btn btn-primary" href="#">From $899 <i class="ci-arrow-up-right fs-base ms-1 me-n1"></i></a>
+              <h2 class="h3 mb-2">Домашні тапочки</h2>
+              <p class="fs-sm text-light-emphasis mb-sm-4">Теплі й стильні. Встигни замовити!</p>
+              <a class="btn btn-primary" href="#">Лише 370 грн<i class="ci-arrow-up-right fs-base ms-1 me-n1"></i></a>
             </div>
             <div class="position-relative z-1 w-100 align-self-end order-sm-1" style="max-width: 416px">
               <div class="ratio rtl-flip" style="--cz-aspect-ratio: calc(320 / 416 * 100%)">
-                <img src="/assets/img/shop/electronics/banners/iphone-1.png" alt="iPhone 14">
+                <img src="/assets/img/shop/electronics/banners/baner_tapki-1.png" alt="домашні тапочки">
               </div>
             </div>
           </div>
         </div>
         <!-- iPad banner -->
+
+
+
         <div class="col-md-5">
-          <div class="position-relative d-flex flex-column align-items-center justify-content-between h-100 rounded-5 overflow-hidden pt-3">
-            <span class="position-absolute top-0 start-0 w-100 h-100 d-none-dark rtl-flip" style="background: linear-gradient(90deg, #fdcbf1 0%, #fdcbf1 1%, #ffecfa 100%)"></span>
-            <div class="position-relative z-1 text-center pt-3 mx-4">
-              <i class="ci-apple text-body-emphasis fs-3 mb-3"></i>
-              <p class="fs-sm text-light-emphasis mb-1">Deal of the week</p>
-              <h2 class="h3 mb-4">iPad Pro M1</h2>
-            </div>
-            <a class="position-relative z-1 d-block w-100" href="#">
-              <div class="ratio" style="--cz-aspect-ratio: calc(159 / 525 * 100%)">
-                <img src="/assets/img/shop/electronics/banners/ipad.png" width="525" alt="iPad">
-              </div>
-            </a>
-          </div>
-        </div>
+  <div class="position-relative d-flex flex-column align-items-center justify-content-between h-100 rounded-5 overflow-hidden pt-3">
+    <span class="position-absolute top-0 start-0 w-100 h-100 d-none-dark rtl-flip"
+          style="background: linear-gradient(90deg, #fdcbf1 0%, #fdcbf1 1%, #ffecfa 100%)"></span>
+
+    <div class="position-relative z-1 text-center mx-4">
+      <i class="ci-3 text-body-emphasis fs-3 mb-3"></i>
+      <p class="fs-sm text-light-emphasis mb-1">М’якість, на яку ваші малята заслуговують</p>
+      <h2 class="h3 mb-4">👶 Новинка</h2>
+    </div>
+
+    <!-- Контейнер з обрізанням -->
+    <div class="position-relative z-1 d-block w-100 text-center overflow-hidden" style="height: 190px;">
+      <img src="/assets/img/shop/electronics/banners/photo-output11.png"
+           alt="Домашні дитячі тапочки"
+           class="w-100 h-100"
+           style="object-fit: cover;">
+    </div>
+  </div>
+</div>
+
+
       </div>
     </section>
 
-    <!-- Mobile banner -->
-    <section class="container pb-4 d-block d-md-none">
-      <div class="position-relative d-flex flex-column align-items-center h-100 rounded-5 overflow-hidden px-4">
-        <span class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(90deg, #accbee 0%, #e7f0fd 100%)"></span>
-        <div class="position-relative z-1 text-center pt-4">
-          <h2 class="h4 mb-2">iPhone 14</h2>
-        </div>
-        <div class="position-relative z-1 w-100" style="max-width: 280px">
-          <div class="ratio" style="--cz-aspect-ratio: calc(320 / 416 * 100%)">
-            <img src="/assets/img/shop/electronics/banners/iphone-1.png" alt="iPhone 14">
-          </div>
-        </div>
+  <!-- Mobile banner -->
+<section class="container pb-4 d-block d-md-none">
+  <div class="position-relative d-flex flex-column align-items-center h-100 rounded-5 overflow-hidden px-4">
+    <span class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(90deg, #accbee 0%, #e7f0fd 100%)"></span>
+
+    <div class="position-relative z-1 text-center pt-4">
+      <h2 class="h4 mb-2">Домашні тапочки</h2>
+      <p class="fs-sm text-light-emphasis mb-sm-4">Теплі й стильні. Встигни замовити!</p>
+    </div>
+
+    <div class="position-relative z-1 w-100 text-center" style="max-width: 280px">
+      <div class="ratio overflow-hidden rounded-4" style="--cz-aspect-ratio: calc(320 / 416 * 100%)">
+        <img src="/assets/img/shop/electronics/banners/baner_tapki-3.png"
+             alt="домашні тапочки"
+             class="w-100 h-100"
+             style="object-fit: cover;">
       </div>
-    </section>
+    </div>
+  </div>
+</section>
+
 
 <!-- Selected filters (виводимо активні фільтри) -->
     <section class="container mb-4">
@@ -290,47 +307,9 @@
 
 
 
-          <!-- Banner -->
-          <div class="col-12">
-            <div class="position-relative rounded-5 overflow-hidden mb-4">
-              <span class="position-absolute top-0 start-0 w-100 h-100 d-none-dark rtl-flip" style="background: linear-gradient(-90deg, #accbee 0%, #e7f0fd 100%)"></span>
-              <span class="position-absolute top-0 start-0 w-100 h-100 d-none d-block-dark rtl-flip" style="background: linear-gradient(-90deg, #1b273a 0%, #1f2632 100%)"></span>
-              <div class="row align-items-center position-relative z-1">
-                <div class="col-md-6 pt-5 pt-md-0 mb-2 mb-md-0">
-                  <div class="text-center text-md-start py-md-5 px-4 ps-md-5 pe-md-0 me-md-n5">
-                    <h3 class="text-uppercase fw-bold ps-xxl-3 pb-2 mb-1">Seasonal weekly sale 2024</h3>
-                    <p class="text-body-emphasis ps-xxl-3 mb-0">Use code <span class="d-inline-block fw-semibold text-dark bg-white rounded-pill py-1 px-2">Sale 2024</span> to get best offer</p>
-                  </div>
-                </div>
-                <div class="col-md-6 d-flex justify-content-center justify-content-md-end">
-                  <div class="me-3 me-lg-4 me-xxl-5">
-                    <img src="/assets/img/shop/electronics/banners/iphone-2.png" class="d-block rtl-flip" width="335" alt="Banner" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+   
 
-          <!-- Pagination -->
-          <nav class="border-top mt-4 pt-3" aria-label="Catalog pagination">
-            <ul class="pagination pagination-lg pt-2 pt-md-3">
-              <li class="page-item disabled me-auto">
-                <a class="page-link d-flex align-items-center h-100 fs-lg px-2" href="#!" aria-label="Previous page">
-                  <i class="ci-chevron-left mx-1"></i>
-                </a>
-              </li>
-              <li class="page-item active"><span class="page-link">1</span></li>
-              <li class="page-item"><a class="page-link" href="#!">2</a></li>
-              <li class="page-item"><a class="page-link" href="#!">3</a></li>
-              <li class="page-item"><span class="page-link pe-none">...</span></li>
-              <li class="page-item"><a class="page-link" href="#!">16</a></li>
-              <li class="page-item ms-auto">
-                <a class="page-link d-flex align-items-center h-100 fs-lg px-2" href="#!" aria-label="Next page">
-                  <i class="ci-chevron-right mx-1"></i>
-                </a>
-              </li>
-            </ul>
-          </nav>
+      
         </div>
       </div>
     </section>

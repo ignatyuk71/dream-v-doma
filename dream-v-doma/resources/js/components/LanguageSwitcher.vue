@@ -1,24 +1,37 @@
 <template>
-  <div class="dropdown">
-    <a class="nav-link dropdown-toggle d-flex align-items-center py-1 px-0"
-       href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Language select">
-      <div class="d-flex align-items-center">
-        <img :src="currentFlag" :alt="currentLang.toUpperCase()" class="me-2" width="20">
-        <span class="fw-medium text-dark-emphasis d-none d-sm-inline">{{ currentLangLabel }}</span>
-      </div>
-    </a>
-    <ul class="dropdown-menu fs-sm" style="--cz-dropdown-spacer: .5rem">
+  <div class="dropdown position-relative">
+    <!-- Тригер -->
+    <button
+      type="button"
+      class="nav-link dropdown-toggle d-flex align-items-center py-1 px-0"
+      :aria-expanded="open.toString()"
+      aria-haspopup="true"
+      aria-label="Language select"
+      @click="toggle"
+      @keydown.down.prevent="open = true"
+      @keydown.esc.prevent="open = false"
+    >
+      <img :src="flagUrl(currentLang)" :alt="currentLang.toUpperCase()" class="me-2" width="20" />
+      <span class="fw-medium text-dark-emphasis d-none d-sm-inline">{{ currentLangLabel }}</span>
+    </button>
+
+    <!-- Меню (керуємо самі) -->
+    <ul
+      class="dropdown-menu dropdown-menu-end fs-sm"
+      :class="{ show: open }"
+      role="menu"
+    >
       <li>
-        <a class="dropdown-item" href="#" @click.prevent="changeLang('uk')">
-          <img src="/public/assets/img/flags/uk.svg" class="flex-shrink-0 me-2" width="20" alt="Українська">
-          Українська
-        </a>
+        <button type="button" class="dropdown-item d-flex align-items-center gap-2" @click="choose('uk')">
+          <img :src="flagUrl('uk')" width="20" alt="Українська" />
+          <span>Українська</span>
+        </button>
       </li>
       <li>
-        <a class="dropdown-item" href="#" @click.prevent="changeLang('ru')">
-          <img src="/public/assets/img/flags/ru.svg" class="flex-shrink-0 me-2" width="20" alt="русский">
-          русский
-        </a>
+        <button type="button" class="dropdown-item d-flex align-items-center gap-2" @click="choose('ru')">
+          <img :src="flagUrl('ru')" width="20" alt="русский" />
+          <span>русский</span>
+        </button>
       </li>
     </ul>
   </div>
@@ -26,51 +39,42 @@
 
 <script>
 export default {
-  props: {
-    category: {
-      type: Object,
-      default: null
-    }
-  },
+  // очікує payload як у тебе: { category: { translations: [{locale, slug}...] } | null }
+  props: { category: { type: Object, default: null } },
   data() {
+    const seg = (window.location.pathname.split('/')[1] || '').toLowerCase()
     return {
-      currentLang: window.location.pathname.split('/')[1] || 'uk'
+      currentLang: ['uk','ru'].includes(seg) ? seg : 'uk',
+      open: false
     }
   },
   computed: {
-    currentFlag() {
-      return `/assets/img/flags/${this.currentLang}.svg`
-    },
-    currentLangLabel() {
-      return this.currentLang === 'uk' ? 'Українська' : 'русский'
-    }
+    currentLangLabel() { return this.currentLang === 'uk' ? 'Українська' : 'русский' }
   },
   methods: {
-    changeLang(lang) {
-      // DEBUG: показуємо всі переклади
-      console.log('category.translations:', this.category?.translations);
-
-      if (this.category?.translations?.length) {
-        const translated = this.category.translations.find(t => t.locale === lang)
-        // DEBUG: показуємо знайдений переклад
-        console.log('Шукаємо slug для мови:', lang, '| Знайшли:', translated);
-
-        if (translated?.slug) {
-          window.location.href = `/${lang}/${translated.slug}`
-          return
-        }
-      }
-
-      // fallback: просто змінити lang у url
-      const pathParts = window.location.pathname.split('/')
-      pathParts[1] = lang
-      const newUrl = pathParts.join('/') + window.location.search + window.location.hash
-      window.location.href = newUrl
+    flagUrl(code) { return `/assets/img/flags/${code}.svg` }, // картинки лежать у /public/assets/img/flags
+    toggle() { this.open = !this.open },
+    closeOnOutside(e) { if (!this.$el.contains(e.target)) this.open = false },
+    choose(lang) {
+      this.open = false
+      const t = this.category?.translations?.find(x => x.locale === lang)
+      if (t?.slug) { window.location.href = `/${lang}/${t.slug}`; return }
+      const parts = window.location.pathname.split('/')
+      parts[1] = lang
+      window.location.href = parts.join('/') + window.location.search + window.location.hash
     }
   },
   mounted() {
-    // DEBUG: показати всі дані при завантаженні компонента
-    console.log('Category prop при mount:', this.category);
+    document.addEventListener('click', this.closeOnOutside, true)
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') this.open = false })
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.closeOnOutside, true)
   }
 }
 </script>
+
+<style scoped>
+/* На випадок, якщо десь інший CSS переб’є — гарантуємо показ */
+.dropdown-menu.show { display: block; }
+</style>

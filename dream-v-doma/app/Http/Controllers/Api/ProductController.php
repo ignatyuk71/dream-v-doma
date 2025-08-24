@@ -42,7 +42,7 @@ class ProductController extends Controller
             });
         }
     
-        $perPage = $request->get('per_page', 20);
+        $perPage = $request->get('per_page', 20);   // тут вказується кількисть позицій продукта
         $products = $query->paginate($perPage);
     
         $result = $products->getCollection()->map(function ($product) use ($locale) {

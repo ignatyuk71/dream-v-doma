@@ -2,11 +2,23 @@ import { defineStore } from 'pinia'
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    items: [], // { id, name, price, quantity, image, link }
+    items: [] 
+    // структура елемента:
+    // {
+    //   id: variantId,       // ключ = id варіанта
+    //   product_id: 123,     // базовий товар
+    //   name: 'Назва товару',
+    //   price: 500,
+    //   quantity: 1,
+    //   image: 'url',
+    //   link: '/uk/product/slug',
+    //   size: '36–37',       // для відображення
+    //   color: 'Чорний'      // для відображення (якщо є)
+    // }
   }),
 
   getters: {
-    // Надійна загальна сума
+    // Загальна сума
     subtotal: (state) =>
       state.items.reduce((sum, item) => {
         const price = parseFloat(item.price) || 0
@@ -21,15 +33,21 @@ export const useCartStore = defineStore('cart', {
 
   actions: {
     addToCart(product) {
+      // product.id тепер = variant.id
       const existing = this.items.find(i => i.id === product.id)
+
       if (existing) {
         existing.quantity += product.quantity || 1
       } else {
-        this.items.push({ ...product, quantity: product.quantity || 1 })
+        this.items.push({
+          ...product,
+          quantity: product.quantity || 1
+        })
       }
     },
 
     removeItem(id) {
+      // id = variant.id
       this.items = this.items.filter(item => item.id !== id)
     },
 
