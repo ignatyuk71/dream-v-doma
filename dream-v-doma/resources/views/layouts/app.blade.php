@@ -35,7 +35,7 @@
   <link rel="preload" href="/assets/css/theme.min.css" as="style">
   <link rel="stylesheet" href="/assets/css/theme.min.css" id="theme-styles">
 
-  @vite(['resources/css/app-index.css', 'resources/js/app.js'])
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
   @stack('styles')
 </head>
 <body>
