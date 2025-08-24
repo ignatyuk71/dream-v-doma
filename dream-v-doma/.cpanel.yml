@@ -1,5 +1,8 @@
 deployment:
   tasks:
+      - echo "🚀 Deploy started at $(date)" > /home/ignat016/deploy-test.log
+    - echo "✅ Repo path: $PWD" >> /home/ignat016/deploy-test.log
+    
     - export REPO="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
     - export TARGET="/home/ignat016/dream-v-doma"
     - export PUBLIC="/home/ignat016/public_html"
