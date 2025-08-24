@@ -1,6 +1,6 @@
 deployment:
   tasks:
-    - export SRC="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
+    - export SRC="/home/ignat016/repositories/dream/dream-v-doma"
     - export TARGET="/home/ignat016/dream-v-doma"
     - export PUBLIC="/home/ignat016/public_html"
 
