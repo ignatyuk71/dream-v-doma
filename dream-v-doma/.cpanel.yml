@@ -1,1 +1,29 @@
 
+deployment:
+  tasks:
+    - export REPO="/home/ignat016/repositories/dream-v-doma"
+    - export TARGET="/home/ignat016/dream-v-doma"
+
+    # створюємо робочу папку, якщо нема
+    - /bin/mkdir -p "$TARGET"
+
+    # синхронізуємо код з репо у робочу папку
+    - /bin/rsync -a --delete \
+        --exclude="/.git" \
+        --exclude="/.cpanel.yml" \
+        --exclude="/node_modules" \
+        --exclude="/vendor" \
+        --exclude="/storage/app/*" \
+        --exclude="/storage/logs/*" \
+        "$REPO"/ "$TARGET"/
+
+    # далі команди у проекті
+    - cd "$TARGET"
+    - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
+    - php artisan key:generate --force || true
+    - php artisan migrate --force
+    - php artisan storage:link || true
+    - php artisan config:cache
+    - php artisan route:cache
+    - php artisan view:cache
+    - /bin/chmod -R 775 storage bootstrap/cache
