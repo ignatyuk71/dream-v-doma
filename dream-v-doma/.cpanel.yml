@@ -3,10 +3,8 @@ deployment:
     - export REPO="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
     - export TARGET="/home/ignat016/dream-v-doma"
 
-    # створити папку призначення
     - /bin/mkdir -p "$TARGET"
 
-    # синхронізація коду з ВНУТРІШНЬОЇ папки репозиторію
     - /bin/rsync -a --delete \
         --exclude='/.git' \
         --exclude='/.cpanel.yml' \
@@ -16,7 +14,6 @@ deployment:
         --exclude='/storage/logs/*' \
         "$REPO"/ "$TARGET"/
 
-    # laravel-команди
     - cd "$TARGET"
     - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
     - php artisan key:generate --force || true
