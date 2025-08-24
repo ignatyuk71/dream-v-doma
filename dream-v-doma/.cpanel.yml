@@ -1,23 +1,22 @@
-
 deployment:
   tasks:
-    - export REPO="/home/ignat016/repositories/dream-v-doma"
+    - export REPO="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
     - export TARGET="/home/ignat016/dream-v-doma"
 
-    # створюємо робочу папку, якщо нема
+    # створити папку призначення
     - /bin/mkdir -p "$TARGET"
 
-    # синхронізуємо код з репо у робочу папку
+    # синхронізація коду з ВНУТРІШНЬОЇ папки репозиторію
     - /bin/rsync -a --delete \
-        --exclude="/.git" \
-        --exclude="/.cpanel.yml" \
-        --exclude="/node_modules" \
-        --exclude="/vendor" \
-        --exclude="/storage/app/*" \
-        --exclude="/storage/logs/*" \
+        --exclude='/.git' \
+        --exclude='/.cpanel.yml' \
+        --exclude='/node_modules' \
+        --exclude='/vendor' \
+        --exclude='/storage/app/*' \
+        --exclude='/storage/logs/*' \
         "$REPO"/ "$TARGET"/
 
-    # далі команди у проекті
+    # laravel-команди
     - cd "$TARGET"
     - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
     - php artisan key:generate --force || true
