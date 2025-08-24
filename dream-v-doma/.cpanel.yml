@@ -2,9 +2,12 @@ deployment:
   tasks:
     - export REPO="/home/ignat016/repositories/dream-v-doma/dream-v-doma"
     - export TARGET="/home/ignat016/dream-v-doma"
+    - export PUBLIC="/home/ignat016/public_html"
 
-    - /bin/mkdir -p "$TARGET"
+    # створюємо папки
+    - /bin/mkdir -p "$TARGET" "$PUBLIC"
 
+    # 1) Синхронізуємо код з репо -> робоча папка
     - /bin/rsync -a --delete \
         --exclude='/.git' \
         --exclude='/.cpanel.yml' \
@@ -14,6 +17,7 @@ deployment:
         --exclude='/storage/logs/*' \
         "$REPO"/ "$TARGET"/
 
+    # 2) Laravel команди (БЕЗ міграцій)
     - cd "$TARGET"
     - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
     - php artisan key:generate --force || true
@@ -22,3 +26,6 @@ deployment:
     - php artisan route:cache
     - php artisan view:cache
     - /bin/chmod -R 775 storage bootstrap/cache
+
+    # 3) Публічні файли в public_html
+    - /bin/rsync -a --delete "$TARGET/public/" "$PUBLIC/"
