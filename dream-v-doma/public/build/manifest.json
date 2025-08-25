@@ -7,6 +7,11 @@
     "file": "assets/nova-poshta-g-ZN1yRV.svg",
     "src": "public/assets/img/nova-poshta.svg"
   },
+  "resources/css/app-index.css": {
+    "file": "assets/app-index-BgGUclAN.css",
+    "src": "resources/css/app-index.css",
+    "isEntry": true
+  },
   "resources/js/admin/index.css": {
     "file": "assets/index-C3VLUpLH.css",
     "src": "resources/js/admin/index.css",

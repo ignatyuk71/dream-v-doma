@@ -15,7 +15,8 @@ export default defineConfig({
       input: [
         'resources/js/app.js',               // фронт
         'resources/js/admin/index.js',       // ✅ адмінка js
-        'resources/js/admin/index.css'       // ✅ адмінка css (в одному input)
+        'resources/js/admin/index.css',       // ✅ адмінка css (в одному input)
+        'resources/css/app-index.css'
       ],
       refresh: true,
     }),
