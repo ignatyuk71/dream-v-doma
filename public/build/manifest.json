@@ -12,11 +12,6 @@
     "src": "resources/css/app-index.css",
     "isEntry": true
   },
-  "resources/css/app.css": {
-    "file": "assets/app-tn0RQdqM.css",
-    "src": "resources/css/app.css",
-    "isEntry": true
-  },
   "resources/js/admin/index.css": {
     "file": "assets/index-C3VLUpLH.css",
     "src": "resources/js/admin/index.css",
