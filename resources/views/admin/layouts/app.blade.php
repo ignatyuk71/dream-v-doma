@@ -15,7 +15,7 @@
 
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
 
-@vite(['resources/js/admin/index.js', 'resources/js/admin/index.css'])
+
 
   @stack('styles')
 </head>
