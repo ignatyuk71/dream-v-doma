@@ -58,14 +58,36 @@
             "allowTouchMove": false,
             "loop": true,
             "effect": "fade",
-            "fadeEffect": {
-              "crossFade": true
-            }
+            "fadeEffect": { "crossFade": true }
           }'>
             <div class="swiper-wrapper">
               @foreach($banners as $banner)
+                @php
+                  $raw = $banner->image ?? null;
+
+                  if ($raw) {
+                      if (\Illuminate\Support\Str::startsWith($raw, ['http://','https://'])) {
+                          $bannerImg = $raw;
+                      } else {
+                          $path = ltrim($raw, '/');
+                          if (\Illuminate\Support\Str::startsWith($path, 'storage/')) {
+                              $path = \Illuminate\Support\Str::after($path, 'storage/'); // прибрати дубльоване "storage/"
+                          }
+                          $bannerImg = asset('storage/'.$path);
+                      }
+                  } else {
+                      $bannerImg = asset('assets/img/placeholder.svg');
+                  }
+                @endphp
+
                 <div class="swiper-slide">
-                  <img src="{{ asset($banner->image) }}" class="rtl-flip" alt="{{ $banner->title }}">
+                  <img
+                    src="{{ $bannerImg }}"
+                    class="rtl-flip"
+                    alt="{{ $banner->title ?? 'Banner' }}"
+                    loading="lazy"
+                    decoding="async"
+                    style="width:100%;height:100%;object-fit:cover;">
                 </div>
               @endforeach
             </div>
