@@ -1,0 +1,53 @@
+{
+  "_index-DIpXTXv3.js": {
+    "file": "assets/index-DIpXTXv3.js",
+    "name": "index"
+  },
+  "public/assets/img/nova-poshta.svg": {
+    "file": "assets/nova-poshta-g-ZN1yRV.svg",
+    "src": "public/assets/img/nova-poshta.svg"
+  },
+  "resources/css/app-index.css": {
+    "file": "assets/app-index-BgGUclAN.css",
+    "src": "resources/css/app-index.css",
+    "isEntry": true
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-tn0RQdqM.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/admin/index.css": {
+    "file": "assets/index-C3VLUpLH.css",
+    "src": "resources/js/admin/index.css",
+    "isEntry": true
+  },
+  "resources/js/admin/index.js": {
+    "file": "assets/index-EjUd5Sff.js",
+    "name": "index",
+    "src": "resources/js/admin/index.js",
+    "isEntry": true,
+    "imports": [
+      "_index-DIpXTXv3.js"
+    ],
+    "css": [
+      "assets/index-BO0dufTy.css",
+      "assets/index-C3VLUpLH.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CLI2ZIHw.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_index-DIpXTXv3.js"
+    ],
+    "css": [
+      "assets/app-DNu_U1dj.css"
+    ],
+    "assets": [
+      "assets/nova-poshta-g-ZN1yRV.svg"
+    ]
+  }
+}
