@@ -31,7 +31,24 @@
           $translation   = $product->translations->first(); // вже по $locale
           $productSlug   = $translation->slug ?? $product->id;
           $name          = trim($translation->name ?? '—');
-          $image         = $product->images[0]->url ?? asset('assets/img/placeholder.svg');
+
+          // ---------- ЗОБРАЖЕННЯ (надійно) ----------
+          $firstImage = $product->images[0]->url ?? null;
+          if ($firstImage) {
+              // Абсолютний URL?
+              if (\Illuminate\Support\Str::startsWith($firstImage, ['http://', 'https://'])) {
+                  $image = $firstImage;
+              } else {
+                  // Нормалізуємо відносний шлях до /storage/...
+                  $path = ltrim($firstImage, '/');
+                  if (\Illuminate\Support\Str::startsWith($path, 'storage/')) {
+                      $path = \Illuminate\Support\Str::after($path, 'storage/'); // прибрати дубльоване "storage/"
+                  }
+                  $image = asset('storage/'.$path);
+              }
+          } else {
+              $image = asset('assets/img/placeholder.svg');
+          }
 
           $price         = (float) ($product->price ?? 0);
           $oldPrice      = (float) ($product->old_price ?? 0);
@@ -95,7 +112,7 @@
                     @if($i <= $rating)
                       <i class="ci-star-filled text-warning"></i>
                     @else
-                      <i class="ci-star text-body-tertiary opacity-75"></i>
+                      <i class="ci-star text-body-terтіary opacity-75"></i>
                     @endif
                   @endfor
                 </div>
@@ -143,7 +160,6 @@
             {{-- Характеристики: до 5 шт. поточною мовою (без міксу RU/UK) --}}
             @php
               $attrs = $product->attributeValues
-                  // беремо тільки ті, де Є переклад активною мовою і в атрибута, і в значення
                   ->filter(function($val) use ($locale) {
                       return (bool) $val->attribute->translations->firstWhere('locale', $locale)
                           && (bool) $val->translations->firstWhere('locale', $locale);
@@ -158,7 +174,6 @@
                 <ul class="list-unstyled d-flex flex-column gap-2 m-0">
                   @foreach($attrs as $val)
                     @php
-                      // строго беремо переклад активною мовою
                       $attrTr   = $val->attribute->translations->firstWhere('locale', $locale);
                       $valueTr  = $val->translations->firstWhere('locale', $locale);
                       $attrName = $attrTr?->name  ?? '';
