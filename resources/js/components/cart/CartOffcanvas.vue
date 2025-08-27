@@ -46,7 +46,7 @@
 
       <div v-for="item in items" :key="item.id" class="d-flex align-items-center">
         <img
-          :src="item.image || '/assets/img/placeholder.jpg'"
+          :src="publicUrl(item.image)"
           alt="Thumbnail"
           class="rounded shadow-sm"
           style="width:110px;height:110px;object-fit:cover;object-position:center;flex-shrink:0;"
@@ -148,6 +148,47 @@ const progress = computed(() => Math.min(100, (subtotal.value / freeShippingFrom
 const increment = cart.increment
 const decrement = cart.decrement
 const removeItem = cart.removeItem
+
+/**
+ * JS-аналог Laravel asset(): будуємо абсолютний URL відносно поточного домену.
+ */
+const asset = (path) => {
+  const clean = String(path || '').replace(/^\/+/, '')
+  return new URL(clean, window.location.origin + '/').toString()
+}
+
+/**
+ * publicUrl(path): повторює твою PHP-логіку $toPublicUrl
+ * - пусто -> плейсхолдер
+ * - абсолютні (http://, https://, //, data:, blob:) -> як є
+ * - якщо вже storage/... -> asset('storage/...')
+ * - прибираємо префікси public/ або app/public/
+ * - інакше повертаємо як asset('storage/' + path)
+ */
+const publicUrl = (path) => {
+  if (!path) {
+    return asset('assets/img/placeholder.svg')
+  }
+
+  let p = String(path).trim()
+
+  // абсолютні або спеціальні схеми (//, data:, blob:)
+  if (/^(https?:)?\/\//i.test(p) || /^(data|blob):/i.test(p)) {
+    return p
+  }
+
+  // знімаємо початкові слеші
+  p = p.replace(/^\/+/, '')
+
+  if (p.startsWith('storage/')) {
+    return asset(p)
+  }
+
+  // прибрати "public/" або "app/public/"
+  p = p.replace(/^(?:app\/)?public\//, '')
+
+  return asset('storage/' + p)
+}
 </script>
 
 <style scoped>
