@@ -1,41 +1,33 @@
 @php
-  // Витягуємо унікальні розміри з варіантів
-  $sizes = $product->variants
-      ->pluck('size')
-      ->unique()
-      ->filter()
-      ->values();
-
+  $sizes = $product->variants->pluck('size')->unique()->filter()->values();
   $locale = app()->getLocale();
 @endphp
 
 <div>
-  <!-- Вибір кольору -->
+  {{-- ВИБІР КОЛЬОРУ (зліва текст, праворуч малі прев’ю) --}}
   @if ($product->colors->isNotEmpty())
-    <div class="mb-1">
-      <label class="form-label fw-semibold pb-1 mb-1">
+    <div class="mb-2 color-picker-row">
+      <label class="form-label fw-semibold mb-0">
         {{ __('product.color') }}:
         <span class="text-body fw-normal" id="selected-color-label">
           {{ $product->colors->firstWhere('is_default', true)?->name ?? $product->colors->first()?->name }}
         </span>
       </label>
 
-      <div class="d-flex flex-wrap gap-2">
+      <div class="color-swatches">
         @foreach ($product->colors as $index => $color)
           @php
-            // Беремо саме linkedProduct — куди веде цей колір!
             $linkedProduct = $color->linkedProduct ?? $product;
             $translation = $linkedProduct->translations->where('locale', $locale)->first();
             $productSlug = $translation->slug ?? $linkedProduct->slug;
 
-            // Витягуємо категорію для цього продукту
             $category = $linkedProduct->categories->first();
             $categoryTranslation = $category?->translations->where('locale', $locale)->first();
             $categorySlug = $categoryTranslation?->slug ?? $category?->slug ?? 'category';
 
             $colorUrl = route('products.show', [
-              'locale' => $locale,
-              'category' => $categorySlug,
+              'locale'  => $locale,
+              'category'=> $categorySlug,
               'product' => $productSlug
             ]);
           @endphp
@@ -48,13 +40,12 @@
             value="{{ $color->name }}"
             @checked($color->is_default)
           >
-
           <label for="color-{{ $index }}"
                  class="color-thumb"
+                 title="{{ $color->name }}"
                  data-label="{{ $color->name }}"
                  onclick="window.location.href='{{ $colorUrl }}'">
-            <img src="{{ asset($color->icon_path) }}"
-                 alt="{{ $color->name }}">
+            <img src="{{ asset($color->icon_path) }}" alt="{{ $color->name }}">
             <span class="visually-hidden">{{ $color->name }}</span>
           </label>
         @endforeach
@@ -62,7 +53,7 @@
     </div>
   @endif
 
-  <!-- Вибір розміру -->
+  {{-- ВИБІР РОЗМІРУ (як було) --}}
   <div class="mb-2">
     <div class="d-flex align-items-center justify-content-between mb-1">
       <label class="form-label fw-semibold mb-0">{{ __('product.size') }}</label>
@@ -74,11 +65,7 @@
       </div>
     </div>
 
-    <select
-      class="form-select form-select-lg"
-      name="size"
-      aria-label="Select size"
-    >
+    <select class="form-select form-select-lg" name="size" aria-label="Select size">
       <option value="">{{ __('product.choose_size') }}</option>
       @foreach ($sizes as $size)
         <option value="{{ $size }}">{{ $size }}</option>
@@ -86,3 +73,54 @@
     </select>
   </div>
 </div>
+@push('styles')
+<style>
+  /* компактні квадрати-стікери під колір */
+  .color-picker-row{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+  }
+  @media (min-width:576px){
+    .color-picker-row{
+      flex-direction:row;
+      align-items:center;
+      justify-content:space-between;
+    }
+  }
+
+  .color-swatches{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+  }
+
+  .color-thumb{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:64px;
+    height:64px;
+    background:#fff;
+    border:1px solid #e9ecef;
+    border-radius:.5rem;
+    overflow:hidden;
+    cursor:pointer;
+    transition:box-shadow .2s, border-color .2s, transform .02s;
+  }
+  .color-thumb:hover{ border-color:#cfd4da; }
+  .btn-check:checked + .color-thumb{
+    border-color:#ff6b6b;
+    box-shadow:0 0 0 .2rem rgba(255,105,97,.15);
+  }
+  .color-thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  /* трошки ущільнив лейбли, як у макеті */
+  .form-label.fw-semibold{ font-weight:600 !important; }
+</style>
+@endpush
