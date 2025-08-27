@@ -73,3 +73,70 @@
     </select>
   </div>
 </div>
+
+@push('styles')
+<style>
+  /* рядок "Колір: ..." + прев'ю */
+  .color-picker-row{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+  }
+  @media (min-width:576px){
+    .color-picker-row{
+      flex-direction:row;
+      align-items:center;      /* по центру по висоті */
+      gap:1rem;                /* невеликий відступ між лейблом і прев'ю */
+    }
+  }
+
+  /* сам лейбл "Колір: Х" */
+  .color-picker-row > .form-label{
+    margin:0;
+    white-space:nowrap;        /* щоб не переносився "Колір: ..." */
+    flex:0 0 auto;             /* фіксована ширина по контенту */
+  }
+
+  /* контейнер з прев'юшками */
+  .color-swatches{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+    flex:1 1 auto;             /* займає решту рядка */
+    justify-content:flex-start;/* притискаємо вліво */
+  }
+
+  /* компактні квадрати */
+  .color-thumb{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:76px;                /* було 64px */
+    height:76px;
+    background:#fff;
+    border:1px solid #e9ecef;
+    border-radius:.5rem;
+    overflow:hidden;
+    cursor:pointer;
+    transition:box-shadow .2s, border-color .2s, transform .02s;
+  }
+  @media (max-width:575.98px){
+    .color-thumb{ width:72px; height:72px; } /* ще трішки менші на мобайлі */
+  }
+  .color-thumb:hover{ border-color:#cfd4da; }
+  .btn-check:checked + .color-thumb{
+    border-color:#ff6b6b;
+    box-shadow:0 0 0 .2rem rgba(255,105,97,.15);
+  }
+  .color-thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  /* густіший шрифт для підписів */
+  .form-label.fw-semibold{ font-weight:600 !important; }
+</style>
+@endpush
+
