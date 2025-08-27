@@ -1,10 +1,32 @@
 @php
+  use Illuminate\Support\Str;
+
+  // Хелпер: нормалізує шлях до публічного URL
+  $toPublicUrl = function ($path) {
+      if (empty($path)) {
+          return asset('assets/img/placeholder.svg');
+      }
+      if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+          return $path; // вже абсолютний URL
+      }
+      $p = ltrim($path, '/');
+
+      // якщо вже /storage/...
+      if (Str::startsWith($p, 'storage/')) {
+          return asset($p);
+      }
+
+      // прибираємо префікси "public/" або "app/public/"
+      $p = preg_replace('#^(?:app/)?public/#', '', $p);
+
+      // повертаємо як /storage/{p}
+      return asset('storage/'.$p);
+  };
+
   $currentLocale = app()->getLocale();
 
   // Перше зображення / плейсхолдер
-  $imageUrl = $product->images->first()
-      ? asset(ltrim($product->images->first()->url, '/'))
-      : asset('assets/img/placeholder.svg');
+  $imageUrl = $toPublicUrl($product->images->first()?->url ?? null);
 
   // Назва поточною мовою
   $name = $product->translations->firstWhere('locale', $currentLocale)?->name
@@ -17,7 +39,7 @@
     'price' => $product->price,
     'name'  => $name,
     'images' => $product->images->map(fn($img) => [
-      'full_url' => asset(ltrim($img->url, '/')),
+      'full_url' => $toPublicUrl($img->url),
     ])->values(),
     'translations' => $product->translations->map(fn($t) => [
       'locale' => $t->locale,
