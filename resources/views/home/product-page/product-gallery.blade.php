@@ -1,36 +1,6 @@
 @php
-    use Illuminate\Support\Str;
-
     $images = $product->images;
     $hasMultiple = $images->count() >= 3;
-
-    // Нормалізуємо будь-який шлях у коректний публічний URL
-    $imgUrl = function ($val) {
-        if (empty($val)) {
-            return asset('assets/img/placeholder.svg');
-        }
-
-        // Якщо вже абсолютний URL — віддаємо як є
-        if (Str::startsWith($val, ['http://', 'https://', '//'])) {
-            return $val;
-        }
-
-        // Прибираємо лідируючий слеш
-        $p = ltrim($val, '/');
-
-        // Якщо шлях починається з storage/ — це вже веб-шлях
-        if (Str::startsWith($p, 'storage/')) {
-            return asset($p);
-        }
-
-        // Якщо це шлях із диска "public" (storage/app/public/… або public/…)
-        // приводимо його до /storage/…
-        $p = preg_replace('#^(?:app/)?public/#', '', $p);
-
-        // Типові наші кейси: products/…, banners/…, uploads/…
-        // робимо /storage/{цей_шлях}
-        return asset('storage/'.$p);
-    };
 
     $mainSwiperOptions = json_encode([
         'loop' => $hasMultiple,
@@ -65,12 +35,10 @@
     @foreach($images as $image)
       <div class="swiper-slide">
         <div class="image-wrapper">
-          <img
-            src="{{ $imgUrl($image->url ?? null) }}"
-            class="swiper-thumb-img"
-            alt="{{ $product->meta_title }}"
-            loading="lazy"
-            decoding="async"
+        <img
+              src="{{ $image->url ? asset(ltrim($image->url, '/')) : asset('assets/img/placeholder.svg') }}"
+              class="swiper-thumb-img"
+              alt="{{ $product->meta_title }}"
           />
         </div>
       </div>
@@ -110,13 +78,11 @@
     @foreach($images as $image)
       <div class="swiper-slide swiper-thumb">
         <div class="thumb-wrapper">
-          <img
-            src="{{ $imgUrl($image->url ?? null) }}"
+        <img
+            src="{{ $image->url ? asset(ltrim($image->url, '/')) : asset('assets/img/placeholder.svg') }}"
             class="swiper-thumb-img"
             alt="{{ $product->meta_title }}"
-            loading="lazy"
-            decoding="async"
-          />
+        />
         </div>
       </div>
     @endforeach
@@ -124,37 +90,38 @@
 </div>
 
 @push('styles')
-<style>
-  .image-wrapper {
-      width: 100%;
-      height: 650px;
-      position: relative;
-      background: #fff;
-  }
-  @media (max-width: 768px) {
-      .image-wrapper {
-          height: auto;
-          padding-top: 100%; /* квадратна пропорція */
-      }
-  }
-  .image-wrapper img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      object-position: center;
-  }
-  .thumb-wrapper {
-      aspect-ratio: 1 / 1;
-      max-width: 94px;
-      overflow: hidden;
-  }
-  .thumb-wrapper img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center;
-  }
-</style>
+    <style>
+        .image-wrapper {
+            width: 100%;
+            height: 650px;
+            position: relative;
+            background: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .image-wrapper {
+                height: auto;
+                padding-top: 100%; /* квадратна пропорція */
+            }
+        }
+        .image-wrapper img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+        }
+        .thumb-wrapper {
+            aspect-ratio: 1 / 1;
+            max-width: 94px;
+            overflow: hidden;
+        }
+        .thumb-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+    </style>
 @endpush
