@@ -133,9 +133,21 @@ export default {
     }
   },
   methods: {
+    // === НОРМАЛІЗАТОРИ/ПОРІВНЯННЯ ===
+    toModelParent(v) {
+      // root: null / '' / 0 / '0' -> null
+      if (v === null || v === undefined || v === '' || v === 0 || v === '0') return null
+      const n = Number(v)
+      return Number.isNaN(n) ? null : n
+    },
+    sameParent(a, b) {
+      return this.toModelParent(a) === this.toModelParent(b)
+    },
+
+    // === ДЕРЕВО ===
     buildTree(categories, parentId = null) {
       return categories
-        .filter(cat => cat.parent_id === parentId)
+        .filter(cat => this.sameParent(cat.parent_id, parentId))
         .map(cat => ({
           ...cat,
           children: this.buildTree(categories, cat.id)
@@ -150,9 +162,11 @@ export default {
       }
       return rows
     },
+
+    // === ДОСТУПНІ БАТЬКИ (без себе та своїх нащадків) ===
     availableParents(current) {
-      const excludeIds = [current.id, ...this.getAllChildrenIds(current)]
-      return this.categories.filter(cat => !excludeIds.includes(cat.id))
+      const exclude = new Set([ this.toModelParent(current.id), ...this.getAllChildrenIds(current).map(this.toModelParent) ])
+      return this.categories.filter(cat => !exclude.has(this.toModelParent(cat.id)))
     },
     getAllChildrenIds(cat) {
       let ids = []
@@ -163,37 +177,43 @@ export default {
       }
       return ids
     },
+
+    // === ТРАНСЛЯЦІЇ ===
     getTranslation(cat, field = 'name', locale = 'uk') {
       const tr = cat.translations?.find(t => t.locale === locale)
       return tr ? tr[field] : ''
     },
+
+    // === ЗМІНА БАТЬКА ===
     confirmChangeParent(cat) {
-      if (cat._pendingParent == cat.parent_id) return
+      if (this.toModelParent(cat._pendingParent) === this.toModelParent(cat.parent_id)) return
       if (confirm('Ви дійсно хочете змінити батьківську категорію?')) {
         this.saveParent(cat)
       } else {
-        cat._pendingParent = cat.parent_id
+        cat._pendingParent = this.toModelParent(cat.parent_id)
       }
     },
     async saveParent(cat) {
       cat._savingParent = true
       try {
         await axios.post(`/api/categories/${cat.id}/update-parent`, {
-          parent_id: cat._pendingParent
+          parent_id: cat._pendingParent // тут уже null або число
         })
         cat.parent_id = cat._pendingParent
         cat._savingParent = false
         this.$emit('reload')
       } catch (err) {
-        cat._pendingParent = cat.parent_id
+        cat._pendingParent = this.toModelParent(cat.parent_id)
         cat._savingParent = false
         alert('Помилка при зміні батьківської категорії')
       }
     },
+
+    // === СТАТУС ===
     async toggleStatus(cat) {
-      if (cat._savingStatus) return;
+      if (cat._savingStatus) return
       const oldStatus = cat.status
-      cat.status = oldStatus == 1 || oldStatus === true ? 0 : 1
+      cat.status = (oldStatus == 1 || oldStatus === true) ? 0 : 1
       cat._savingStatus = true
       try {
         await axios.post(`/api/categories/${cat.id}/toggle-status`, { status: cat.status })
@@ -215,6 +235,8 @@ export default {
       if (status == 0 || status === false) return 'status-inactive'
       return ''
     },
+
+    // === МЕНЮ ===
     openMenu(idx) {
       if (this.menuOpen === idx) {
         this.closeMenu()
@@ -233,12 +255,10 @@ export default {
       }
     },
 
-    // ОНОВЛЕНО: Видалення категорії з видаленням зображень/директорії
+    // === DELETE / DUPLICATE ===
     async deleteCategory(cat) {
       this.closeMenu()
-      if (!confirm('Підтвердіть видалення категорії. Операція незворотна і не може бути скасована.')) {
-        return
-      }
+      if (!confirm('Підтвердіть видалення категорії. Операція незворотна і не може бути скасована.')) return
       try {
         await axios.delete(`/admin/categories/${cat.id}`)
         alert('Категорія успішно видалена')
@@ -247,7 +267,6 @@ export default {
         alert('Помилка при видаленні категорії')
       }
     },
-
     download(cat) {
       this.closeMenu()
       alert(`Download category #${cat.id}`)
@@ -256,19 +275,21 @@ export default {
       this.closeMenu()
       this.$emit('duplicate', cat)
     },
-    // Оновлюємо всі допоміжні поля рекурсивно
+
+    // === ІНІЦІАЛІЗАЦІЯ ДОД. ПОЛІВ ===
     initPendingParentFields() {
       const patch = cat => {
         Object.assign(cat, {
-          _pendingParent: cat.parent_id,
+          _pendingParent: this.toModelParent(cat.parent_id),
           _savingParent: false,
           _savingStatus: false
-        });
+        })
         if (cat.children && cat.children.length) {
           cat.children.forEach(patch)
         }
       }
-      this.categories.forEach(patch)
+      // Важливо: ініціалізуємо на дереві, а не на «плоскому» масиві
+      this.treeCategories.forEach(patch)
     },
   },
   mounted() {
@@ -276,9 +297,7 @@ export default {
   },
   watch: {
     categories: {
-      handler() {
-        this.initPendingParentFields()
-      },
+      handler() { this.initPendingParentFields() },
       deep: true,
       immediate: true,
     }
