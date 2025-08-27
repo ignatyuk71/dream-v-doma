@@ -46,7 +46,7 @@
 
       <div v-for="item in items" :key="item.id" class="d-flex align-items-center">
         <img
-          :src="publicUrl(item.image)"
+          :src="toPublicUrl(item.image) || '/assets/img/placeholder.jpg'"
           alt="Thumbnail"
           class="rounded shadow-sm"
           style="width:110px;height:110px;object-fit:cover;object-position:center;flex-shrink:0;"
@@ -69,7 +69,6 @@
 
             <div class="d-flex align-items-center">
               <div class="count-input rounded-2 me-2">
-                <!-- простіше і надійніше: .prevent.stop -->
                 <button
                   type="button"
                   class="btn btn-icon btn-sm"
@@ -149,45 +148,19 @@ const increment = cart.increment
 const decrement = cart.decrement
 const removeItem = cart.removeItem
 
-/**
- * JS-аналог Laravel asset(): будуємо абсолютний URL відносно поточного домену.
- */
-const asset = (path) => {
-  const clean = String(path || '').replace(/^\/+/, '')
-  return new URL(clean, window.location.origin + '/').toString()
-}
+// ✅ Локальний нормалізатор URL — без змін у сторах.
+// 'products/77/...'  -> '/storage/products/77/...'
+// 'public/...', 'app/public/...' -> '/storage/...'
+// 'storage/...'      -> '/storage/...'
+// http(s)://...      -> як є
+const toPublicUrl = (path) => {
+  if (!path) return ''
+  if (/^https?:\/\//i.test(path) || path.startsWith('//')) return path
 
-/**
- * publicUrl(path): повторює твою PHP-логіку $toPublicUrl
- * - пусто -> плейсхолдер
- * - абсолютні (http://, https://, //, data:, blob:) -> як є
- * - якщо вже storage/... -> asset('storage/...')
- * - прибираємо префікси public/ або app/public/
- * - інакше повертаємо як asset('storage/' + path)
- */
-const publicUrl = (path) => {
-  if (!path) {
-    return asset('assets/img/placeholder.svg')
-  }
-
-  let p = String(path).trim()
-
-  // абсолютні або спеціальні схеми (//, data:, blob:)
-  if (/^(https?:)?\/\//i.test(p) || /^(data|blob):/i.test(p)) {
-    return p
-  }
-
-  // знімаємо початкові слеші
-  p = p.replace(/^\/+/, '')
-
-  if (p.startsWith('storage/')) {
-    return asset(p)
-  }
-
-  // прибрати "public/" або "app/public/"
+  let p = String(path).replace(/^\/+/, '')
   p = p.replace(/^(?:app\/)?public\//, '')
-
-  return asset('storage/' + p)
+  if (p.startsWith('storage/')) return '/' + p
+  return '/storage/' + p
 }
 </script>
 
