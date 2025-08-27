@@ -5,9 +5,11 @@
       <input type="file" class="form-control" multiple @change="handleFilesChange">
       <small class="text-muted">Файлів: {{ images.length }}</small>
     </div>
+
     <div ref="containerRef" class="d-flex gap-2 flex-wrap">
       <div v-for="(img, index) in images" :key="img.id" class="image-item">
-        <img :src="img.url" alt="" />
+        <img :src="resolveUrl(img)" alt=""
+             @error="onImgError" />
         <button
           type="button"
           class="remove-btn"
@@ -44,6 +46,39 @@ watch(
   }
 )
 
+/** Побудова коректного URL для різних форматів з БД/файлів */
+function resolveUrl(img) {
+  // Поширені поля, які можуть приїхати з бекенда
+  let u = img?.url || img?.full_url || img?.path || img?.storage_path || img?.image || img?.filepath || img?.filename || img?.name
+  if (!u) return ''
+
+  u = String(u)
+
+  // Якщо це blob:/data: або абсолютний http(s) — віддаємо як є
+  if (u.startsWith('blob:') || u.startsWith('data:') || /^https?:\/\//i.test(u)) return u
+
+  // Якщо вже абсолютний шлях на домені
+  if (u.startsWith('/')) return u
+
+  // Якщо починається з storage/ — додамо слеш спереду
+  if (u.startsWith('storage/')) return `/${u.replace(/^\/+/, '')}`
+
+  // Якщо десь всередині є /storage/ — обрізаємо до нього
+  const storageIdx = u.indexOf('/storage/')
+  if (storageIdx !== -1) return u.slice(storageIdx)
+
+  // Часто зберігають 'public/...': прибираємо 'public/'
+  u = u.replace(/^public\//, '')
+
+  // Базовий випадок: вважаємо, що це шлях відносно storage/
+  return `/storage/${u.replace(/^\/+/, '')}`
+}
+
+function onImgError(e) {
+  // Фолбек, якщо файл не знайдено
+  e.target.src = '/images/placeholder.png' // за потреби підстав свій плейсхолдер
+}
+
 function updatePositionsAndMain() {
   images.value.forEach((img, idx) => {
     img.position = idx
@@ -68,6 +103,11 @@ function handleFilesChange(event) {
 }
 
 function removeImage(idx) {
+  // відкочуємо blob URL щоб не текла пам’ять
+  const removed = images.value[idx]
+  if (removed?.url && String(removed.url).startsWith('blob:')) {
+    try { URL.revokeObjectURL(removed.url) } catch(_) {}
+  }
   images.value.splice(idx, 1)
   updatePositionsAndMain()
 }
