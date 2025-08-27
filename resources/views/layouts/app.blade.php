@@ -9,8 +9,9 @@
   <meta name="keywords" content="тапки, домашній одяг, вʼєтнамки, шльопанці, покупки онлайн, магазин">
   <meta name="author" content="Dream V Doma">
 
-  @stack('meta')
-  
+  {{-- Meta Pixel --}}
+  @includeWhen(app()->environment('production'), 'partials.meta-pixel')
+
   <!-- PWA / icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -54,7 +55,6 @@
   <script defer>
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-        // global bootstrap з theme.min.js
         new bootstrap.Tooltip(el)
       })
     })

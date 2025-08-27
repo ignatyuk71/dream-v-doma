@@ -37,5 +37,9 @@ return [
     'nova_poshta' => [
     'api_key' => env('NOVA_POSHTA_API_KEY'),
     ],
+    
+    'meta' => [
+        'pixel_id' => env('META_PIXEL_ID'),
+    ],
 
 ];
