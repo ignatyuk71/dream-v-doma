@@ -1,9 +1,43 @@
 @php
-    $images = $product->images;
-    $hasMultiple = $images->count() >= 3;
+    use Illuminate\Support\Str;
+
+    // Хелпер: нормалізує шлях до публічного URL
+    $toPublicUrl = function ($path) {
+        if (empty($path)) {
+            return asset('assets/img/placeholder.svg');
+        }
+        if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+            return $path; // вже абсолютний URL
+        }
+        $p = ltrim($path, '/');
+
+        // якщо вже /storage/...
+        if (Str::startsWith($p, 'storage/')) {
+            return asset($p);
+        }
+
+        // прибираємо префікси "public/" або "app/public/"
+        $p = preg_replace('#^(?:app/)?public/#', '', $p);
+
+        // повертаємо як /storage/{p}
+        return asset('storage/'.$p);
+    };
+
+    $locale = app()->getLocale();
+    $desc   = $product->translations->firstWhere('locale', $locale)?->description ?? '';
+    $blocks = $desc ? json_decode($desc, true) : [];
+
+    // ГАЛЕРЕЯ
+    $images = $product->images; // за потреби: ->sortBy('position')
+    $imagesCount = $images->count();
+
+    // loop лише коли є достатньо слайдів
+    $hasLoopMain   = $imagesCount > 1;   // для головного прев’ю
+    $maxThumbsSpv  = 6;                  // найбільше slidesPerView у breakpoints
+    $hasLoopThumbs = $imagesCount > $maxThumbsSpv;
 
     $mainSwiperOptions = json_encode([
-        'loop' => $hasMultiple,
+        'loop' => $hasLoopMain,
         'navigation' => [
             'prevEl' => '.btn-prev',
             'nextEl' => '.btn-next',
@@ -11,10 +45,10 @@
         'thumbs' => [
             'swiper' => '#thumbs',
         ],
-    ]);
+    ], JSON_UNESCAPED_SLASHES);
 
     $thumbsSwiperOptions = json_encode([
-        'loop' => $hasMultiple,
+        'loop' => $hasLoopThumbs,
         'spaceBetween' => 12,
         'slidesPerView' => 2,
         'watchSlidesProgress' => true,
@@ -26,23 +60,34 @@
             992 => ['slidesPerView' => 5],
             1200 => ['slidesPerView' => 6],
         ],
-    ]);
+    ], JSON_UNESCAPED_SLASHES);
 @endphp
 
 <!-- Preview -->
 <div class="swiper" data-swiper='{{ $mainSwiperOptions }}'>
   <div class="swiper-wrapper">
-    @foreach($images as $image)
+    @forelse($images as $image)
       <div class="swiper-slide">
         <div class="image-wrapper">
-        <img
-              src="{{ $image->url ? asset(ltrim($image->url, '/')) : asset('assets/img/placeholder.svg') }}"
-              class="swiper-thumb-img"
-              alt="{{ $product->meta_title }}"
+          <img
+            src="{{ $toPublicUrl($image->url ?? null) }}"
+            class="swiper-thumb-img"
+            alt="{{ $product->meta_title }}"
+            @if($loop->first) fetchpriority="high" @else loading="lazy" decoding="async" @endif
           />
         </div>
       </div>
-    @endforeach
+    @empty
+      <div class="swiper-slide">
+        <div class="image-wrapper">
+          <img
+            src="{{ $toPublicUrl(null) }}"
+            class="swiper-thumb-img"
+            alt="{{ $product->meta_title }}"
+          />
+        </div>
+      </div>
+    @endforelse
   </div>
 
   <!-- Prev button -->
@@ -75,53 +120,73 @@
   data-swiper='{{ $thumbsSwiperOptions }}'
 >
   <div class="swiper-wrapper">
-    @foreach($images as $image)
+    @forelse($images as $image)
       <div class="swiper-slide swiper-thumb">
         <div class="thumb-wrapper">
-        <img
-            src="{{ $image->url ? asset(ltrim($image->url, '/')) : asset('assets/img/placeholder.svg') }}"
+          <img
+            src="{{ $toPublicUrl($image->url ?? null) }}"
             class="swiper-thumb-img"
             alt="{{ $product->meta_title }}"
-        />
+            loading="lazy"
+            decoding="async"
+          />
         </div>
       </div>
-    @endforeach
+    @empty
+      <div class="swiper-slide swiper-thumb">
+        <div class="thumb-wrapper">
+          <img
+            src="{{ $toPublicUrl(null) }}"
+            class="swiper-thumb-img"
+            alt="{{ $product->meta_title }}"
+          />
+        </div>
+      </div>
+    @endforelse
   </div>
 </div>
 
 @push('styles')
-    <style>
-        .image-wrapper {
-            width: 100%;
-            height: 650px;
-            position: relative;
-            background: #fff;
-        }
+<style>
+  .image-wrapper {
+      width: 100%;
+      height: 650px;
+      position: relative;
+      background: #fff;
+  }
+  @media (max-width: 768px) {
+      .image-wrapper {
+          height: auto;
+          padding-top: 100%; /* квадратна пропорція */
+      }
+  }
+  .image-wrapper img {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+  }
 
-        @media (max-width: 768px) {
-            .image-wrapper {
-                height: auto;
-                padding-top: 100%; /* квадратна пропорція */
-            }
-        }
-        .image-wrapper img {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            object-position: center;
-        }
-        .thumb-wrapper {
-            aspect-ratio: 1 / 1;
-            max-width: 94px;
-            overflow: hidden;
-        }
-        .thumb-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-        }
-    </style>
+  .thumb-wrapper {
+      aspect-ratio: 1 / 1;
+      max-width: 94px;
+      border: 1px solid #e9ecef;
+      border-radius: .5rem;
+      overflow: hidden;
+      background: #fff;
+  }
+  .swiper-slide-thumb-active .thumb-wrapper {
+      border-color: #ff6b6b;
+      box-shadow: 0 0 0 .12rem rgba(255,105,97,.18);
+  }
+  .thumb-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+  }
+</style>
 @endpush
