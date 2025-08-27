@@ -1,5 +1,6 @@
 @php
     use App\Models\Product;
+    use Illuminate\Support\Str;
 
     $products = Product::with([
             'images',
@@ -48,6 +49,27 @@
             992 => ['slidesPerView' => $breakpointsSlides[992]],
         ],
     ], JSON_UNESCAPED_UNICODE);
+
+    // Хелпер для зображень
+    $toPublicUrl = function ($path) {
+        if (empty($path)) {
+            return asset('assets/img/placeholder.svg');
+        }
+        if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+            return $path; // вже абсолютний URL
+        }
+        $p = ltrim($path, '/');
+
+        // якщо вже веб-шлях /storage/...
+        if (Str::startsWith($p, 'storage/')) {
+            return asset($p);
+        }
+
+        // привести "public/..."/"app/public/..." до storage/...
+        $p = preg_replace('#^(?:app/)?public/#', '', $p);
+
+        return asset('storage/'.$p);
+    };
 @endphp
 
 @if($count)
@@ -78,7 +100,7 @@
               $name      = trim($tr?->name ?? $product->sku ?? '—');
               $slug      = $tr?->slug ?? $product->id;
 
-              // Категорія для URL: первинна (pivot.is_primary) або перша
+              // Категорія для URL
               $primaryCategory = $product->categories
                   ->sortByDesc(fn($c) => $c->pivot->is_primary ?? 0)
                   ->first() ?? $product->categories->first();
@@ -87,7 +109,6 @@
                               ?? $primaryCategory?->translations->first();
               $categorySlug = $catTr->slug ?? ($primaryCategory->id ?? 'catalog');
 
-              // URL у форматі /{locale}/{categorySlug}/{productSlug}
               $productUrl = url($locale . '/' . $categorySlug . '/' . $slug);
 
               // Ціни / знижка
@@ -97,12 +118,13 @@
                            ? '-' . round(100 - ($price / $oldPrice * 100)) . '%'
                            : null;
 
-              // Картинка (обрізаємо, не тягнемо)
+              // Картинка
               $mainImage = $product->images->firstWhere('is_main', true) ?? $product->images->first();
-              $image     = $mainImage?->full_url ?? asset('assets/img/placeholder.svg');
+              $imgPath   = $mainImage->url ?? $mainImage->path ?? $mainImage->full_url ?? null;
+              $image     = $toPublicUrl($imgPath);
 
-              // Рейтинг (за замовчуванням 5, якщо свого немає)
-              $rating  = 5; // $product->avg_rating ?? 5;
+              // Рейтинг
+              $rating  = 5; // поки фіксовано
               $reviews = $product->reviews_count ?? 0;
           @endphp
 
@@ -135,7 +157,7 @@
                     <span class="badge bg-danger position-absolute top-0 start-0 mt-2 ms-2 mt-lg-3 ms-lg-3">{{ $discount }}</span>
                   @endif
 
-                  <!-- Обрізаємо зображення, не спотворюємо -->
+                  <!-- Зображення -->
                   <div class="ratio" style="--cz-aspect-ratio: calc(240 / 258 * 100%); aspect-ratio: 240/258;">
                     <img src="{{ $image }}"
                          alt="{{ $name }}"

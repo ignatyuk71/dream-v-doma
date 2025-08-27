@@ -1,10 +1,32 @@
 @php
     use App\Models\InstagramPost;
+    use Illuminate\Support\Str;
 
     $posts = InstagramPost::where('active', true)
-        ->orderBy('position') // тобто від меншого до більшого
-        ->take(5)             // беремо перші 4
+        ->orderBy('position')
+        ->take(5)
         ->get();
+
+    // Нормалізація шляху -> публічний URL
+    $igUrl = function ($path) {
+        if (empty($path)) {
+            return asset('assets/img/placeholder.svg');
+        }
+        if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+            return $path; // вже абсолютний URL
+        }
+        $p = ltrim($path, '/');
+
+        // якщо вже веб-шлях /storage/...
+        if (Str::startsWith($p, 'storage/')) {
+            return asset($p);
+        }
+
+        // привести "public/..."/"app/public/..." до storage/...
+        $p = preg_replace('#^(?:app/)?public/#', '', $p);
+
+        return asset('storage/'.$p);
+    };
 @endphp
 
 @if ($posts->count())
@@ -23,15 +45,28 @@
     <div class="overflow-x-auto pb-3 mb-n3" data-simplebar>
         <div class="d-flex gap-2 gap-md-3 gap-lg-4" style="min-width: 700px">
             @foreach($posts as $post)
+                @php
+                    $src = $igUrl($post->image ?? '');
+                    $alt = $post->alt ?? 'Instagram image';
+                    $href = $post->link ?: '#';
+                @endphp
                 <a
                     class="hover-effect-scale hover-effect-opacity position-relative w-100 overflow-hidden"
-                    href="{{ $post->link ?? '#' }}"
+                    href="{{ $href }}"
                     target="_blank"
+                    rel="noopener"
+                    aria-label="{{ $alt }}"
                 >
                     <span class="hover-effect-target position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-25 opacity-0 z-1"></span>
                     <i class="ci-instagram hover-effect-target fs-4 text-white position-absolute top-50 start-50 translate-middle opacity-0 z-2"></i>
                     <div class="hover-effect-target ratio ratio-1x1">
-                        <img src="/{{ $post->image }}" alt="{{ $post->alt ?? 'Instagram image' }}" />
+                        <img
+                            src="{{ $src }}"
+                            alt="{{ $alt }}"
+                            loading="lazy"
+                            decoding="async"
+                            class="w-100 h-100 object-fit-cover"
+                        />
                     </div>
                 </a>
             @endforeach
