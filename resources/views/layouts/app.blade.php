@@ -14,10 +14,10 @@
   <!-- PWA / icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" href="/assets/app-icons/icon-32x32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="/assets/app-icons/icon-180x180.png">
-
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ff6b6b">
   <!-- Theme switcher має бути рано -->
   <script src="/assets/js/theme-switcher.js"></script>
 
