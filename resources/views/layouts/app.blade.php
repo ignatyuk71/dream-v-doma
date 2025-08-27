@@ -10,7 +10,7 @@
   <meta name="author" content="Dream V Doma">
 
   {{-- Meta Pixel --}}
-  @includeWhen(app()->environment('production'), 'partials.meta-pixel')
+  @include('partials.meta-pixel-script')
 
   <!-- PWA / icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -40,6 +40,9 @@
   @stack('styles')
 </head>
 <body>
+  
+  {{-- NOSCRIPT — одразу після <body> --}}
+  @include('partials.meta-pixel-noscript')
 
   @yield('content')
   <div id="cart-offcanvas"></div>
