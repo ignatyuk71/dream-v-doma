@@ -34,14 +34,12 @@
                   </div>
                 </div>
               </td>
-
               <td>
                 <span class="text-muted">
                   {{ getTranslation(row.cat, 'meta_title', 'uk') }}
                 </span>
               </td>
-
-              <!-- Parent select -->
+              <!-- === Parent select === -->
               <td>
                 <select
                   v-model="row.cat._pendingParent"
@@ -54,15 +52,14 @@
                   <option
                     v-for="catOption in availableParents(row.cat)"
                     :key="catOption.id"
-                    :value="toModelParent(catOption.id)"
+                    :value="catOption.id"
                   >
                     {{ getTranslation(catOption, 'name', 'uk') }}
                   </option>
                 </select>
                 <span v-if="row.cat._savingParent" class="spinner-border spinner-border-sm ms-1"></span>
               </td>
-              <!-- /Parent select -->
-
+              <!-- === END Parent select === -->
               <td>
                 <div class="d-flex align-items-center gap-2">
                   <div
@@ -77,7 +74,6 @@
                   <span v-if="row.cat._savingStatus" class="spinner-border spinner-border-sm ms-1"></span>
                 </div>
               </td>
-
               <td class="actions-cell">
                 <a
                   :href="`/admin/categories/${row.cat.id}/edit`"
@@ -86,7 +82,6 @@
                 >
                   <i class="bi bi-pencil-square"></i>
                 </a>
-
                 <button
                   class="dots-menu"
                   @click="openMenu(row.cat.id)"
@@ -95,7 +90,6 @@
                 >
                   <i class="bi bi-three-dots-vertical"></i>
                 </button>
-
                 <div
                   v-if="menuOpen === row.cat.id"
                   class="dropdown-menu show"
@@ -125,7 +119,6 @@
 
 <script>
 import axios from 'axios'
-
 export default {
   name: 'CategoryTable',
   props: {
@@ -135,29 +128,19 @@ export default {
     return { menuOpen: null }
   },
   computed: {
-    // Будуємо дерево з нормалізацією parent_id
     treeCategories() {
       return this.buildTree(this.categories)
     }
   },
   methods: {
-    // Нормалізація parent_id/ID (null для кореня; число для інших)
-    toModelParent(v) {
-      if (v === null || v === undefined || v === '' || v === 0 || v === '0') return null
-      const n = Number(v)
-      return Number.isNaN(n) ? null : n
-    },
-
     buildTree(categories, parentId = null) {
-      const p = this.toModelParent(parentId)
       return categories
-        .filter(cat => this.toModelParent(cat.parent_id) === p)
+        .filter(cat => cat.parent_id === parentId)
         .map(cat => ({
           ...cat,
           children: this.buildTree(categories, cat.id)
         }))
     },
-
     renderCategoryRow(cat, level) {
       let rows = [{ cat, level }]
       if (cat.children && cat.children.length) {
@@ -167,13 +150,10 @@ export default {
       }
       return rows
     },
-
     availableParents(current) {
-      // не дозволяємо вибирати самого себе і своїх нащадків
       const excludeIds = [current.id, ...this.getAllChildrenIds(current)]
       return this.categories.filter(cat => !excludeIds.includes(cat.id))
     },
-
     getAllChildrenIds(cat) {
       let ids = []
       if (cat.children && cat.children.length) {
@@ -183,44 +163,37 @@ export default {
       }
       return ids
     },
-
     getTranslation(cat, field = 'name', locale = 'uk') {
-      const tr = cat?.translations?.find(t => t.locale === locale)
-      return tr ? (tr[field] ?? '') : ''
+      const tr = cat.translations?.find(t => t.locale === locale)
+      return tr ? tr[field] : ''
     },
-
     confirmChangeParent(cat) {
-      const normalizedCurrent = this.toModelParent(cat.parent_id)
-      const normalizedPending = this.toModelParent(cat._pendingParent)
-      if (normalizedPending === normalizedCurrent) return
-
+      if (cat._pendingParent == cat.parent_id) return
       if (confirm('Ви дійсно хочете змінити батьківську категорію?')) {
         this.saveParent(cat)
       } else {
-        cat._pendingParent = normalizedCurrent
+        cat._pendingParent = cat.parent_id
       }
     },
-
     async saveParent(cat) {
       cat._savingParent = true
       try {
         await axios.post(`/api/categories/${cat.id}/update-parent`, {
-          parent_id: this.toModelParent(cat._pendingParent)
+          parent_id: cat._pendingParent
         })
-        cat.parent_id = this.toModelParent(cat._pendingParent)
+        cat.parent_id = cat._pendingParent
         cat._savingParent = false
         this.$emit('reload')
       } catch (err) {
-        cat._pendingParent = this.toModelParent(cat.parent_id)
+        cat._pendingParent = cat.parent_id
         cat._savingParent = false
         alert('Помилка при зміні батьківської категорії')
       }
     },
-
     async toggleStatus(cat) {
-      if (cat._savingStatus) return
+      if (cat._savingStatus) return;
       const oldStatus = cat.status
-      cat.status = (oldStatus == 1 || oldStatus === true) ? 0 : 1
+      cat.status = oldStatus == 1 || oldStatus === true ? 0 : 1
       cat._savingStatus = true
       try {
         await axios.post(`/api/categories/${cat.id}/toggle-status`, { status: cat.status })
@@ -232,7 +205,6 @@ export default {
         alert('Помилка збереження статусу')
       }
     },
-
     statusLabel(status) {
       if (status == 1 || status === true) return 'Опубліковано'
       if (status == 0 || status === false) return 'Неактивний'
@@ -243,10 +215,10 @@ export default {
       if (status == 0 || status === false) return 'status-inactive'
       return ''
     },
-
     openMenu(idx) {
-      if (this.menuOpen === idx) this.closeMenu()
-      else {
+      if (this.menuOpen === idx) {
+        this.closeMenu()
+      } else {
         this.menuOpen = idx
         document.addEventListener('click', this.handleOutsideClick)
       }
@@ -261,14 +233,17 @@ export default {
       }
     },
 
+    // ОНОВЛЕНО: Видалення категорії з видаленням зображень/директорії
     async deleteCategory(cat) {
       this.closeMenu()
-      if (!confirm('Підтвердіть видалення категорії. Операція незворотна і не може бути скасована.')) return
+      if (!confirm('Підтвердіть видалення категорії. Операція незворотна і не може бути скасована.')) {
+        return
+      }
       try {
         await axios.delete(`/admin/categories/${cat.id}`)
         alert('Категорія успішно видалена')
         this.$emit('reload')
-      } catch {
+      } catch (e) {
         alert('Помилка при видаленні категорії')
       }
     },
@@ -277,44 +252,49 @@ export default {
       this.closeMenu()
       alert(`Download category #${cat.id}`)
     },
-
     duplicate(cat) {
       this.closeMenu()
       this.$emit('duplicate', cat)
     },
-
-    // Проставляємо службові поля з нормалізацією
+    // Оновлюємо всі допоміжні поля рекурсивно
     initPendingParentFields() {
       const patch = cat => {
         Object.assign(cat, {
-          _pendingParent: this.toModelParent(cat.parent_id),
+          _pendingParent: cat.parent_id,
           _savingParent: false,
           _savingStatus: false
-        })
-        if (cat.children && cat.children.length) cat.children.forEach(patch)
+        });
+        if (cat.children && cat.children.length) {
+          cat.children.forEach(patch)
+        }
       }
-      // Працюємо по дереву, щоб було поле children
-      this.treeCategories.forEach(patch)
-    }
+      this.categories.forEach(patch)
+    },
   },
-
   mounted() {
     this.initPendingParentFields()
   },
-
   watch: {
     categories: {
       handler() {
         this.initPendingParentFields()
       },
       deep: true,
-      immediate: true
+      immediate: true,
     }
   }
 }
 </script>
 
+
+
+
+
+
+
 <style scoped>
+
+
 .category-table-modern .cat-modern-cell {
   position: relative;
   min-height: 34px;
@@ -347,21 +327,19 @@ export default {
   position: fixed !important;
   top: auto !important;
   bottom: auto !important;
+
   z-index: 2000 !important;
   max-height: none !important;
   overflow: visible !important;
-  transform: translate(calc(100% - 180px), 90px) !important;
+  transform: translate(calc(100% - 180px), 90px) !important; /* зміщення вправо і вниз */
 }
-
-.toggle-switch {
+  .toggle-switch {
   width: 38px;
   height: 20px;
   background-color: #e5e7eb;
   border-radius: 999px;
   position: relative;
   transition: all 0.3s ease;
-  cursor: pointer;
-  flex-shrink: 0;
 }
 .toggle-switch::before {
   content: '';
@@ -373,7 +351,6 @@ export default {
   top: 2px;
   left: 2px;
   transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 .toggle-switch.active {
   background-color: #22c55e;
@@ -381,6 +358,8 @@ export default {
 .toggle-switch.active::before {
   transform: translateX(18px);
 }
+
+
 
 .table {
   width: 100%;
@@ -422,9 +401,44 @@ export default {
   font-size: 13px;
 }
 
-.d-flex { display: flex !important; }
-.align-items-center { align-items: center !important; }
-.gap-2 { gap: 0.5rem !important; }
+.d-flex {
+  display: flex !important;
+}
+.align-items-center {
+  align-items: center !important;
+}
+.gap-2 {
+  gap: 0.5rem !important;
+}
+
+.toggle-switch {
+  width: 38px;
+  height: 20px;
+  background-color: #e5e7eb;
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+.toggle-switch::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.toggle-switch.active {
+  background-color: #22c55e;
+}
+.toggle-switch.active::before {
+  transform: translateX(18px);
+}
 
 .status-badge {
   padding: 4px 12px;
@@ -434,8 +448,14 @@ export default {
   display: inline-block;
   white-space: nowrap;
 }
-.status-publish { background-color: #e9fdf0; color: #22c55e; }
-.status-inactive { background-color: #ffecec; color: #ef4444; }
+.status-publish {
+  background-color: #e9fdf0;
+  color: #22c55e;
+}
+.status-inactive {
+  background-color: #ffecec;
+  color: #ef4444;
+}
 
 .actions-cell {
   display: flex;
@@ -458,7 +478,10 @@ export default {
   transition: background 0.15s;
   color: #374151;
 }
-.edit-btn:hover { background: #f2f2f5; color: #1f2937; }
+.edit-btn:hover {
+  background: #f2f2f5;
+  color: #1f2937;
+}
 
 .dots-menu {
   border: none;
@@ -509,6 +532,10 @@ export default {
   align-items: center;
   transition: background 0.15s;
 }
-.dropdown-item:hover { background: #f6f6fa; }
-.dropdown-item.text-danger { color: #d62424; }
+.dropdown-item:hover {
+  background: #f6f6fa;
+}
+.dropdown-item.text-danger {
+  color: #d62424;
+}
 </style>
