@@ -141,7 +141,7 @@ export default {
     }
   },
   methods: {
-    // Нормалізація parent_id/ID (null для кореня; число для інших)
+    // Нормалізація parent_id/ID
     toModelParent(v) {
       if (v === null || v === undefined || v === '' || v === 0 || v === '0') return null
       const n = Number(v)
@@ -151,7 +151,12 @@ export default {
     buildTree(categories, parentId = null) {
       const p = this.toModelParent(parentId)
       return categories
-        .filter(cat => this.toModelParent(cat.parent_id) === p)
+        .filter(cat => {
+          const catParent = this.toModelParent(cat.parent_id)
+          // DEBUG
+          // console.log(`cat.id=${cat.id}, parent_id=${cat.parent_id} → ${catParent}, need=${p}`)
+          return catParent === p
+        })
         .map(cat => ({
           ...cat,
           children: this.buildTree(categories, cat.id)
@@ -169,7 +174,6 @@ export default {
     },
 
     availableParents(current) {
-      // не дозволяємо вибирати самого себе і своїх нащадків
       const excludeIds = [current.id, ...this.getAllChildrenIds(current)]
       return this.categories.filter(cat => !excludeIds.includes(cat.id))
     },
@@ -283,18 +287,15 @@ export default {
       this.$emit('duplicate', cat)
     },
 
-    // Проставляємо службові поля з нормалізацією
+    // Проставляємо службові поля (не через дерево, а по масиву)
     initPendingParentFields() {
-      const patch = cat => {
+      this.categories.forEach(cat => {
         Object.assign(cat, {
           _pendingParent: this.toModelParent(cat.parent_id),
           _savingParent: false,
           _savingStatus: false
         })
-        if (cat.children && cat.children.length) cat.children.forEach(patch)
-      }
-      // Працюємо по дереву, щоб було поле children
-      this.treeCategories.forEach(patch)
+      })
     }
   },
 
@@ -313,6 +314,7 @@ export default {
   }
 }
 </script>
+
 
 <style scoped>
 .category-table-modern .cat-modern-cell {
