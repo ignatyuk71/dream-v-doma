@@ -46,7 +46,7 @@
 
       <div v-for="item in items" :key="item.id" class="d-flex align-items-center">
         <img
-          :src="toPublicUrl(item.image) || '/assets/img/placeholder.jpg'"
+          :src="withStorage(item.image)"
           alt="Thumbnail"
           class="rounded shadow-sm"
           style="width:110px;height:110px;object-fit:cover;object-position:center;flex-shrink:0;"
@@ -148,18 +148,24 @@ const increment = cart.increment
 const decrement = cart.decrement
 const removeItem = cart.removeItem
 
-// ✅ Локальний нормалізатор URL — без змін у сторах.
-// 'products/77/...'  -> '/storage/products/77/...'
-// 'public/...', 'app/public/...' -> '/storage/...'
-// 'storage/...'      -> '/storage/...'
-// http(s)://...      -> як є
-const toPublicUrl = (path) => {
-  if (!path) return ''
-  if (/^https?:\/\//i.test(path) || path.startsWith('//')) return path
+// Примусово додаємо /storage/ до будь-якого відносного шляху
+const withStorage = (path) => {
+  if (!path) return '/assets/img/placeholder.jpg'
 
-  let p = String(path).replace(/^\/+/, '')
-  p = p.replace(/^(?:app\/)?public\//, '')
+  // Якщо абсолютний URL — беремо pathname
+  if (/^https?:\/\//i.test(path) || path.startsWith('//')) {
+    try {
+      path = new URL(path, window.location.origin).pathname
+    } catch (_) {}
+  }
+
+  // Прибрати початкові слеші і службові префікси
+  let p = String(path).replace(/^\/+/, '').replace(/^(?:app\/)?public\//, '')
+
+  // Якщо вже storage/... — повертаємо як /storage/...
   if (p.startsWith('storage/')) return '/' + p
+
+  // Інакше додати /storage/
   return '/storage/' + p
 }
 </script>
