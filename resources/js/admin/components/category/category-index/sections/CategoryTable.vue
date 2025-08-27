@@ -11,107 +11,96 @@
         </tr>
       </thead>
       <tbody>
-        <template v-for="cat in treeCategories" :key="cat.id">
-          <template v-for="row in renderCategoryRow(cat, 0)" :key="row.cat.id + '-' + row.level">
-            <tr>
-              <td>
-                <div
-                  class="d-flex align-items-center cat-modern-cell"
-                  :style="{ paddingLeft: (row.level * 36) + 'px' }"
-                >
-                  <span
-                    class="modern-dot"
-                    :class="{ parent: row.cat.children && row.cat.children.length }"
-                  ></span>
-                  <span
-                    v-if="row.cat.children && row.cat.children.length"
-                    class="modern-arrow"
-                  >&#8594;</span>
-                  <div>
-                    <div class="product-name">
-                      {{ getTranslation(row.cat, 'name', 'uk') }}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <span class="text-muted">
-                  {{ getTranslation(row.cat, 'meta_title', 'uk') }}
-                </span>
-              </td>
-              <!-- === Parent select === -->
-              <td>
-                <select
-                  v-model="row.cat._pendingParent"
-                  @change="confirmChangeParent(row.cat)"
-                  class="form-select"
-                  style="min-width:140px;"
-                  :disabled="row.cat._savingParent"
-                >
-                  <option :value="null">— Коренева категорія —</option>
-                  <option
-                    v-for="catOption in availableParents(row.cat)"
-                    :key="catOption.id"
-                    :value="catOption.id"
-                  >
-                    {{ getTranslation(catOption, 'name', 'uk') }}
-                  </option>
-                </select>
-                <span v-if="row.cat._savingParent" class="spinner-border spinner-border-sm ms-1"></span>
-              </td>
-              <!-- === END Parent select === -->
-              <td>
-                <div class="d-flex align-items-center gap-2">
-                  <div
-                    :class="['toggle-switch', { active: row.cat.status == 1 || row.cat.status === true }]"
-                    @click="toggleStatus(row.cat)"
-                    style="cursor: pointer;"
-                    title="Змінити статус"
-                  ></div>
-                  <span :class="['status-badge', statusClass(row.cat.status)]">
-                    {{ statusLabel(row.cat.status) }}
-                  </span>
-                  <span v-if="row.cat._savingStatus" class="spinner-border spinner-border-sm ms-1"></span>
-                </div>
-              </td>
-              <td class="actions-cell">
-                <a
-                  :href="`/admin/categories/${row.cat.id}/edit`"
-                  class="edit-btn text-dark"
-                  title="Редагувати"
-                >
-                  <i class="bi bi-pencil-square"></i>
-                </a>
-                <button
-                  class="dots-menu"
-                  @click="openMenu(row.cat.id)"
-                  type="button"
-                  title="Ще дії"
-                >
-                  <i class="bi bi-three-dots-vertical"></i>
-                </button>
-                <div
-                  v-if="menuOpen === row.cat.id"
-                  class="dropdown-menu show"
-                  @mouseleave="closeMenu"
-                >
-                  <a class="dropdown-item" @click.prevent="download(row.cat)">
-                    <i class="bi bi-download me-2"></i> Download
-                  </a>
-                  <a
-                    class="dropdown-item text-danger"
-                    @click.prevent="deleteCategory(row.cat)"
-                  >
-                    <i class="bi bi-trash me-2"></i> Delete
-                  </a>
-                  <a class="dropdown-item" @click.prevent="duplicate(row.cat)">
-                    <i class="bi bi-files me-2"></i> Duplicate
-                  </a>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </template>
+        <!-- ПЛОСКИЙ СПИСОК -->
+        <tr v-for="cat in sortedCategories" :key="cat.id">
+          <td>
+            <div class="d-flex align-items-center cat-modern-cell">
+              <div class="product-name">
+                {{ getTranslation(cat, 'name', 'uk') }}
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <span class="text-muted">
+              {{ getTranslation(cat, 'meta_title', 'uk') }}
+            </span>
+          </td>
+
+          <!-- === Parent select === -->
+          <td>
+            <select
+              v-model="cat._pendingParent"
+              @change="confirmChangeParent(cat)"
+              class="form-select"
+              style="min-width:140px;"
+              :disabled="cat._savingParent"
+            >
+              <option :value="null">— Коренева категорія —</option>
+              <option
+                v-for="catOption in availableParents(cat)"
+                :key="catOption.id"
+                :value="catOption.id"
+              >
+                {{ getTranslation(catOption, 'name', 'uk') }}
+              </option>
+            </select>
+            <span v-if="cat._savingParent" class="spinner-border spinner-border-sm ms-1"></span>
+          </td>
+          <!-- === END Parent select === -->
+
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div
+                :class="['toggle-switch', { active: cat.status == 1 || cat.status === true }]"
+                @click="toggleStatus(cat)"
+                style="cursor: pointer;"
+                title="Змінити статус"
+              ></div>
+              <span :class="['status-badge', statusClass(cat.status)]">
+                {{ statusLabel(cat.status) }}
+              </span>
+              <span v-if="cat._savingStatus" class="spinner-border spinner-border-sm ms-1"></span>
+            </div>
+          </td>
+
+          <td class="actions-cell">
+            <a
+              :href="`/admin/categories/${cat.id}/edit`"
+              class="edit-btn text-dark"
+              title="Редагувати"
+            >
+              <i class="bi bi-pencil-square"></i>
+            </a>
+            <button
+              class="dots-menu"
+              @click="openMenu(cat.id)"
+              type="button"
+              title="Ще дії"
+            >
+              <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <div
+              v-if="menuOpen === cat.id"
+              class="dropdown-menu show"
+              @mouseleave="closeMenu"
+            >
+              <a class="dropdown-item" @click.prevent="download(cat)">
+                <i class="bi bi-download me-2"></i> Download
+              </a>
+              <a
+                class="dropdown-item text-danger"
+                @click.prevent="deleteCategory(cat)"
+              >
+                <i class="bi bi-trash me-2"></i> Delete
+              </a>
+              <a class="dropdown-item" @click.prevent="duplicate(cat)">
+                <i class="bi bi-files me-2"></i> Duplicate
+              </a>
+            </div>
+          </td>
+        </tr>
+        <!-- /ПЛОСКИЙ СПИСОК -->
       </tbody>
     </table>
   </div>
@@ -128,45 +117,42 @@ export default {
     return { menuOpen: null }
   },
   computed: {
-    treeCategories() {
-      return this.buildTree(this.categories)
+    // Плоский відсортований список (за назвою uk)
+    sortedCategories() {
+      return [...this.categories].sort((a, b) => {
+        const an = (this.getTranslation(a, 'name', 'uk') || '').toLowerCase()
+        const bn = (this.getTranslation(b, 'name', 'uk') || '').toLowerCase()
+        return an.localeCompare(bn)
+      })
     }
   },
   methods: {
-    buildTree(categories, parentId = null) {
-      return categories
-        .filter(cat => cat.parent_id === parentId)
-        .map(cat => ({
-          ...cat,
-          children: this.buildTree(categories, cat.id)
-        }))
-    },
-    renderCategoryRow(cat, level) {
-      let rows = [{ cat, level }]
-      if (cat.children && cat.children.length) {
-        cat.children.forEach(child => {
-          rows = rows.concat(this.renderCategoryRow(child, level + 1))
-        })
-      }
-      return rows
-    },
-    availableParents(current) {
-      const excludeIds = [current.id, ...this.getAllChildrenIds(current)]
-      return this.categories.filter(cat => !excludeIds.includes(cat.id))
-    },
-    getAllChildrenIds(cat) {
-      let ids = []
-      if (cat.children && cat.children.length) {
-        cat.children.forEach(child => {
-          ids.push(child.id, ...this.getAllChildrenIds(child))
-        })
-      }
-      return ids
-    },
     getTranslation(cat, field = 'name', locale = 'uk') {
       const tr = cat.translations?.find(t => t.locale === locale)
       return tr ? tr[field] : ''
     },
+
+    availableParents(current) {
+      // забороняємо обрати себе і своїх нащадків, щоб не створити цикл
+      const excludeIds = [current.id, ...this.getDescendantIds(current.id)]
+      return this.categories.filter(cat => !excludeIds.includes(cat.id))
+    },
+
+    // шукаємо нащадків по parent_id без побудови дерева
+    getDescendantIds(rootId) {
+      const ids = []
+      const walk = (pid) => {
+        this.categories.forEach(c => {
+          if (c.parent_id === pid) {
+            ids.push(c.id)
+            walk(c.id)
+          }
+        })
+      }
+      walk(rootId)
+      return ids
+    },
+
     confirmChangeParent(cat) {
       if (cat._pendingParent == cat.parent_id) return
       if (confirm('Ви дійсно хочете змінити батьківську категорію?')) {
@@ -175,6 +161,7 @@ export default {
         cat._pendingParent = cat.parent_id
       }
     },
+
     async saveParent(cat) {
       cat._savingParent = true
       try {
@@ -190,8 +177,9 @@ export default {
         alert('Помилка при зміні батьківської категорії')
       }
     },
+
     async toggleStatus(cat) {
-      if (cat._savingStatus) return;
+      if (cat._savingStatus) return
       const oldStatus = cat.status
       cat.status = oldStatus == 1 || oldStatus === true ? 0 : 1
       cat._savingStatus = true
@@ -205,6 +193,7 @@ export default {
         alert('Помилка збереження статусу')
       }
     },
+
     statusLabel(status) {
       if (status == 1 || status === true) return 'Опубліковано'
       if (status == 0 || status === false) return 'Неактивний'
@@ -215,6 +204,7 @@ export default {
       if (status == 0 || status === false) return 'status-inactive'
       return ''
     },
+
     openMenu(idx) {
       if (this.menuOpen === idx) {
         this.closeMenu()
@@ -233,7 +223,6 @@ export default {
       }
     },
 
-    // ОНОВЛЕНО: Видалення категорії з видаленням зображень/директорії
     async deleteCategory(cat) {
       this.closeMenu()
       if (!confirm('Підтвердіть видалення категорії. Операція незворотна і не може бути скасована.')) {
@@ -256,19 +245,16 @@ export default {
       this.closeMenu()
       this.$emit('duplicate', cat)
     },
-    // Оновлюємо всі допоміжні поля рекурсивно
+
+    // ініціалізація службових полів
     initPendingParentFields() {
-      const patch = cat => {
+      this.categories.forEach(cat => {
         Object.assign(cat, {
-          _pendingParent: cat.parent_id,
+          _pendingParent: cat.parent_id ?? null,
           _savingParent: false,
           _savingStatus: false
-        });
-        if (cat.children && cat.children.length) {
-          cat.children.forEach(patch)
-        }
-      }
-      this.categories.forEach(patch)
+        })
+      })
     },
   },
   mounted() {
@@ -285,9 +271,6 @@ export default {
   }
 }
 </script>
-
-
-
 
 
 
