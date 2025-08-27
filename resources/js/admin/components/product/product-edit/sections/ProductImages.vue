@@ -5,9 +5,10 @@
       <input type="file" class="form-control" multiple @change="handleFilesChange">
       <small class="text-muted">Файлів: {{ images.length }}</small>
     </div>
+
     <div ref="containerRef" class="d-flex gap-2 flex-wrap">
-      <div v-for="(img, index) in imagesWithCorrectUrl" :key="img.id" class="image-item">
-        <img :src="img.url" alt="" />
+      <div v-for="(img, index) in sortedImages" :key="img.id" class="image-item">
+        <img :src="viewUrl(img)" alt="" />
         <button
           type="button"
           class="remove-btn"
@@ -44,20 +45,45 @@ watch(
   }
 )
 
-// Додаємо початковий '/' до url, якщо потрібно, і сортуємо по position
-const imagesWithCorrectUrl = computed(() => {
-  return images.value
-    .map(img => {
-      if (img.url && !img.url.startsWith('/') && !img.url.startsWith('blob:')) {
-        return {
-          ...img,
-          url: '/' + img.url
-        }
-      }
-      return img
-    })
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+/** Рендеримо посилання на ОРИГІНАЛЬНІ об'єкти (без .map / клонування) */
+const sortedImages = computed(() => {
+  return [...images.value].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
 })
+
+/** Універсальна побудова URL */
+function viewUrl(img) {
+  let u =
+    img?.url ||
+    img?.full_url ||
+    img?.path ||
+    img?.storage_path ||
+    img?.image ||
+    img?.filepath ||
+    img?.filename ||
+    img?.name
+
+  if (!u) return ''
+
+  u = String(u)
+
+  // blob:/data: або абсолютний http(s)
+  if (u.startsWith('blob:') || u.startsWith('data:') || /^https?:\/\//i.test(u)) return u
+
+  // вже абсолютний шлях від кореня
+  if (u.startsWith('/')) return u
+
+  // типові кейси зі storage
+  if (u.startsWith('storage/')) return `/${u.replace(/^\/+/, '')}`
+
+  const storageIdx = u.indexOf('/storage/')
+  if (storageIdx !== -1) return u.slice(storageIdx)
+
+  // часто зберігають "public/...": приберемо префікс
+  u = u.replace(/^public\//, '')
+
+  // базово — вважаємо шлях відносно /storage
+  return `/storage/${u.replace(/^\/+/, '')}`
+}
 
 function updatePositionsAndMain() {
   images.value.forEach((img, idx) => {
@@ -82,9 +108,19 @@ function handleFilesChange(event) {
   event.target.value = ''
 }
 
-function removeImage(idx) {
-  images.value.splice(idx, 1)
-  updatePositionsAndMain()
+/** Видалення по індексу відсортованого списку: знаходимо реальний елемент по id */
+function removeImage(sortedIdx) {
+  const target = sortedImages.value[sortedIdx]
+  const realIdx = images.value.findIndex(i => i.id === target.id)
+  if (realIdx !== -1) {
+    // звільняємо blob URL (якщо це прев’ю)
+    const removed = images.value[realIdx]
+    if (removed?.url && String(removed.url).startsWith('blob:')) {
+      try { URL.revokeObjectURL(removed.url) } catch (_) {}
+    }
+    images.value.splice(realIdx, 1)
+    updatePositionsAndMain()
+  }
 }
 
 const containerRef = ref(null)
@@ -92,14 +128,19 @@ onMounted(() => {
   Sortable.create(containerRef.value, {
     animation: 150,
     onEnd: (evt) => {
-      const moved = images.value.splice(evt.oldIndex, 1)[0]
-      images.value.splice(evt.newIndex, 0, moved)
+      // Позиції беруться з DOM, який рендериться з sortedImages.
+      // Формуємо новий порядок як копію sortedImages з переміщенням.
+      const list = [...sortedImages.value]
+      const [moved] = list.splice(evt.oldIndex, 1)
+      list.splice(evt.newIndex, 0, moved)
+
+      // Оскільки list — це ті самі об'єкти, просто замінюємо images.value на цей порядок.
+      images.value = list
       updatePositionsAndMain()
     }
   })
 })
 </script>
-
 
 <style scoped>
 .image-item {
