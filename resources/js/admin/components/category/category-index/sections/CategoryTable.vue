@@ -257,7 +257,6 @@ export default {
 }
 </script>
 
-
 <style scoped>
 .category-table-modern .cat-modern-cell {
   position: relative;
