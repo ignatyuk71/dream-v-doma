@@ -25,141 +25,163 @@
   </div>
 
   <div class="tab-content pt-3">
-  
-  <div class="tab-pane fade show active fs-sm" id="description-tab-pane" role="tabpanel" aria-labelledby="description-tab">
-  @php
-    $desc = $product->translations->firstWhere('locale', app()->getLocale())?->description ?? '';
-    $blocks = $desc ? json_decode($desc, true) : [];
-  @endphp
+    <div class="tab-pane fade show active fs-sm" id="description-tab-pane" role="tabpanel" aria-labelledby="description-tab">
+      @php
+        use Illuminate\Support\Str;
 
-  @if(!empty($blocks))
-    @foreach($blocks as $block)
-      @php $type = $block['type'] ?? 'text'; @endphp
+        // Хелпер для нормалізації URL зображень
+        $toPublicUrl = function ($path) {
+            if (empty($path)) {
+                return asset('assets/img/placeholder.svg');
+            }
+            if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+                return $path; // вже абсолютний URL
+            }
+            $p = ltrim($path, '/');
 
-      <section class="py-3 border-bottom">
-        @switch($type)
+            // якщо вже веб-шлях /storage/...
+            if (Str::startsWith($p, 'storage/')) {
+                return asset($p);
+            }
 
-          {{-- TEXT BLOCK --}}
-          @case('text')
-            <div class="container-fluid px-4 px-lg-5">
-              <div class="mx-auto">
-                @if(!empty($block['title']))
-                  <h2 class="fw-bold mb-3 text-center" style="font-size:1.75rem;">
-                    {{ $block['title'] }}
-                  </h2>
-                @endif
-                <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
-                  {!! nl2br(e($block['text'] ?? '')) !!}
-                </p>
-              </div>
-            </div>
-          @break
+            // зняти префікси "public/" або "app/public/"
+            $p = preg_replace('#^(?:app/)?public/#', '', $p);
 
-          {{-- IMAGE RIGHT --}}
-          @case('image_right')
-            <div class="container px-4 px-lg-5">
-              <div class="row align-items-center gx-5 gy-4">
-                <div class="col-12 col-lg-6">
-                  @if(!empty($block['title']))
-                    <h2 class="fw-bold mb-3" style="font-size:1.75rem;">
-                      {{ $block['title'] }}
-                    </h2>
-                  @endif
-                  <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
-                    {!! nl2br(e($block['text'] ?? '')) !!}
-                  </p>
-                </div>
-                <div class="col-12 col-lg-6 text-center">
-                  @if(!empty($block['imageUrl']))
-                    <img src="{{ asset($block['imageUrl']) }}"
-                         alt="{{ $block['title'] ?? 'Product image' }}"
-                         class="img-fluid rounded"
-                         loading="lazy">
-                  @endif
-                </div>
-              </div>
-            </div>
-          @break
+            // решту віддаємо як /storage/{p}
+            return asset('storage/'.$p);
+        };
 
-          {{-- IMAGE LEFT --}}
-          @case('image_left')
-            <div class="container px-4 px-lg-5">
-              <div class="row align-items-center gx-5 gy-4 flex-lg-row-reverse">
-                <div class="col-12 col-lg-6">
-                  @if(!empty($block['title']))
-                    <h2 class="fw-bold mb-3" style="font-size:1.75rem;">
-                      {{ $block['title'] }}
-                    </h2>
-                  @endif
-                  <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
-                    {!! nl2br(e($block['text'] ?? '')) !!}
-                  </p>
-                </div>
-                <div class="col-12 col-lg-6 text-center">
-                  @if(!empty($block['imageUrl']))
-                    <img src="{{ asset($block['imageUrl']) }}"
-                         alt="{{ $block['title'] ?? 'Product image' }}"
-                         class="img-fluid rounded"
-                         loading="lazy">
-                  @endif
-                </div>
-              </div>
-            </div>
-          @break
+        $locale = app()->getLocale();
+        $desc   = $product->translations->firstWhere('locale', $locale)?->description ?? '';
+        $blocks = $desc ? json_decode($desc, true) : [];
+      @endphp
 
-          {{-- TWO IMAGES --}}
-          @case('two_images')
-            <div class="container px-4 px-lg-5">
-              <div class="row gx-4 gy-4">
-                @if(!empty($block['imageUrl1']))
-                  <div class="col-12 col-md-6 text-center">
-                    <img src="{{ asset($block['imageUrl1']) }}"
-                         alt="Gallery image 1"
-                         class="img-fluid rounded shadow"
-                         loading="lazy">
+      @if(!empty($blocks))
+        @foreach($blocks as $block)
+          @php $type = $block['type'] ?? 'text'; @endphp
+
+          <section class="py-3 border-bottom">
+            @switch($type)
+
+              {{-- TEXT BLOCK --}}
+              @case('text')
+                <div class="container-fluid px-4 px-lg-5">
+                  <div class="mx-auto">
+                    @if(!empty($block['title']))
+                      <h2 class="fw-bold mb-3 text-center" style="font-size:1.75rem;">
+                        {{ $block['title'] }}
+                      </h2>
+                    @endif
+                    <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
+                      {!! nl2br(e($block['text'] ?? '')) !!}
+                    </p>
                   </div>
-                @endif
-                @if(!empty($block['imageUrl2']))
-                  <div class="col-12 col-md-6 text-center">
-                    <img src="{{ asset($block['imageUrl2']) }}"
-                         alt="Gallery image 2"
-                         class="img-fluid rounded shadow"
-                         loading="lazy">
+                </div>
+              @break
+
+              {{-- IMAGE RIGHT --}}
+              @case('image_right')
+                <div class="container px-4 px-lg-5">
+                  <div class="row align-items-center gx-5 gy-4">
+                    <div class="col-12 col-lg-6">
+                      @if(!empty($block['title']))
+                        <h2 class="fw-bold mb-3" style="font-size:1.75rem;">
+                          {{ $block['title'] }}
+                        </h2>
+                      @endif
+                      <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
+                        {!! nl2br(e($block['text'] ?? '')) !!}
+                      </p>
+                    </div>
+                    <div class="col-12 col-lg-6 text-center">
+                      @if(!empty($block['imageUrl']))
+                        <img src="{{ $toPublicUrl($block['imageUrl']) }}"
+                             alt="{{ $block['title'] ?? 'Product image' }}"
+                             class="img-fluid rounded"
+                             loading="lazy">
+                      @endif
+                    </div>
                   </div>
-                @endif
-              </div>
-            </div>
-          @break
+                </div>
+              @break
 
-          @default
-            {{-- fallback --}}
-        @endswitch
-      </section>
-    @endforeach
-  @endif
+              {{-- IMAGE LEFT --}}
+              @case('image_left')
+                <div class="container px-4 px-lg-5">
+                  <div class="row align-items-center gx-5 gy-4 flex-lg-row-reverse">
+                    <div class="col-12 col-lg-6">
+                      @if(!empty($block['title']))
+                        <h2 class="fw-bold mb-3" style="font-size:1.75rem;">
+                          {{ $block['title'] }}
+                        </h2>
+                      @endif
+                      <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
+                        {!! nl2br(e($block['text'] ?? '')) !!}
+                      </p>
+                    </div>
+                    <div class="col-12 col-lg-6 text-center">
+                      @if(!empty($block['imageUrl']))
+                        <img src="{{ $toPublicUrl($block['imageUrl']) }}"
+                             alt="{{ $block['title'] ?? 'Product image' }}"
+                             class="img-fluid rounded"
+                             loading="lazy">
+                      @endif
+                    </div>
+                  </div>
+                </div>
+              @break
 
-  {{-- Характеристики (НЕ ЧІПАЄМО логіку) --}}
-  <div class="col-md-7 order-md-1 pt-4" id="specs-anchor">
-    <h2 class="h3 pb-2 pb-md-3">{{ __('specs.title') }}</h2>
-    <ul class="list-unstyled d-flex flex-column gap-3 fs-sm pb-3 m-0 mb-2 mb-sm-3">
-      @foreach ($product->attributeValues as $attrValue)
-        @php
-          $attrTrans = $attrValue->attribute->translations->firstWhere('locale', app()->getLocale());
-          $valueTrans = $attrValue->translations->firstWhere('locale', app()->getLocale());
-        @endphp
-        @if ($attrTrans && $valueTrans)
-          <li class="d-flex align-items-center position-relative pe-4">
-            <span>{{ $attrTrans->name }}:</span>
-            <span class="d-block flex-grow-1 border-bottom border-dashed px-1 mt-2 mx-2"></span>
-            <span class="text-dark-emphasis fw-medium text-end">{{ $valueTrans->value }}</span>
-          </li>
-        @endif
-      @endforeach
-    </ul>
-  </div>
-</div>
+              {{-- TWO IMAGES --}}
+              @case('two_images')
+                <div class="container px-4 px-lg-5">
+                  <div class="row gx-4 gy-4">
+                    @if(!empty($block['imageUrl1']))
+                      <div class="col-12 col-md-6 text-center">
+                        <img src="{{ $toPublicUrl($block['imageUrl1']) }}"
+                             alt="Gallery image 1"
+                             class="img-fluid rounded shadow"
+                             loading="lazy">
+                      </div>
+                    @endif
+                    @if(!empty($block['imageUrl2']))
+                      <div class="col-12 col-md-6 text-center">
+                        <img src="{{ $toPublicUrl($block['imageUrl2']) }}"
+                             alt="Gallery image 2"
+                             class="img-fluid rounded shadow"
+                             loading="lazy">
+                      </div>
+                    @endif
+                  </div>
+                </div>
+              @break
 
+              @default
+                {{-- fallback --}}
+            @endswitch
+          </section>
+        @endforeach
+      @endif
 
+      {{-- Характеристики --}}
+      <div class="col-md-7 order-md-1 pt-4" id="specs-anchor">
+        <h2 class="h3 pb-2 pb-md-3">{{ __('specs.title') }}</h2>
+        <ul class="list-unstyled d-flex flex-column gap-3 fs-sm pb-3 m-0 mb-2 mb-sm-3">
+          @foreach ($product->attributeValues as $attrValue)
+            @php
+              $attrTrans  = $attrValue->attribute->translations->firstWhere('locale', app()->getLocale());
+              $valueTrans = $attrValue->translations->firstWhere('locale', app()->getLocale());
+            @endphp
+            @if ($attrTrans && $valueTrans)
+              <li class="d-flex align-items-center position-relative pe-4">
+                <span>{{ $attrTrans->name }}:</span>
+                <span class="d-block flex-grow-1 border-bottom border-dashed px-1 mt-2 mx-2"></span>
+                <span class="text-dark-emphasis fw-medium text-end">{{ $valueTrans->value }}</span>
+              </li>
+            @endif
+          @endforeach
+        </ul>
+      </div>
+    </div>
 
     <div class="tab-pane fade fs-sm" id="delivery-tab-pane" role="tabpanel" aria-labelledby="delivery-tab">
       <p>{{ __('product.delivery_and_returns') }}...</p>
@@ -228,22 +250,25 @@
             <p class="fs-sm mb-2">{{ $review->content }}</p>
 
             @if ($review->photo_path)
+              {{-- якщо ти зберігаєш фото в storage/app/public/review/... — краще теж через нормалізацію --}}
+              @php $reviewImg = $toPublicUrl($review->photo_path); @endphp
               <div>
-                <img src="{{ asset('assets/img/review/' . basename($review->photo_path)) }}"
-                    width="50" height="50" class="rounded border cursor-pointer"
-                    data-bs-toggle="modal" data-bs-target="#photoModal-{{ $review->id }}"
-                    alt="{{ __('review.photo') }}">
+                <img src="{{ $reviewImg }}"
+                     width="50" height="50" class="rounded border cursor-pointer"
+                     data-bs-toggle="modal" data-bs-target="#photoModal-{{ $review->id }}"
+                     alt="{{ __('review.photo') }}">
               </div>
             @endif
           </div>
 
           @if ($review->photo_path)
+            @php $reviewImg = $toPublicUrl($review->photo_path); @endphp
             <div class="modal fade" id="photoModal-{{ $review->id }}" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content bg-transparent border-0">
                   <div class="modal-body p-0 position-relative">
                     <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="{{ __('review.modal_close') }}"></button>
-                    <img src="{{ asset('assets/img/review/' . basename($review->photo_path)) }}" class="img-fluid rounded" alt="{{ __('review.photo') }}">
+                    <img src="{{ $reviewImg }}" class="img-fluid rounded" alt="{{ __('review.photo') }}">
                   </div>
                 </div>
               </div>
@@ -317,27 +342,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
   fileInput.addEventListener('change', function () {
     const file = this.files[0];
-
-    // Очистити попередній перегляд
     previewContainer.innerHTML = '';
-
     if (!file) return;
 
-    // Перевірка MIME-типу
     if (!file.type.startsWith('image/')) {
       previewContainer.innerHTML = '<div class="text-danger">Файл не є зображенням.</div>';
       this.value = '';
       return;
     }
 
-    // Генерація унікального імені
     const now = new Date();
     const pad = num => String(num).padStart(2, '0');
     const fileExt = file.name.split('.').pop().toLowerCase();
     const filename = `domashni-tapochkidream-v-doma_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.${fileExt}`;
 
-
-    // Показати прев’ю
     const reader = new FileReader();
     reader.onload = function (e) {
       const img = document.createElement('img');
@@ -354,7 +372,6 @@ document.addEventListener('DOMContentLoaded', function () {
       previewContainer.appendChild(img);
       previewContainer.appendChild(caption);
     };
-
     reader.readAsDataURL(file);
   });
 });

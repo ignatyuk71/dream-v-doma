@@ -1,4 +1,27 @@
 @php
+  use Illuminate\Support\Str;
+
+  // Функція нормалізації URL зображень
+  $toPublicUrl = function ($path) {
+      if (empty($path)) {
+          return asset('assets/img/placeholder.svg');
+      }
+      if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+          return $path; // вже абсолютний URL
+      }
+      $p = ltrim($path, '/');
+
+      // якщо вже починається з storage/
+      if (Str::startsWith($p, 'storage/')) {
+          return asset($p);
+      }
+
+      // зняти префікси public/ або app/public/
+      $p = preg_replace('#^(?:app/)?public/#', '', $p);
+
+      return asset('storage/' . $p);
+  };
+
   // Приймаємо $blocks (масив). Якщо не передали — пробуємо зчитати з $translation->description (JSON).
   if (!isset($blocks)) {
       $locale = app()->getLocale();
@@ -61,7 +84,7 @@
               </div>
               <div class="col-12 col-lg-6 text-center">
                 @if(!empty($block['imageUrl']))
-                  <img src="{{ asset($block['imageUrl']) }}"
+                  <img src="{{ $toPublicUrl($block['imageUrl']) }}"
                        alt="{{ $block['title'] ?? 'Category image' }}"
                        class="img-fluid rounded"
                        loading="lazy">
@@ -89,7 +112,7 @@
               </div>
               <div class="col-12 col-lg-6 text-center">
                 @if(!empty($block['imageUrl']))
-                  <img src="{{ asset($block['imageUrl']) }}"
+                  <img src="{{ $toPublicUrl($block['imageUrl']) }}"
                        alt="{{ $block['title'] ?? 'Category image' }}"
                        class="img-fluid rounded"
                        loading="lazy">
@@ -105,7 +128,7 @@
             <div class="row gx-4 gy-4">
               @if(!empty($block['imageUrl1']))
                 <div class="col-12 col-md-6 text-center">
-                  <img src="{{ asset($block['imageUrl1']) }}"
+                  <img src="{{ $toPublicUrl($block['imageUrl1']) }}"
                        alt="Gallery image 1"
                        class="img-fluid rounded shadow"
                        loading="lazy">
@@ -113,7 +136,7 @@
               @endif
               @if(!empty($block['imageUrl2']))
                 <div class="col-12 col-md-6 text-center">
-                  <img src="{{ asset($block['imageUrl2']) }}"
+                  <img src="{{ $toPublicUrl($block['imageUrl2']) }}"
                        alt="Gallery image 2"
                        class="img-fluid rounded shadow"
                        loading="lazy">
