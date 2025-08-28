@@ -34,63 +34,62 @@
             <h5 class="fw-bold mb-3">{{ $t('checkout.order.summary_title') }}</h5>
 
             <ul class="list-unstyled mb-3">
-            <li class="d-flex justify-content-between py-1">
-              <span>{{ itemsCountText }}</span>
-              <span class="fw-semibold">{{ subtotal }} {{ $t('currency') }}</span>
-            </li>
+              <li class="d-flex justify-content-between py-1">
+                <span>{{ itemsCountText }}</span>
+                <span class="fw-semibold">{{ subtotal }} {{ $t('currency') }}</span>
+              </li>
 
-            <!-- Доставка -->
-            <li class="d-flex justify-content-between align-items-center py-1">
-              <span>{{ $t('checkout.order.delivery', { label: deliveryLabel }) }}</span>
+              <!-- Доставка -->
+              <li class="d-flex justify-content-between align-items-center py-1">
+                <span>{{ $t('checkout.order.delivery', { label: deliveryLabel }) }}</span>
 
-              <template v-if="isFreeShipping">
-                <span class="badge rounded-pill bg-success-subtle text-success border text-uppercase px-2">
-                  {{ $t('checkout.order.free') || 'FREE' }}
-                </span>
-              </template>
-              <template v-else>
-                <span class="fw-semibold">{{ deliveryCost }} {{ $t('currency') }}</span>
-              </template>
-            </li>
+                <template v-if="isFreeShipping">
+                  <span class="badge rounded-pill bg-success-subtle text-success border text-uppercase px-2">
+                    {{ $t('checkout.order.free') || 'FREE' }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="fw-semibold">{{ deliveryCost }} {{ $t('currency') }}</span>
+                </template>
+              </li>
 
-            <!-- Комісія післяплати (червоним) -->
-            <li v-if="paymentType === 'cod'" class="d-flex justify-content-between py-1 text-danger">
-              <span class="fw-semibold">{{ $t('checkout.order.cod_fee_short') || 'Комісія післяплати' }}</span>
-              <span class="fw-bold">{{ codFee }} {{ $t('currency') }}</span>
-            </li>
+              <!-- Комісія післяплати (червоним) -->
+              <li v-if="paymentType === 'cod'" class="d-flex justify-content-between py-1 text-danger">
+                <span class="fw-semibold">{{ $t('checkout.order.cod_fee_short') || 'Комісія післяплати' }}</span>
+                <span class="fw-bold">{{ codFee }} {{ $t('currency') }}</span>
+              </li>
 
-            <li v-if="bonuses > 0" class="d-flex justify-content-between py-1 text-success">
-              <span>{{ $t('checkout.order.bonuses') }}</span>
-              <span class="fw-semibold">-{{ bonuses }} {{ $t('currency') }}</span>
-            </li>
-          </ul>
-
-
-          <!-- ✅ Повідомлення про безкоштовну доставку -->
-          <div v-if="isFreeShipping" class="alert alert-success d-flex align-items-center gap-2 py-2 px-3 mb-3 rounded-3">
-            <i class="ci-check-circle fs-lg"></i>
-            <span>{{ $t('checkout.order.free_shipping_msg') || 'Вітаємо! Ваше замовлення відповідає умовам безкоштовної доставки.' }}</span>
-          </div>
-
-          <!-- Підсумок -->
-          <div class="d-flex justify-content-between align-items-center border-top pt-3 mb-2">
-            <span class="fs-6 fw-semibold">{{ $t('checkout.order.total') }}</span>
-            <span class="fs-4 fw-bold">{{ total }} {{ $t('currency') }}</span>
-          </div>
-
-          <!-- Кнопка підтвердження -->
-          <button class="btn btn-success w-100 py-2" @click="submitForm">
-            {{ $t('checkout.order.button') }}
-          </button>
-
-          <div class="mt-3 small text-muted">
-            {{ $t('checkout.order.terms_hint') || 'Підтверджуючи замовлення, я приймаю умови:' }}
-            <ul class="mt-2 mb-0 ps-3">
-              <li><a href="/policy" class="text-muted text-decoration-underline">{{ $t('policy') || 'політика конфіденційності' }}</a></li>
-              <li><a href="/terms" class="text-muted text-decoration-underline">{{ $t('terms') || 'угода користувача' }}</a></li>
+              <li v-if="bonuses > 0" class="d-flex justify-content-between py-1 text-success">
+                <span>{{ $t('checkout.order.bonuses') }}</span>
+                <span class="fw-semibold">-{{ bonuses }} {{ $t('currency') }}</span>
+              </li>
             </ul>
+
+            <!-- ✅ Повідомлення про безкоштовну доставку -->
+            <div v-if="isFreeShipping" class="alert alert-success d-flex align-items-center gap-2 py-2 px-3 mb-3 rounded-3">
+              <i class="ci-check-circle fs-lg"></i>
+              <span>{{ $t('checkout.order.free_shipping_msg') || 'Вітаємо! Ваше замовлення відповідає умовам безкоштовної доставки.' }}</span>
+            </div>
+
+            <!-- Підсумок -->
+            <div class="d-flex justify-content-between align-items-center border-top pt-3 mb-2">
+              <span class="fs-6 fw-semibold">{{ $t('checkout.order.total') }}</span>
+              <span class="fs-4 fw-bold">{{ total }} {{ $t('currency') }}</span>
+            </div>
+
+            <!-- Кнопка підтвердження -->
+            <button class="btn btn-success w-100 py-2" @click="submitForm">
+              {{ $t('checkout.order.button') }}
+            </button>
+
+            <div class="mt-3 small text-muted">
+              {{ $t('checkout.order.terms_hint') || 'Підтверджуючи замовлення, я приймаю умови:' }}
+              <ul class="mt-2 mb-0 ps-3">
+                <li><a href="/policy" class="text-muted text-decoration-underline">{{ $t('policy') || 'політика конфіденційності' }}</a></li>
+                <li><a href="/terms" class="text-muted text-decoration-underline">{{ $t('terms') || 'угода користувача' }}</a></li>
+              </ul>
+            </div>
           </div>
-        </div>
 
         </div>
       </aside>
@@ -109,7 +108,13 @@
 
           <div v-for="item in cart.items" :key="item.id" class="border rounded-3 p-2 mb-2">
             <div class="d-flex">
-              <img :src="item.image || '/assets/img/placeholder.jpg'" class="rounded me-2" style="width:72px;height:72px;object-fit:cover" alt=""/>
+              <img
+                :src="withStorage(item.image || item.image_url || item.product_image)"
+                @error="(e)=> e.target.src = '/assets/img/placeholder.jpg'"
+                class="rounded me-2"
+                style="width:72px;height:72px;object-fit:cover"
+                alt=""
+              />
               <div class="flex-grow-1">
                 <a :href="item.link" class="fw-medium text-body text-decoration-none d-block text-truncate-2">
                   {{ item.name }}
@@ -139,18 +144,18 @@
           </div>
 
           <div class="text-end">
-
+            <!-- додаткові дії за потреби -->
           </div>
         </div>
 
         <!-- 2) Доставка -->
-        <div class="bg-white border rounded-4 p-2 p-md-3 shadow-sm mb-3">
+        <div class="bg-white border rounded-4 p-2 p-md-3 shadowсм mb-3">
           <div class="mb-3 text-center text-md-start">
             <img src="/public/assets/img/nova-poshta.svg" alt="Нова Пошта" class="mb-2" style="height: 40px;" />
-  <div class="fw-semibold fs-6">
-    {{ $t('checkout.delivery.title') }} — <span class="text-muted">{{ deliveryLabel }}</span>
-  </div>
-</div>
+            <div class="fw-semibold fs-6">
+              {{ $t('checkout.delivery.title') }} — <span class="text-muted">{{ deliveryLabel }}</span>
+            </div>
+          </div>
           <div class="list-group">
             <label class="list-group-item d-flex justify-content-between align-items-center">
               <div class="d-flex align-items-center">
@@ -306,20 +311,16 @@
 <style scoped>
 /* sticky тільки на ≥lg */
 @media (min-width: 992px) {
-  .sticky-lg {
-    position: sticky;
-    top: 16px;
-  }
+  .sticky-lg { position: sticky; top: 16px; }
 }
 @media (max-width: 991.98px) {
-  .sticky-lg {
-    position: static;
-  }
+  .sticky-lg { position: static; }
 }
+.list-group { max-height: 200px; overflow-y: auto; }
 </style>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import PhoneInput from '@/components/shared/PhoneInput.vue'
@@ -641,18 +642,64 @@ async function submitForm() {
     }
   }
 }
+
+/* ===== Helpers: зображення через /storage та Meta Pixel: InitiateCheckout ===== */
+const withStorage = (path) => {
+  if (!path) return '/assets/img/placeholder.jpg'
+  if (/^https?:\/\//i.test(path) || String(path).startsWith('//')) {
+    try { path = new URL(path, window.location.origin).pathname } catch (_) {}
+  }
+  let p = String(path).replace(/^\/+/, '').replace(/^(?:app\/)?public\//, '')
+  if (p.startsWith('storage/')) return '/' + p
+  return '/storage/' + p
+}
+
+// InitiateCheckout — одноразово при заході на сторінку оформлення
+const sanitizePrice = (p) => {
+  const cleaned = String(p).replace(',', '.').replace(/[^\d.]/g, '')
+  const num = parseFloat(cleaned)
+  return Number.isFinite(num) ? Number(num.toFixed(2)) : 0
+}
+
+const buildContents = (items) =>
+  items.map(i => ({
+    id: String(i.sku || i.id || i.product_id),
+    quantity: Number(i.quantity || 1),
+    item_price: sanitizePrice(i.price),
+  }))
+
+const fingerprint = (contents, currency) =>
+  contents.map(c => `${c.id}:${c.quantity}:${c.item_price}`).join('|') + `|${currency}`
+
+const sendInitiateCheckoutOnce = () => {
+  const items = cart.items || []
+  if (!items.length) return
+
+  const currency = window.metaPixelCurrency || 'UAH'
+  const contents = buildContents(items)
+  const value = contents.reduce((s, c) => s + c.item_price * c.quantity, 0)
+
+  const fp = fingerprint(contents, currency)
+  const key = 'pixel_initiate_fp'
+  if (localStorage.getItem(key) === fp) return // вже відправляли для цього складу кошика
+
+  const payload = {
+    value: Number(value.toFixed(2)),
+    currency,
+    contents,
+    num_items: contents.reduce((s, c) => s + c.quantity, 0),
+    content_type: 'product',
+  }
+
+  console.log('[MetaPixel] InitiateCheckout', payload)
+  if (window.fbq) {
+    window.fbq('track', 'InitiateCheckout', payload)
+    localStorage.setItem(key, fp)
+  }
+}
+
+onMounted(() => {
+  sendInitiateCheckoutOnce()
+})
+/* ====================================================================== */
 </script>
-
-<style scoped>
-.list-group {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-/* sticky справа тільки на ≥ lg */
-.sticky-lg { position: static; }
-@media (min-width: 992px) {
-  .sticky-lg { position: sticky; top: 1rem; }
-}
-</style>
-

@@ -92,7 +92,7 @@
                   :src="withStorage(item.image_url || item.product_image)"
                   @error="(e)=> e.target.src = '/assets/img/placeholder.jpg'"
                   class="rounded me-3"
-                  style="width: 64px; height: 64px; object-fit: cover;"
+                  style="width: 74px; height: 74px; object-fit: cover;"
                   alt="Фото товару"
                 />
                 <div>
