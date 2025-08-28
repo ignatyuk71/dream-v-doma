@@ -42,7 +42,7 @@ return [
     'meta_pixel' => [
         'enabled'          => env('META_PIXEL_ENABLED', false),
         'id'               => env('META_PIXEL_ID'),
-        'default_currency' => env('META_PIXEL_DEFAULT_CURRENCY', 'PLN'),
+        'default_currency' => env('META_PIXEL_DEFAULT_CURRENCY', 'UAH'),
     ],
 
 ];

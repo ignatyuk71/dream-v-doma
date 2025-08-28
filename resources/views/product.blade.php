@@ -107,4 +107,22 @@
 
   {{-- Footer --}}
   @include('home.footer')
+
+    {{-- Meta Pixel: ViewContent --}}
+    @isset($product)
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+    if (!window.fbq) return;
+
+    fbq('track', 'ViewContent', {
+        content_ids: ['{{ $product->sku ?? $product->id }}'],
+        content_type: 'product',
+        content_name: @json($product->title ?? $product->name),
+        value: {{ number_format((float)($product->price ?? 0), 2, '.', '') }},
+        currency: '{{ config('services.meta_pixel.default_currency', 'UAH') }}'
+    });
+    });
+    </script>
+    @endisset
+
 @endsection

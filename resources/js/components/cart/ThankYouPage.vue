@@ -5,17 +5,24 @@
 
         <!-- Ліва колонка: інформація про замовлення -->
         <div class="col d-flex flex-column justify-content-center py-5 px-xl-4 px-xxl-5">
-          <div class="w-100 pt-sm-2 pt-md-3 pt-lg-4 pb-lg-4 pb-xl-5 px-3 px-sm-4 pe-lg-0 ps-lg-5 mx-auto ms-lg-auto me-lg-4" style="max-width: 740px">
-            
+          <div
+            class="w-100 pt-sm-2 pt-md-3 pt-lg-4 pb-lg-4 pb-xl-5 px-3 px-sm-4 pe-lg-0 ps-lg-5 mx-auto ms-lg-auto me-lg-4"
+            style="max-width: 740px"
+          >
             <!-- Заголовок -->
             <div class="d-flex align-items-sm-center border-bottom pb-4 pb-md-5">
-              <div class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle flex-shrink-0" style="width: 3rem; height: 3rem; margin-top: -.125rem">
+              <div
+                class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle flex-shrink-0"
+                style="width: 3rem; height: 3rem; margin-top: -.125rem"
+              >
                 <i class="ci-check fs-4"></i>
               </div>
               <div class="w-100 ps-3">
                 <div class="fs-sm mb-1">Замовлення №{{ order.order_number }}</div>
                 <h1 class="h4 mb-0">Дякуємо за ваше замовлення!</h1>
-                <p class="text-muted mb-0">Наш менеджер звʼяжеться з вами найближчим часом, щоб уточнити деталі замовлення.</p>
+                <p class="text-muted mb-0">
+                  Наш менеджер звʼяжеться з вами найближчим часом, щоб уточнити деталі замовлення.
+                </p>
               </div>
             </div>
 
@@ -64,12 +71,12 @@
 
             <p class="fs-sm pt-4 pt-md-5 mt-2 mt-sm-3 mt-md-0 mb-0">
               Потрібна допомога?
-              <a class="fw-medium ms-2" href="/contact">Звʼяжіться з нами</a>
+              <a class="fw-medium ms-2" :href="`/${$i18n.locale}/contact`">Звʼяжіться з нами</a>
             </p>
           </div>
         </div>
 
-        <!-- Права колонка: Склад замовлення -->
+        <!-- Права колонка: склад замовлення -->
         <div class="col-12 col-lg-6 px-3 px-sm-4 px-xl-5 py-5">
           <div class="bg-white border rounded-4 p-3 p-md-4 shadow-sm mx-auto" style="max-width: 636px">
             <h5 class="fw-bold mb-4">Ваше замовлення</h5>
@@ -82,13 +89,16 @@
               <!-- Фото + деталі -->
               <div class="d-flex align-items-center">
                 <img
-                  :src="item.image_url || item.product_image || '/assets/img/placeholder.jpg'"
+                  :src="withStorage(item.image_url || item.product_image)"
+                  @error="(e)=> e.target.src = '/assets/img/placeholder.jpg'"
                   class="rounded me-3"
                   style="width: 64px; height: 64px; object-fit: cover;"
                   alt="Фото товару"
                 />
                 <div>
-                  <div class="fw-medium text-truncate" style="max-width: 360px">{{ item.product_name }}</div>
+                  <div class="fw-medium text-truncate" style="max-width: 360px">
+                    {{ item.product_name }}
+                  </div>
 
                   <!-- Розмір / Колір -->
                   <div class="small text-muted mt-1" v-if="item.size">
@@ -147,11 +157,60 @@ const order = ref(null)
 
 const toNumber = (v) => {
   if (typeof v === 'number') return v
-  const n = parseFloat(String(v).replace(',', '.'))
-  return isNaN(n) ? 0 : n
+  const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.]/g, ''))
+  return Number.isFinite(n) ? n : 0
 }
 const money = (v) => `${toNumber(v).toFixed(2)} ${t('currency') || 'грн'}`
 const lineTotal = (item) => toNumber(item.price) * toNumber(item.quantity)
+
+const withStorage = (path) => {
+  if (!path) return '/assets/img/placeholder.jpg'
+  if (/^https?:\/\//i.test(path) || String(path).startsWith('//')) {
+    try { path = new URL(path, window.location.origin).pathname } catch (_) {}
+  }
+  let p = String(path).replace(/^\/+/, '').replace(/^(?:app\/)?public\//, '')
+  if (p.startsWith('storage/')) return '/' + p
+  return '/storage/' + p
+}
+
+/* ============== Meta Pixel: Purchase (одноразово) ==================== */
+const sendPurchaseOnce = (ord) => {
+  if (!ord || !Array.isArray(ord.items) || !ord.items.length) return
+
+  const key = `pixel_purchase_sent_${ord.order_number || ord.id || ''}`
+  if (localStorage.getItem(key)) {
+    console.log('[MetaPixel] Purchase already sent for', key)
+    return
+  }
+
+  const contents = ord.items.map(i => ({
+    id: String(i.sku || i.product_id || i.id),
+    quantity: Number(toNumber(i.quantity) || 1),
+    item_price: Number(toNumber(i.price).toFixed(2)),
+  }))
+
+  // якщо бек дає загальну суму — беремо її, інакше сумуємо позиції
+  const totalFromOrder = toNumber(ord.total ?? ord.total_price ?? ord.total_amount)
+  const calcFromItems = contents.reduce((s, c) => s + c.item_price * c.quantity, 0)
+  const value = totalFromOrder > 0 ? totalFromOrder : calcFromItems
+
+  const payload = {
+    value: Number(value.toFixed(2)),
+    currency: window.metaPixelCurrency || 'UAH',
+    contents,
+    content_type: 'product',
+  }
+  const opts = { eventID: `order-${ord.order_number || ord.id}` }
+
+  console.log('[MetaPixel] Purchase', payload, opts)
+  if (window.fbq) {
+    window.fbq('track', 'Purchase', payload, opts)
+    localStorage.setItem(key, '1') // guard від дубляжу
+  } else {
+    console.warn('[MetaPixel] fbq not found — Purchase not sent')
+  }
+}
+/* ===================================================================== */
 
 onMounted(async () => {
   const orderNumber = localStorage.getItem('lastOrderNumber')
@@ -164,7 +223,10 @@ onMounted(async () => {
     const { data } = await axios.get(`/api/orders/${orderNumber}`)
     order.value = data
 
-    // Очистка після успішного отримання
+    // 🔔 Відправляємо Purchase ОДИН РАЗ
+    sendPurchaseOnce(order.value)
+
+    // Очистка після успішного отримання (не чіпаємо ключ guard'у)
     localStorage.removeItem('lastOrderNumber')
     localStorage.removeItem('cart')
     localStorage.removeItem('thankyou')
@@ -177,3 +239,6 @@ onMounted(async () => {
   }
 })
 </script>
+
+<!-- стилі для цієї сторінки не обов'язкові -->
+<style scoped></style>

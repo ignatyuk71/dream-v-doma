@@ -1,8 +1,44 @@
 import { defineStore } from 'pinia'
 
+// ===== Meta Pixel helpers ==============================================
+function sanitizePrice(p) {
+  const cleaned = String(p).replace(',', '.').replace(/[^\d.]/g, '')
+  const num = parseFloat(cleaned)
+  return Number.isFinite(num) ? Number(num.toFixed(2)) : 0
+}
+
+function sendMetaAddToCart(item) {
+  try {
+    const pid = String(item.sku || item.id || item.product_id)
+    const qty = Number(item.quantity || 1)
+    const price = sanitizePrice(item.price)
+    const currency = window.metaPixelCurrency || 'UAH'
+
+    const payload = {
+      content_ids: [pid],
+      content_type: 'product',
+      contents: [{ id: pid, quantity: qty, item_price: price }],
+      value: Number((price * qty).toFixed(2)),
+      currency
+    }
+
+    console.log('[MetaPixel][store] AddToCart payload', payload)
+
+    if (window.fbq) {
+      window.fbq('track', 'AddToCart', payload)
+      console.log('[MetaPixel][store] sent')
+    } else {
+      console.warn('[MetaPixel][store] fbq not found')
+    }
+  } catch (e) {
+    console.error('[MetaPixel][store] error', e)
+  }
+}
+// =======================================================================
+
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    items: [] 
+    items: []
     // структура елемента:
     // {
     //   id: variantId,       // ключ = id варіанта
@@ -12,8 +48,8 @@ export const useCartStore = defineStore('cart', {
     //   quantity: 1,
     //   image: 'url',
     //   link: '/uk/product/slug',
-    //   size: '36–37',       // для відображення
-    //   color: 'Чорний'      // для відображення (якщо є)
+    //   size: '36–37',
+    //   color: 'Чорний'
     // }
   }),
 
@@ -21,29 +57,30 @@ export const useCartStore = defineStore('cart', {
     // Загальна сума
     subtotal: (state) =>
       state.items.reduce((sum, item) => {
-        const price = parseFloat(item.price) || 0
-        const qty = item.quantity || 0
+        const price = sanitizePrice(item.price)
+        const qty = Number(item.quantity || 0)
         return sum + price * qty
       }, 0),
 
     // Загальна кількість товарів
     itemCount: (state) =>
-      state.items.reduce((count, item) => count + item.quantity, 0),
+      state.items.reduce((count, item) => count + Number(item.quantity || 0), 0),
   },
 
   actions: {
     addToCart(product) {
-      // product.id тепер = variant.id
+      // product.id = variant.id
+      const qty = Number(product.quantity || 1)
       const existing = this.items.find(i => i.id === product.id)
 
       if (existing) {
-        existing.quantity += product.quantity || 1
+        existing.quantity = Number(existing.quantity || 1) + qty
       } else {
-        this.items.push({
-          ...product,
-          quantity: product.quantity || 1
-        })
+        this.items.push({ ...product, quantity: qty })
       }
+
+      // Meta Pixel: централізовано після успішного додавання
+      sendMetaAddToCart({ ...product, quantity: qty })
     },
 
     removeItem(id) {
@@ -57,13 +94,13 @@ export const useCartStore = defineStore('cart', {
 
     increment(id) {
       const item = this.items.find(i => i.id === id)
-      if (item) item.quantity++
+      if (item) item.quantity = Number(item.quantity || 1) + 1
     },
 
     decrement(id) {
       const item = this.items.find(i => i.id === id)
-      if (item && item.quantity > 1) {
-        item.quantity--
+      if (item && Number(item.quantity) > 1) {
+        item.quantity = Number(item.quantity) - 1
       }
     },
   },
