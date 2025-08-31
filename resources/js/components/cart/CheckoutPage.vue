@@ -149,7 +149,7 @@
         </div>
 
         <!-- 2) Доставка -->
-        <div class="bg-white border rounded-4 p-2 p-md-3 shadowсм mb-3">
+        <div class="bg-white border rounded-4 p-2 p-md-3 shadow-sm mb-3">
           <div class="mb-3 text-center text-md-start">
             <img src="/public/assets/img/nova-poshta.svg" alt="Нова Пошта" class="mb-2" style="height: 40px;" />
             <div class="fw-semibold fs-6">
@@ -318,7 +318,6 @@
 }
 .list-group { max-height: 200px; overflow-y: auto; }
 </style>
-
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -329,14 +328,18 @@ import { normalizePhone, isValidPhone } from '@/helpers/phone'
 
 const { locale, t } = useI18n()
 
+// ------------------------------
 // Контактні дані
+// ------------------------------
 const firstName = ref('')
 const lastName = ref('')
 const customerPhone = ref('')
 const isPhoneValid = ref(false)
 const customerEmail = ref('')
 
+// ------------------------------
 // Доставка / Оплата
+// ------------------------------
 const deliveryType = ref('branch')
 const paymentType = ref('')
 const city = ref('')
@@ -352,13 +355,17 @@ const warehouseSearch = ref('')
 const selectedWarehouse = ref(null)
 const courierAddress = ref('')
 
+// ------------------------------
 // Промокод
+// ------------------------------
 const promoCode = ref('')
 const showPromoInput = ref(false)
 const promoApplied = ref(false)
 const bonuses = ref(0)
 
+// ------------------------------
 // Кошик
+// ------------------------------
 const cart = useCartStore()
 
 function isValidEmail(email) {
@@ -446,7 +453,9 @@ function applyPromo() {
   window.showGlobalToast?.('Промокод застосовано', 'success')
 }
 
-// 🔍 Завантаження міст
+// ------------------------------
+// Нова Пошта: міста / відділення
+// ------------------------------
 async function searchCity() {
   const normalizeCity = (name) => {
     if (!name) return ''
@@ -475,7 +484,6 @@ async function searchCity() {
   }
 }
 
-// ✅ Вибір міста
 async function selectCity(cityItem) {
   selectedCity.value = cityItem
   isCityProgrammaticChange.value = true
@@ -490,7 +498,6 @@ async function selectCity(cityItem) {
   isCityProgrammaticChange.value = false
 }
 
-// ✅ Завантаження відділень
 async function loadWarehouses(cityItem = null) {
   const cityToUse = cityItem || selectedCity.value
   if (!cityToUse || !cityToUse.DeliveryCity) {
@@ -518,7 +525,7 @@ function selectWarehouseFromList(warehouse) {
   warehouses.value = []
 }
 
-// 🔁 Зміна типу доставки
+// Зміна типу доставки → оновити відділення
 watch(deliveryType, async () => {
   if (selectedCity.value) {
     await loadWarehouses()
@@ -528,7 +535,6 @@ watch(deliveryType, async () => {
 let debounceTimeout = null
 const cityNotFound = ref(false)
 
-// 🔁 Обробка ручного вводу в поле міста
 watch(city, (val, oldVal = '') => {
   if (val.length < oldVal.length && val.length !== 0) return
 
@@ -558,7 +564,6 @@ watch(city, (val, oldVal = '') => {
   }, 1000)
 })
 
-// 🔁 Зміна поля пошуку відділення
 watch(warehouseSearch, (val) => {
   if (!val) {
     selectedWarehouse.value = null
@@ -570,6 +575,9 @@ watch(warehouseSearch, (val) => {
   selectedWarehouse.value = null
 })
 
+// ------------------------------
+// Валідації / сабміт
+// ------------------------------
 function validateForm() {
   if (!firstName.value.trim()) return t('checkout.contact.first_name') + ' ' + t('checkout.validation.required')
   if (!lastName.value.trim()) return t('checkout.contact.last_name') + ' ' + t('checkout.validation.required')
@@ -643,7 +651,9 @@ async function submitForm() {
   }
 }
 
-/* ===== Helpers: зображення через /storage та Meta Pixel: InitiateCheckout ===== */
+// ------------------------------
+// Хелпер зображення через /storage
+// ------------------------------
 const withStorage = (path) => {
   if (!path) return '/assets/img/placeholder.jpg'
   if (/^https?:\/\//i.test(path) || String(path).startsWith('//')) {
@@ -654,52 +664,117 @@ const withStorage = (path) => {
   return '/storage/' + p
 }
 
-// InitiateCheckout — одноразово при заході на сторінку оформлення
-const sanitizePrice = (p) => {
-  const cleaned = String(p).replace(',', '.').replace(/[^\d.]/g, '')
-  const num = parseFloat(cleaned)
-  return Number.isFinite(num) ? Number(num.toFixed(2)) : 0
+/* =========================================================================
+   InitiateCheckout — ПІДКЛЮЧЕНА КОПІЯ (Pixel + CAPI, дедуплікація)
+   - Повага до прапорця з БД: window._mpFlags.ic === false → не шлемо
+   - Єдина event_id для Pixel і CAPI
+   - Guard у localStorage по складу кошика (fingerprint)
+   - Працює, навіть якщо iOS блочить браузерні івенти (через CAPI)
+   ========================================================================= */
+
+// окремі унікальні хелпери (щоб не конфліктувати з іншими)
+const icSanitize = (p) => {
+  const n = parseFloat(String(p ?? 0).replace(',', '.').replace(/[^\d.]/g, ''))
+  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0
 }
 
-const buildContents = (items) =>
-  items.map(i => ({
+const icBuildContents = (items) =>
+  (items || []).map(i => ({
     id: String(i.sku || i.id || i.product_id),
     quantity: Number(i.quantity || 1),
-    item_price: sanitizePrice(i.price),
+    item_price: icSanitize(i.price),
   }))
 
-const fingerprint = (contents, currency) =>
+const icFingerprint = (contents, currency) =>
   contents.map(c => `${c.id}:${c.quantity}:${c.item_price}`).join('|') + `|${currency}`
 
-const sendInitiateCheckoutOnce = () => {
+const getCookie = (name) =>
+  document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || null
+
+const ensureFbp = () => {
+  let fbp = getCookie('_fbp') || localStorage.getItem('fbp_generated')
+  if (!fbp) {
+    fbp = `fb.1.${Math.floor(Date.now()/1000)}.${Math.floor(Math.random()*1e10)}`
+    localStorage.setItem('fbp_generated', fbp)
+  }
+  return fbp
+}
+
+async function sendInitiateCheckoutOnce() {
+  // вимкнено у налаштуваннях (з БД)?
+  if (window._mpFlags && window._mpFlags.ic === false) {
+    console.info('[IC] disabled via window._mpFlags.ic')
+    return
+  }
+
   const items = cart.items || []
   if (!items.length) return
 
   const currency = window.metaPixelCurrency || 'UAH'
-  const contents = buildContents(items)
+  const contents = icBuildContents(items)
   const value = contents.reduce((s, c) => s + c.item_price * c.quantity, 0)
+  const numItems = contents.reduce((s, c) => s + c.quantity, 0)
 
-  const fp = fingerprint(contents, currency)
-  const key = 'pixel_initiate_fp'
-  if (localStorage.getItem(key) === fp) return // вже відправляли для цього складу кошика
+  // guard від дубляжу для того самого складу кошика
+  const fp = icFingerprint(contents, currency)
+  const fpKey = 'ic_fp_v2'
+  if (localStorage.getItem(fpKey) === fp) return
+
+  // єдина event_id для Pixel + CAPI
+  const sid =
+    (document.cookie.match(/PHPSESSID=([^;]+)/)?.[1]) ||
+    (document.cookie.match(/_session=([^;]+)/)?.[1]) ||
+    Math.random().toString(36).slice(2)
+  const eventId = `ic-${sid}-${Date.now()}`
 
   const payload = {
     value: Number(value.toFixed(2)),
     currency,
     contents,
-    num_items: contents.reduce((s, c) => s + c.quantity, 0),
+    num_items: numItems,
     content_type: 'product',
   }
 
-  console.log('[MetaPixel] InitiateCheckout', payload)
-  if (window.fbq) {
-    window.fbq('track', 'InitiateCheckout', payload)
-    localStorage.setItem(key, fp)
+  // Browser Pixel
+  if (typeof window.fbq === 'function') {
+    try {
+      window.fbq('track', 'InitiateCheckout', payload, { eventID: eventId })
+      console.log('[IC][Pixel] sent', { ...payload, eventId })
+    } catch (e) {
+      console.warn('[IC][Pixel] error', e)
+    }
+  } else {
+    console.warn('[IC][Pixel] fbq not found')
   }
+
+  // Server CAPI (шлемо, якщо не вимкнено окремим прапорцем)
+  const capiDisabled = window._mpFlags && window._mpFlags.capi === false
+  if (!capiDisabled) {
+    try {
+      await axios.post('/api/track/ic', {
+        event_id: eventId,
+        event_time: Math.floor(Date.now()/1000),
+        event_source_url: window.location.href,
+        currency,
+        value: payload.value,
+        num_items: numItems,
+        contents,
+        fbp: getCookie('_fbp') || ensureFbp(),
+        fbc: getCookie('_fbc') || null,
+      })
+      console.log('[IC][CAPI] sent')
+    } catch (e) {
+      console.warn('[IC][CAPI] error', e?.response?.data || e)
+    }
+  }
+
+  // позначаємо, що на цей склад кошика вже відправили
+  localStorage.setItem(fpKey, fp)
 }
 
 onMounted(() => {
+  // Відправляємо IC один раз після монту
   sendInitiateCheckoutOnce()
 })
-/* ====================================================================== */
+
 </script>

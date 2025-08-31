@@ -87,8 +87,6 @@
                 </div>
             </section>
 
-          
-
             <!-- Tabs -->
             @include('home.product-page.product-description', ['product' => $product])
         </main>
@@ -102,27 +100,13 @@
         <!-- Toast -->
         <frontend-toast ref="toastRef"></frontend-toast>
     </div>
-  <!-- Sticky Bottom Bar (Buy) -->
-  @include('home.product-page.sticky-product-bottom-bar', ['product' => $product])
 
-  {{-- Footer --}}
-  @include('home.footer')
+    <!-- Sticky Bottom Bar (Buy) -->
+    @include('home.product-page.sticky-product-bottom-bar', ['product' => $product])
 
-    {{-- Meta Pixel: ViewContent --}}
-    @isset($product)
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-    if (!window.fbq) return;
+    {{-- Footer --}}
+    @include('home.footer')
 
-    fbq('track', 'ViewContent', {
-        content_ids: ['{{ $product->sku ?? $product->id }}'],
-        content_type: 'product',
-        content_name: @json($product->title ?? $product->name),
-        value: {{ number_format((float)($product->price ?? 0), 2, '.', '') }},
-        currency: '{{ config('services.meta_pixel.default_currency', 'UAH') }}'
-    });
-    });
-    </script>
-    @endisset
-
+    {{-- Meta Pixel: ViewContent (з БД через паршал) --}}
+    @include('partials.meta-pixel-view-content', ['product' => $product])
 @endsection

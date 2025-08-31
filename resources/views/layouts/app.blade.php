@@ -9,10 +9,9 @@
   <meta name="keywords" content="тапки, домашній одяг, вʼєтнамки, шльопанці, покупки онлайн, магазин">
   <meta name="author" content="Dream V Doma">
 
-  {{-- Meta Pixel --}}
+  {{-- Meta Pixel (скрипт і init) --}}
   @include('partials.meta-pixel-script')
-  {{-- Хелпер AddToCart завантажується глобально, але не в head --}}
-  @include('partials.meta-pixel-add-to-cart')
+
   <!-- PWA / icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -41,9 +40,10 @@
   @stack('styles')
 </head>
 <body>
-  
   {{-- NOSCRIPT — одразу після <body> --}}
   @include('partials.meta-pixel-noscript')
+
+
 
   @yield('content')
   <div id="cart-offcanvas"></div>

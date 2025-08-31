@@ -90,7 +90,7 @@
               <div class="d-flex align-items-center">
                 <img
                   :src="withStorage(item.image_url || item.product_image)"
-                  @error="(e)=> e.target.src = '/assets/img/placeholder.jpg'"
+                  @error="$event.target.src = '/assets/img/placeholder.jpg'"
                   class="rounded me-3"
                   style="width: 74px; height: 74px; object-fit: cover;"
                   alt="Фото товару"
@@ -124,14 +124,6 @@
                 {{ money(lineTotal(item)) }}
               </div>
             </div>
-
-            <!-- Підсумок за бажанням -->
-            <!--
-            <div class="d-flex justify-content-between mt-3">
-              <span class="text-muted">Разом</span>
-              <span class="fw-bold">{{ money(order.total_price) }}</span>
-            </div>
-            -->
           </div>
         </div>
 
@@ -177,6 +169,17 @@ const withStorage = (path) => {
 const sendPurchaseOnce = (ord) => {
   if (!ord || !Array.isArray(ord.items) || !ord.items.length) return
 
+  // вимкнено в БД? (прапорець підкидає паршал з пікселем)
+  if (window._mpFlags && window._mpFlags.pur === false) {
+    console.log('[MetaPixel] Purchase disabled by flags')
+    return
+  }
+
+  if (!window.fbq) {
+    console.warn('[MetaPixel] fbq not found — Purchase not sent')
+    return
+  }
+
   const key = `pixel_purchase_sent_${ord.order_number || ord.id || ''}`
   if (localStorage.getItem(key)) {
     console.log('[MetaPixel] Purchase already sent for', key)
@@ -189,7 +192,6 @@ const sendPurchaseOnce = (ord) => {
     item_price: Number(toNumber(i.price).toFixed(2)),
   }))
 
-  // якщо бек дає загальну суму — беремо її, інакше сумуємо позиції
   const totalFromOrder = toNumber(ord.total ?? ord.total_price ?? ord.total_amount)
   const calcFromItems = contents.reduce((s, c) => s + c.item_price * c.quantity, 0)
   const value = totalFromOrder > 0 ? totalFromOrder : calcFromItems
@@ -203,12 +205,8 @@ const sendPurchaseOnce = (ord) => {
   const opts = { eventID: `order-${ord.order_number || ord.id}` }
 
   console.log('[MetaPixel] Purchase', payload, opts)
-  if (window.fbq) {
-    window.fbq('track', 'Purchase', payload, opts)
-    localStorage.setItem(key, '1') // guard від дубляжу
-  } else {
-    console.warn('[MetaPixel] fbq not found — Purchase not sent')
-  }
+  window.fbq('track', 'Purchase', payload, opts)
+  localStorage.setItem(key, '1') // guard від дубляжу
 }
 /* ===================================================================== */
 
@@ -240,5 +238,4 @@ onMounted(async () => {
 })
 </script>
 
-<!-- стилі для цієї сторінки не обов'язкові -->
 <style scoped></style>
