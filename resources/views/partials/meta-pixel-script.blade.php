@@ -3,27 +3,27 @@
 
   $t = DB::table('tracking_settings')->first();
 
-  $pixelId  = $t->pixel_id ?? null;
-  $currency = $t->default_currency ?? 'UAH';
+  $pixelId  = $t?->pixel_id ?? null;
+  $currency = $t?->default_currency ?? 'UAH';
 
   // Чи вмикати піксель на цій сторінці
   $enabled  = $t
-    && (int)($t->pixel_enabled ?? 0) === 1
+    && (int)($t?->pixel_enabled ?? 0) === 1
     && !empty($pixelId)
-    && !((int)($t->exclude_admin ?? 1) === 1 && request()->is('admin*'));
+    && !((int)($t?->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
-  // Прапорці (беремо з БД; якщо якесь поле відсутнє — вважаємо true, крім lead)
+  // Прапорці (беремо з БД; якщо поле відсутнє — true, крім lead)
   $flags = [
-    'pv'   => (int)($t->send_page_view          ?? 1) === 1,
-    'vc'   => (int)($t->send_view_content       ?? 1) === 1,
-    'atc'  => (int)($t->send_add_to_cart        ?? 1) === 1,
-    'ic'   => (int)($t->send_initiate_checkout  ?? 1) === 1,
-    'pur'  => (int)($t->send_purchase           ?? 1) === 1,
-    'lead' => (int)($t->send_lead               ?? 0) === 1,
+    'pv'   => (int)($t?->send_page_view          ?? 1) === 1,
+    'vc'   => (int)($t?->send_view_content       ?? 1) === 1,
+    'atc'  => (int)($t?->send_add_to_cart        ?? 1) === 1,
+    'ic'   => (int)($t?->send_initiate_checkout  ?? 1) === 1,
+    'pur'  => (int)($t?->send_purchase           ?? 1) === 1,
+    'lead' => (int)($t?->send_lead               ?? 0) === 1,
   ];
 
-  $requireConsent = (int)($t->require_consent ?? 0) === 1;
-  $testCode       = $t->capi_test_code ?? null; // щоб серверні події були видні у Test Events
+  $requireConsent = (int)($t?->require_consent ?? 0) === 1;
+  $testCode       = $t?->capi_test_code ?? null; // щоб серверні події були видні у Test Events
 @endphp
 
 <script>
@@ -35,10 +35,16 @@
   window._mpRequireConsent = @json($requireConsent);
   window._mpTestCode       = @json($testCode);
 
-  // cookie helper
+  // ✅ стабільний cookie helper без регулярок
   window._mpCookie = function(name){
-    var m = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g, '\\$1') + '=([^;]*)');
-    return m ? decodeURIComponent(m[1]) : null;
+    if (!document.cookie) return null;
+    var parts = document.cookie.split('; ');
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].indexOf(name + '=') === 0) {
+        return decodeURIComponent(parts[i].substring(name.length + 1));
+      }
+    }
+    return null;
   };
 
   // генератор event_id (узгоджений із беком)
@@ -77,7 +83,7 @@
     }
 
     // 2) спільний event_id для дедупу
-    var eid = window._mpMakeEventId('PageView');
+    var eid = window._mpMakeEventId('pv');
     try { window._mpLastEventId = window._mpLastEventId || {}; window._mpLastEventId['PageView'] = eid; } catch(_){}
 
     // 3) браузерний PageView (якщо дозволено)
@@ -93,7 +99,6 @@
         event_id: eid,
         event_time: Math.floor(Date.now()/1000),
         event_source_url: window.location.href,
-        // fbp/fbc з cookie (якщо є; бек все одно також формує fbc із fbclid при потребі)
         fbp: window._mpCookie('_fbp') || undefined,
         fbc: window._mpCookie('_fbc') || undefined
       };
