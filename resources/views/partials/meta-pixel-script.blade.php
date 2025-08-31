@@ -23,6 +23,8 @@
   if (!$enabled) {
     $flags = ['pv'=>false,'vc'=>false,'atc'=>false,'ic'=>false,'pur'=>false,'lead'=>false];
   }
+
+  $testCode = $t->capi_test_code ?? null; // NEW
 @endphp
 
 <script>
@@ -30,6 +32,7 @@
   window.metaPixelCurrency = @json($currency);
   window._mpEnabled = @json($enabled);
   window._mpPixelId = @json($pixelId);
+  window._mpTestCode = @json($testCode); // NEW
 
   // генератор спільних event_id
   window._mpGenEventId = function(name){
@@ -68,15 +71,22 @@
   if (!window._mpFlags || window._mpFlags.pv === false) return;
 
   var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
-  var fbc = (function(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } })(window._mpGetCookie('_fbc'));
+
+  // NEW: однаково декодуємо і fbp, і fbc
+  var safeDecode = function(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } };
+  var fbp = safeDecode(window._mpGetCookie('_fbp')); // NEW
+  var fbc = safeDecode(window._mpGetCookie('_fbc')); // (раніше було тільки для fbc)
 
   var payload = {
     event_id: pvId,
     event_time: Math.floor(Date.now()/1000),
     event_source_url: window.location.href,
-    fbp: window._mpGetCookie('_fbp'),
+    fbp: fbp, // NEW (декодований)
     fbc: fbc
   };
+
+  // NEW: якщо є тест-код у БД — додаємо
+  if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
 
   try {
     var body = JSON.stringify(payload);
