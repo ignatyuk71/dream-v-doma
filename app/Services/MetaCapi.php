@@ -25,14 +25,12 @@ class MetaCapi
             'data'         => $events,
             'access_token' => $this->accessToken,
         ];
+        if ($testCode) $payload['test_event_code'] = $testCode;
 
-        if ($testCode) {
-            $payload['test_event_code'] = $testCode;
-        }
-
-        return Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])
+        return Http::timeout(8)
+            ->connectTimeout(4)
+            ->retry(2, 250)
+            ->withHeaders(['Content-Type' => 'application/json'])
             ->post($endpoint, $payload);
     }
 }
