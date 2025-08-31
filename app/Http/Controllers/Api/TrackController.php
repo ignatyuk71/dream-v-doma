@@ -12,18 +12,15 @@ class TrackController extends Controller
     /* ===================== PUBLIC ENDPOINTS ===================== */
 
     // PageView — без custom_data
-// PageView — без custom_data
     public function pv(Request $request)
     {
-        return $this->handleEvent('PageView', $request, fn() => [], flag: 'send_page_view');
+        return $this->handleEvent('PageView', $request, fn () => [], flag: 'send_page_view');
     }
-
 
     // ViewContent
     public function vc(Request $request)
     {
         return $this->handleEvent('ViewContent', $request, function () use ($request) {
-            // якщо прийшло contents[] — беремо його
             $contents = $this->contentsFromRequest($request);
             if (!empty($contents)) {
                 $value = $this->calcValue($contents);
@@ -37,7 +34,6 @@ class TrackController extends Controller
                 ];
             }
 
-            // бек-сов сумісність: id / price / quantity
             $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
             $price    = $this->num($request->input('price', $request->input('item_price', $request->input('value', 0))));
             $qty      = (int)$request->input('quantity', 1);
@@ -67,7 +63,6 @@ class TrackController extends Controller
     public function atc(Request $request)
     {
         return $this->handleEvent('AddToCart', $request, function () use ($request) {
-            // новий формат: contents[] + (опційний) value
             $contents = $this->contentsFromRequest($request);
             if (!empty($contents)) {
                 $value = $request->filled('value')
@@ -83,7 +78,6 @@ class TrackController extends Controller
                 ];
             }
 
-            // бек-сов сумісність: id/quantity/price
             $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
             $qty      = (int)$request->input('quantity', 1);
             $price    = $this->num($request->input('price', $request->input('item_price', 0)));
@@ -109,7 +103,6 @@ class TrackController extends Controller
     public function ic(Request $request)
     {
         return $this->handleEvent('InitiateCheckout', $request, function () use ($request) {
-            // підтримуємо і contents[], і наш попередній items[]
             $contents = $this->contentsFromRequest($request);
             if (empty($contents)) {
                 $items = (array)$request->input('items', []);
@@ -154,29 +147,29 @@ class TrackController extends Controller
     private function handleEvent(string $name, Request $req, \Closure $buildCustomData, string $flag)
     {
         $s = $this->settings();
-    
+
         if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
             return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
         }
         if (!$this->flagEnabled($s, $flag)) {
             return response()->json(['ok' => true, 'skipped' => "flag_{$flag}_disabled"], 202);
         }
-    
+
         if ((int)($s->exclude_admin ?? 1) === 1) {
             $url = $this->eventSourceUrl($req);
             if ($this->looksLikeAdmin($url)) {
                 return response()->json(['ok' => true, 'skipped' => 'admin_excluded'], 202);
             }
         }
-    
+
         $pixelId = (string)($s->pixel_id ?? '');
         $token   = (string)($s->capi_token ?? '');
         if ($pixelId === '' || $token === '') {
             return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
         }
-    
+
         $custom = $buildCustomData();
-    
+
         $event = [
             'event_name'       => $name,
             'event_time'       => (int)($req->input('event_time') ?: time()),
@@ -185,13 +178,14 @@ class TrackController extends Controller
             'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId($name)),
             'user_data'        => $this->userData($req),
         ];
+
         if (!empty($custom)) {
             $event['custom_data'] = $custom;
         }
-    
+
         $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
         $resp = $capi->send([$event], $s->capi_test_code ?? null);
-    
+
         if (!$resp->ok()) {
             return response()->json([
                 'ok'     => false,
@@ -200,10 +194,9 @@ class TrackController extends Controller
                 'body'   => $resp->json(),
             ], 502);
         }
-    
+
         return response()->json(['ok' => true, 'event' => $name], 200);
     }
-    
 
     /* ===================== HELPERS ===================== */
 
@@ -237,9 +230,17 @@ class TrackController extends Controller
         return str_contains($url, '/admin') || str_contains($url, '/dashboard');
     }
 
+    // <<< важливо: коректний IP навіть без TrustProxies >>>
+    private function clientIp(Request $req): string
+    {
+        if ($v = $req->headers->get('CF-Connecting-IP')) return $v;      // Cloudflare
+        if ($v = $req->headers->get('X-Real-IP'))        return $v;      // Nginx
+        if ($v = $req->headers->get('X-Forwarded-For'))  return trim(explode(',', $v)[0]);
+        return $req->ip();
+    }
+
     private function num($v): float
     {
-        // спочатку коми -> крапки, потім чистимо
         $s = str_replace(',', '.', (string)$v);
         $clean = preg_replace('/[^\d\.\-]/', '', $s);
         $n = (float)$clean;
@@ -276,7 +277,6 @@ class TrackController extends Controller
         $fn    = $req->input('first_name') ?? $req->input('fn');
         $ln    = $req->input('last_name')  ?? $req->input('ln');
 
-        // з фронта мають пріоритет
         $fbp = $req->input('fbp') ?? $req->cookie('_fbp');
         $fbc = $req->input('fbc') ?? $req->cookie('_fbc');
 
@@ -286,7 +286,7 @@ class TrackController extends Controller
         }
 
         $data = [
-            'client_ip_address' => $this->clientIp($req),
+            'client_ip_address' => $this->clientIp($req),          // тут
             'client_user_agent' => (string)$req->userAgent(),
         ];
 
@@ -306,7 +306,6 @@ class TrackController extends Controller
         return $name . '-' . bin2hex(random_bytes(6)) . '-' . time();
     }
 
-    /** Приймає contents[] з тіла (і нормалізує), або порожній масив */
     private function contentsFromRequest(Request $req): array
     {
         $raw = $req->input('contents');
@@ -323,7 +322,6 @@ class TrackController extends Controller
         return $out;
     }
 
-    /** Підсумкова вартість по contents[] */
     private function calcValue(array $contents): float
     {
         $sum = 0.0;
@@ -332,13 +330,5 @@ class TrackController extends Controller
         }
         return $this->num($sum);
     }
-
-    private function clientIp(Request $req): string
-    {
-        if ($v = $req->headers->get('CF-Connecting-IP')) return $v; // Cloudflare
-        if ($v = $req->headers->get('X-Real-IP'))        return $v; // Nginx
-        if ($v = $req->headers->get('X-Forwarded-For'))  return trim(explode(',', $v)[0]); // перший клієнтський
-        return $req->ip();
-    }
-
 }
+ы
