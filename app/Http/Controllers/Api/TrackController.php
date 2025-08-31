@@ -11,10 +11,12 @@ class TrackController extends Controller
 {
     /* ===================== PUBLIC ENDPOINTS ===================== */
 
-    // PageView — без custom_data
+    // PageView — БЕЗ custom_data
     public function pv(Request $request)
     {
-        return $this->handleEvent('PageView', $request, fn () => [], flag: 'send_page_view');
+        return $this->handleEvent('PageView', $request, function () {
+            return []; // нічого не додаємо в custom_data для PV
+        }, flag: 'send_page_view');
     }
 
     // ViewContent
@@ -22,6 +24,7 @@ class TrackController extends Controller
     {
         return $this->handleEvent('ViewContent', $request, function () use ($request) {
             $contents = $this->contentsFromRequest($request);
+
             if (!empty($contents)) {
                 $value = $this->calcValue($contents);
                 return [
@@ -34,6 +37,7 @@ class TrackController extends Controller
                 ];
             }
 
+            // бек-сов фолбек: id / price / quantity
             $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
             $price    = $this->num($request->input('price', $request->input('item_price', $request->input('value', 0))));
             $qty      = (int)$request->input('quantity', 1);
@@ -53,7 +57,9 @@ class TrackController extends Controller
                     'item_price' => $price,
                 ]];
             }
-            if ($request->filled('name')) $data['content_name'] = $request->input('name');
+            if ($request->filled('name')) {
+                $data['content_name'] = $request->input('name');
+            }
 
             return $data;
         }, flag: 'send_view_content');
@@ -64,6 +70,7 @@ class TrackController extends Controller
     {
         return $this->handleEvent('AddToCart', $request, function () use ($request) {
             $contents = $this->contentsFromRequest($request);
+
             if (!empty($contents)) {
                 $value = $request->filled('value')
                     ? $this->num($request->input('value'))
@@ -78,6 +85,7 @@ class TrackController extends Controller
                 ];
             }
 
+            // бек-сов фолбек
             $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
             $qty      = (int)$request->input('quantity', 1);
             $price    = $this->num($request->input('price', $request->input('item_price', 0)));
@@ -104,6 +112,7 @@ class TrackController extends Controller
     {
         return $this->handleEvent('InitiateCheckout', $request, function () use ($request) {
             $contents = $this->contentsFromRequest($request);
+
             if (empty($contents)) {
                 $items = (array)$request->input('items', []);
                 foreach ($items as $i) {
@@ -230,15 +239,6 @@ class TrackController extends Controller
         return str_contains($url, '/admin') || str_contains($url, '/dashboard');
     }
 
-    // <<< важливо: коректний IP навіть без TrustProxies >>>
-    private function clientIp(Request $req): string
-    {
-        if ($v = $req->headers->get('CF-Connecting-IP')) return $v;      // Cloudflare
-        if ($v = $req->headers->get('X-Real-IP'))        return $v;      // Nginx
-        if ($v = $req->headers->get('X-Forwarded-For'))  return trim(explode(',', $v)[0]);
-        return $req->ip();
-    }
-
     private function num($v): float
     {
         $s = str_replace(',', '.', (string)$v);
@@ -286,7 +286,7 @@ class TrackController extends Controller
         }
 
         $data = [
-            'client_ip_address' => $this->clientIp($req),          // тут
+            'client_ip_address' => $req->ip(),
             'client_user_agent' => (string)$req->userAgent(),
         ];
 
@@ -306,6 +306,7 @@ class TrackController extends Controller
         return $name . '-' . bin2hex(random_bytes(6)) . '-' . time();
     }
 
+    /** Приймає contents[] з тіла (і нормалізує), або порожній масив */
     private function contentsFromRequest(Request $req): array
     {
         $raw = $req->input('contents');
@@ -322,6 +323,7 @@ class TrackController extends Controller
         return $out;
     }
 
+    /** Підсумкова вартість по contents[] */
     private function calcValue(array $contents): float
     {
         $sum = 0.0;
@@ -331,4 +333,3 @@ class TrackController extends Controller
         return $this->num($sum);
     }
 }
-ы
