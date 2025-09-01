@@ -90,6 +90,7 @@ const increment = () => { if (quantity.value < 10) quantity.value++ }
 const decrement = () => { if (quantity.value > 1) quantity.value-- }
 
 const addToCart = () => {
+  // 1) перевіряємо вибір розміру (як і було)
   const sizeSelect = document.querySelector('select[name="size"]')
   const selectedSize = sizeSelect?.value || ''
   if (!selectedSize) {
@@ -99,17 +100,25 @@ const addToCart = () => {
   }
   sizeSelect?.classList.remove('is-invalid')
 
+  // 2) знаходимо варіант
   const matchedVariant = variants.value.find(v => v.size === selectedSize)
   if (!matchedVariant) {
     window.showGlobalToast('Обраний розмір недоступний', 'danger')
     return
   }
 
+  // 3) ціна/назва/валюта
   const finalPrice = matchedVariant.price_override ?? props.product.price
   const productName =
-    props.product.translations.find(t => t.locale === locale.value)?.name ||
-    props.product.name
+    props.product?.translations?.find(t => t.locale === locale.value)?.name ||
+    props.product?.translations?.find(t => t.locale === 'uk')?.name ||
+    props.product?.translations?.[0]?.name ||
+    props.product?.name ||
+    ''
 
+  const currency = (window.metaPixelCurrency || 'UAH')
+
+  // 4) додаємо до кошика (твоя бізнес-логіка як і була)
   cart.addToCart({
     id: matchedVariant.id,
     product_id: props.product.id,
@@ -117,16 +126,29 @@ const addToCart = () => {
     price: finalPrice,
     image: props.product.images?.[0]?.full_url || '',
     quantity: quantity.value,
-    link: props.product.url,    // ✅ беремо готовий URL з Blade
+    link: props.product.url,    // готовий URL із Blade
     size: matchedVariant.size,
     color: matchedVariant.color ?? '',
   })
 
+  // 5) UI-реакції
   emit('added', productName)
   window.showGlobalToast('🛒  Товар додано в кошик', 'info')
-
   const cartEl = document.getElementById('shoppingCart')
-  if (cartEl) new bootstrap.Offcanvas(cartEl).show()
+  if (cartEl && window.bootstrap?.Offcanvas) new bootstrap.Offcanvas(cartEl).show()
+
+  // 6) ТРЕКІНГ AddToCart (Pixel + CAPI з одним event_id через паршал)
+  try {
+    if (window.mpTrackATC) {
+      window.mpTrackATC({
+        sku: matchedVariant.sku || props.product.sku || props.product.id, // content_id
+        price: finalPrice,
+        quantity: quantity.value,
+        name: productName,
+        currency
+      })
+    }
+  } catch (_) { /* нехай трекінг не ламає UX */ }
 }
 </script>
 

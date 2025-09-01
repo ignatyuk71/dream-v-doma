@@ -11,6 +11,7 @@
 
   {{-- Meta Pixel (скрипт і init) --}}
   @include('partials.meta-pixel-script')
+  @include('partials.meta-pixel-add-to-cart')
   <!-- PWA / icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
