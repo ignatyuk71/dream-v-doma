@@ -1,5 +1,4 @@
 @php
-  // читаємо налаштування лише з БД
   $t = \Illuminate\Support\Facades\DB::table('tracking_settings')->first();
 
   $pixelOk = $t
@@ -13,41 +12,40 @@
 @if ($allowVC && isset($product))
 <script>
 (function () {
-  // вимкнуто прапорцем з глобального паршала — не шлемо
   if (window._mpFlags && window._mpFlags.vc === false) return;
   if (!window.fbq) return;
 
-  var pid = String(@json($product->sku ?? $product->id ?? ''));
-  if (!pid) return; // без id/sku немає сенсу шити VC
+  var pid   = String(@json($product->sku ?? $product->id ?? ''));
+  if (!pid) return;
 
-  var name = @json($product->name ?? $product->title ?? '');
-  var rawPrice = @json($product->price ?? 0);
+  var name      = @json($product->name ?? $product->title ?? '');
+  var rawPrice  = @json($product->price ?? 0);
+  var currency  = window.metaPixelCurrency || 'UAH';
 
-  // нормалізація ціни
   var price = (function (p) {
     var s = String(p).replace(',', '.').replace(/[^\d.]/g, '');
     var n = parseFloat(s);
     return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
   })(rawPrice);
 
-  var currency = window.metaPixelCurrency || 'UAH';
+  var contents = [{ id: pid, quantity: 1, item_price: price }];
 
-  // спільний event_id для дедупу VC
+  // один і той самий ID для дедупу
   var vcId = window._mpVCId || (window._mpVCId = (typeof window._mpGenEventId === 'function'
-               ? window._mpGenEventId('vc')
-               : ('vc-' + Math.random().toString(16).slice(2) + '-' + Date.now())));
+              ? window._mpGenEventId('vc')
+              : ('vc-' + Math.random().toString(16).slice(2) + '-' + Date.now())));
 
-  // -------- БРАУЗЕРНИЙ VC --------
-  var pixelPayload = {
+  // ---------- БРАУЗЕРНИЙ VC (повний набір полів) ----------
+  fbq('track', 'ViewContent', {
     content_ids: [pid],
     content_type: 'product',
+    contents: contents,
     content_name: name,
     value: price,
     currency: currency
-  };
-  fbq('track', 'ViewContent', pixelPayload, { eventID: vcId });
+  }, { eventID: vcId });
 
-  // -------- CAPI VC (той самий event_id) --------
+  // ---------- CAPI VC (ідентичні поля) ----------
   try {
     var getCookie = window._mpGetCookie || function(n){
       return document.cookie.split('; ').find(function(r){ return r.indexOf(n + '=') === 0 })?.split('=')[1] || null;
@@ -61,14 +59,15 @@
       event_id: vcId,
       event_time: Math.floor(Date.now()/1000),
       event_source_url: window.location.href,
+      content_name: name,
+      content_type: 'product',
+      content_ids: [pid],
+      contents: contents,
+      value: price,            // не обов’язково (бек все одно перерахує), але для симетрії — залишимо
       currency: currency,
-      contents: [{ id: pid, quantity: 1, item_price: price }],
-      // value не передаємо — бек сам по contents рахує
       fbp: fbp,
-      fbc: fbc,
-      content_name: name // бек це підхопить як custom_data.content_name
+      fbc: fbc
     };
-
     if (window._mpTestCode) capiBody.test_event_code = window._mpTestCode;
 
     var body = JSON.stringify(capiBody);
