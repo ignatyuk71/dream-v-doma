@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex flex-wrap gap-2 mb-4 w-100">
-    <!-- Лічильник (.count-input з data-* + блокування дубль-хендлерів теми) -->
+    <!-- Лічильник -->
     <div class="count-input">
       <button
         type="button"
@@ -41,30 +41,18 @@
     </div>
 
     <!-- В обране -->
-    <button
-      type="button"
-      class="btn btn-icon btn-lg btn-secondary animate-pulse"
-      title="До обраного"
-    >
+    <button type="button" class="btn btn-icon btn-lg btn-secondary animate-pulse" title="До обраного">
       <i class="ci-heart fs-base animate-target"></i>
     </button>
 
     <!-- Порівняти -->
-    <button
-      type="button"
-      class="btn btn-icon btn-lg btn-secondary animate-rotate"
-      title="Порівняти"
-    >
+    <button type="button" class="btn btn-icon btn-lg btn-secondary animate-rotate" title="Порівняти">
       <i class="ci-refresh-cw fs-base animate-target"></i>
     </button>
 
     <!-- У кошик -->
     <div class="flex-grow-1">
-      <button
-        type="button"
-        class="btn btn-lg btn-primary w-100 animate-slide-end"
-        @click="addToCart"
-      >
+      <button type="button" class="btn btn-lg btn-primary w-100 animate-slide-end" @click="addToCart">
         <i class="ci-shopping-cart fs-base animate-target me-2"></i>
         {{ $t('add_to_cart') }}
       </button>
@@ -84,71 +72,113 @@ const { locale } = useI18n()
 const cart = useCartStore()
 const quantity = ref(1)
 
-const variants = computed(() => props.product.variants ?? [])
+// джерело варіантів: пріоритет — props, fallback — window.productVariants
+const variants = computed(() => {
+  if (Array.isArray(props.product?.variants)) return props.product.variants
+  if (Array.isArray(window.productVariants)) return window.productVariants
+  return []
+})
+
+// число з 2 знаками
+const toNum = (v) => {
+  const s = String(v ?? '').replace(',', '.').replace(/[^\d.\-]/g, '')
+  const n = parseFloat(s)
+  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0
+}
 
 const increment = () => { if (quantity.value < 10) quantity.value++ }
 const decrement = () => { if (quantity.value > 1) quantity.value-- }
 
-const addToCart = () => {
-  // 1) перевіряємо вибір розміру (як і було)
+// читаємо вибраний розмір з <select name="size">
+const getSelectedSize = () => {
+  const el = document.querySelector('select[name="size"]')
+  return el?.value?.toString() ?? ''
+}
+
+const getMatchedVariant = (size) => {
+  if (!size) return null
+  // якщо в майбутньому додасться колір — тут легко розширити
+  return variants.value.find(v => (v?.size ?? '') === size) || null
+}
+
+const addToCart = async () => {
+  // 1) вибір розміру
   const sizeSelect = document.querySelector('select[name="size"]')
-  const selectedSize = sizeSelect?.value || ''
+  const selectedSize = getSelectedSize()
   if (!selectedSize) {
-    window.showGlobalToast('Будь ласка, виберіть розмір!', 'warning')
-    if (sizeSelect) { sizeSelect.classList.add('is-invalid'); sizeSelect.focus() }
+    window.showGlobalToast?.('Будь ласка, виберіть розмір!', 'warning')
+    sizeSelect?.classList.add('is-invalid'); sizeSelect?.focus()
     return
   }
   sizeSelect?.classList.remove('is-invalid')
 
   // 2) знаходимо варіант
-  const matchedVariant = variants.value.find(v => v.size === selectedSize)
+  const matchedVariant = getMatchedVariant(selectedSize)
   if (!matchedVariant) {
-    window.showGlobalToast('Обраний розмір недоступний', 'danger')
+    window.showGlobalToast?.('Обраний розмір недоступний', 'danger')
     return
   }
 
-  // 3) ціна/назва/валюта
-  const finalPrice = matchedVariant.price_override ?? props.product.price
+  // 2.1) перевіряємо склад (якщо приходить quantity з бекенда)
+  const stock = Number(matchedVariant.quantity ?? 0)
+  if (stock > 0 && quantity.value > stock) {
+    quantity.value = stock
+    window.showGlobalToast?.(`На складі лише ${stock} шт.`, 'warning')
+  }
+
+  // 3) дані товару
+  const rawPrice   = matchedVariant.price_override ?? props.product.price
+  const finalPrice = toNum(rawPrice)
   const productName =
     props.product?.translations?.find(t => t.locale === locale.value)?.name ||
     props.product?.translations?.find(t => t.locale === 'uk')?.name ||
     props.product?.translations?.[0]?.name ||
-    props.product?.name ||
-    ''
+    props.product?.name || ''
+  const currency = window.metaPixelCurrency || 'UAH'
 
-  const currency = (window.metaPixelCurrency || 'UAH')
-
-  // 4) додаємо до кошика (твоя бізнес-логіка як і була)
-  cart.addToCart({
+  // 4) кладемо в кошик
+  await cart.addToCart({
     id: matchedVariant.id,
     product_id: props.product.id,
+    variant_sku: matchedVariant.variant_sku ?? null,
     name: productName,
     price: finalPrice,
-    image: props.product.images?.[0]?.full_url || '',
+    image: props.product.images?.[0]?.full_url || props.product.images?.[0]?.url || '',
     quantity: quantity.value,
-    link: props.product.url,    // готовий URL із Blade
+    link: props.product.url,
     size: matchedVariant.size,
     color: matchedVariant.color ?? '',
   })
 
-  // 5) UI-реакції
+  // 5) UI
   emit('added', productName)
-  window.showGlobalToast('🛒  Товар додано в кошик', 'info')
+  window.showGlobalToast?.('🛒  Товар додано в кошик', 'info')
   const cartEl = document.getElementById('shoppingCart')
   if (cartEl && window.bootstrap?.Offcanvas) new bootstrap.Offcanvas(cartEl).show()
 
-  // 6) ТРЕКІНГ AddToCart (Pixel + CAPI з одним event_id через паршал)
+  // 6) ТРЕК ATC: ТІЛЬКИ variant_sku
+  const vSku = (matchedVariant.variant_sku ?? '').toString().trim()
+  if (!vSku) {
+    window.showGlobalToast?.('⚠️ Відсутній артикул варіанта (variant_sku). Подія трекінгу пропущена.', 'warning')
+    console.warn('[ATC] variant_sku missing — skip tracking to avoid wrong id!', matchedVariant)
+    return
+  }
+
   try {
-    if (window.mpTrackATC) {
+    if (typeof window.mpTrackATC === 'function') {
+      console.log('[ATC] sending', { variant_sku: vSku, price: finalPrice, qty: quantity.value })
       window.mpTrackATC({
-        sku: matchedVariant.sku || props.product.sku || props.product.id, // content_id
+        variant_sku: vSku,
         price: finalPrice,
         quantity: quantity.value,
         name: productName,
         currency
       })
+    } else {
+      console.warn('[ATC] mpTrackATC is not defined (partial not loaded yet)')
     }
-  } catch (_) { /* нехай трекінг не ламає UX */ }
+  } catch (e) {
+    console.warn('[ATC] tracking error', e)
+  }
 }
 </script>
-

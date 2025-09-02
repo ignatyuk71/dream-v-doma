@@ -1,5 +1,6 @@
 @php
   use Illuminate\Support\Facades\DB;
+
   $t = DB::table('tracking_settings')->first();
 
   $pixelOk = $t
@@ -13,76 +14,82 @@
 @if ($allowATC)
 <script>
 (function(){
-  if (window.mpTrackATC) return;                       // не перевизначати
+  // не перевизначати при повторних завантаженнях
+  if (window.mpTrackATC) return;
   if (!window._mpFlags || window._mpFlags.atc === false) return;
 
-  // утиліти
+  /* ===== утиліти ===== */
   function num(v){
-    var s = String(v ?? 0).replace(',', '.').replace(/[^\d.\-]/g, '');
+    var s = String(v ?? 0).replace(',', '.').replace(/[^\d.\-]/g,'');
     var n = parseFloat(s);
     return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
   }
   function getCookie(n){
-    return document.cookie.split('; ').find(function(r){ return r.indexOf(n + '=') === 0 })?.split('=')[1] || null;
+    return document.cookie.split('; ')
+      .find(function(r){ return r.indexOf(n + '=') === 0 })?.split('=')[1] || null;
   }
   function safeDecode(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } }
-
-  // анти-даблклік: кеш останньої події по (sku+qty+price) на 800мс
-  var _atcSeen = new Map();
-  function shouldSkip(key){
-    var now = Date.now();
-    var prev = _atcSeen.get(key) || 0;
-    _atcSeen.set(key, now);
-    return (now - prev) < 800;
+  function genEventId(name){
+    if (typeof window._mpGenEventId === 'function') return window._mpGenEventId(name);
+    try {
+      var a = new Uint8Array(6);
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      var hex = Array.from(a).map(function(b){ return b.toString(16).padStart(2,'0') }).join('');
+      return name + '-' + hex + '-' + Math.floor(Date.now()/1000);
+    } catch (_e) {
+      return name + '-' + Math.random().toString(16).slice(2) + '-' + Math.floor(Date.now()/1000);
+    }
   }
 
-  /**
-   * ГОЛОВНА ФУНКЦІЯ
-   * Викликати після успішного додавання в кошик:
-   *   mpTrackATC({ sku|id, price, quantity?, name?, currency? })
-   */
+  /* ===== головна функція ===== */
+  // window.mpTrackATC({ variant_sku, price, quantity?, name?, currency? })
   window.mpTrackATC = function(opts){
     try{
       if (!opts) return;
 
-      var pid = String(opts.sku || opts.id || '');
-      if (!pid) return;
+      // тільки variant_sku
+      var pidRaw = (opts.variant_sku ?? '').toString().trim();
+      if (!pidRaw) {
+        console.warn('[ATC] variant_sku missing — tracking skipped!', opts);
+        window.showGlobalToast?.('⚠️ Відсутній артикул варіанта (variant_sku). Подія трекінгу пропущена.', 'warning');
+        return;
+      }
+      var pid = pidRaw;
 
-      var qty   = Number(opts.quantity || 1); if (!Number.isFinite(qty) || qty <= 0) qty = 1;
+      var qty = Number(opts.quantity || 1);
+      if (!Number.isFinite(qty) || qty <= 0) qty = 1;
+
       var price = num(opts.price);
       var name  = typeof opts.name === 'string' ? opts.name : '';
       var currency = opts.currency || (window.metaPixelCurrency || 'UAH');
 
-      // анти-дабл
-      var k = pid + '|' + qty + '|' + price;
-      if (shouldSkip(k)) return;
-
       var contents = [{ id: pid, quantity: qty, item_price: price }];
-      var value = num(qty * price);
+      var value    = num(qty * price);
+      var atcId    = genEventId('atc');
 
-      // один і той самий event_id для дедупу
-      var atcId = (window._mpGenEventId
-        ? window._mpGenEventId('atc')
-        : ('atc-' + Math.random().toString(16).slice(2) + '-' + Date.now()));
-
-      // -------- БРАУЗЕР (ретрай, поки fbq не готовий) --------
-      (function sendPixel(){
-        if (typeof window.fbq !== 'function'){ setTimeout(sendPixel, 80); return; }
-        window.fbq('track', 'AddToCart', {
+      // ---- браузерний AddToCart (з обмеженим ретраєм)
+      (function sendPixel(attempt){
+        attempt = attempt || 0;
+        if (typeof window.fbq !== 'function') {
+          if (attempt > 120) return; // ~10 секунд @ ~80ms
+          return setTimeout(function(){ sendPixel(attempt+1) }, 80);
+        }
+        fbq('track', 'AddToCart', {
           content_ids: [pid],
           content_type: 'product',
           contents: contents,
           content_name: name,
           value: value,
           currency: currency
-        }, { eventID: atcId }); // ВАЖЛИВО: eventID (camelCase)
+        }, { eventID: atcId });
       })();
 
-      // -------- CAPI (той самий event_id) --------
+      // ---- CAPI AddToCart
       var fbp = safeDecode(getCookie('_fbp'));
       var fbc = safeDecode(getCookie('_fbc'));
+
       var bodyObj = {
-        event_id: atcId,                               // ВАЖЛИВО: event_id (snake_case)
+        event_id: atcId,
         event_time: Math.floor(Date.now()/1000),
         event_source_url: window.location.href,
         content_type: 'product',
@@ -91,31 +98,47 @@
         content_name: name,
         value: value,
         currency: currency,
-        fbp: fbp,
-        fbc: fbc
+        fbp: fbp, fbc: fbc
       };
       if (window._mpTestCode) bodyObj.test_event_code = window._mpTestCode;
 
       var body = JSON.stringify(bodyObj);
 
-      // iOS/Instagram → тільки fetch keepalive
       var ua = navigator.userAgent || '';
       var isiOS = /iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && 'ontouchend' in document);
 
-      if (isiOS || !navigator.sendBeacon) {
+      if (isiOS) {
         fetch('/api/track/atc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           keepalive: true,
           body
-        }).catch(function(){ setTimeout(function(){
-          fetch('/api/track/atc', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', keepalive:true, body });
-        }, 300); });
-      } else {
+        }).catch(function(){
+          setTimeout(function(){
+            fetch('/api/track/atc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              keepalive: true,
+              body
+            });
+          }, 250);
+        });
+      } else if (navigator.sendBeacon) {
         navigator.sendBeacon('/api/track/atc', new Blob([body], {type:'application/json'}));
+      } else {
+        fetch('/api/track/atc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          keepalive: true,
+          body
+        });
       }
-    }catch(_){}
+    } catch(e){
+      console.warn('[ATC] mpTrackATC exception', e);
+    }
   };
 })();
 </script>

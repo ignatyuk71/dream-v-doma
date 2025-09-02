@@ -10,7 +10,7 @@
       <div class="d-flex gap-1 fs-sm">
         @php $rating = $product->average_rating ?? 0; @endphp
         @for ($i = 1; $i <= 5; $i++)
-          <i class="ci-star{{ $i <= floor($rating) ? '-filled text-warning' : ($i - $rating < 1 ? '' : ' text-body-tertiary opacity-75') }}"></i>
+          <i class="ci-star{{ $i <= floor($rating) ? '-filled text-warning' : ($i - $rating < 1 ? '' : ' text-body-terтіary opacity-75') }}"></i>
         @endfor
       </div>
       <span class="text-body-tertiary fs-sm">
@@ -48,39 +48,6 @@
   </style>
   @endpush
 
-  @push('scripts')
-  <script>
-    window.productVariants = @json($product->variants);
-    window.basePrice = {{ $product->price }};
-    document.addEventListener('DOMContentLoaded', function () {
-      const variants = window.productVariants;
-      const basePrice = parseFloat(window.basePrice);
-      const priceEl = document.getElementById('product-price');
-      const oldPriceEl = document.getElementById('product-old-price');
-      const sizeSelect = document.querySelector('select[name="size"]');
-      if (!priceEl || !oldPriceEl || !sizeSelect) return;
-      const formatPrice = (price) => {
-        const num = parseFloat(price);
-        return (num % 1 === 0 ? num.toFixed(0) : num.toFixed(2)) + ' грн';
-      };
-      sizeSelect.addEventListener('change', function () {
-        const selectedSize = this.value;
-        const match = variants.find(v => v.size === selectedSize);
-        const newPrice = match?.price_override ?? basePrice;
-        priceEl.textContent = formatPrice(newPrice);
-        const oldPrice = parseFloat(match?.old_price ?? 0);
-        if (oldPrice > 0) {
-          oldPriceEl.textContent = formatPrice(oldPrice);
-          oldPriceEl.classList.remove('d-none');
-        } else {
-          oldPriceEl.textContent = '';
-          oldPriceEl.classList.add('d-none');
-        }
-      });
-    });
-  </script>
-  @endpush
-
   @php
     $currentLocale = app()->getLocale();
 
@@ -107,7 +74,8 @@
       'price' => $product->price,
       'name'  => $tr?->name ?? '—',
       'images' => $product->images->map(fn($img) => [
-        'full_url' => asset(ltrim($img->url, '/')),
+        // гарантуємо /storage/... у URL
+        'full_url' => asset('storage/' . ltrim($img->url, '/')),
       ])->values(),
       'translations' => $product->translations->map(fn($t) => [
         'locale' => $t->locale,
@@ -119,9 +87,53 @@
         'color'          => $v->color,
         'price_override' => $v->price_override,
         'old_price'      => $v->old_price ?? null,
+        'variant_sku'    => $v->variant_sku,   // ← додано
+        'quantity'       => $v->quantity,      // ← опціонально
       ])->values(),
     ];
   @endphp
+
+  @push('scripts')
+  <script>
+    // віддаємо саме підготовлені варіанти з payload
+    window.productVariants = @json($payload['variants']);
+    window.basePrice = {{ $payload['price'] }};
+    document.addEventListener('DOMContentLoaded', function () {
+      const variants = Array.isArray(window.productVariants) ? window.productVariants : [];
+      const basePrice = parseFloat(window.basePrice);
+      const priceEl = document.getElementById('product-price');
+      const oldPriceEl = document.getElementById('product-old-price');
+      const sizeSelect = document.querySelector('select[name="size"]');
+      if (!priceEl || !oldPriceEl || !sizeSelect) return;
+
+      const formatPrice = (price) => {
+        const num = Number.parseFloat(price);
+        if (!Number.isFinite(num)) return '';
+        return (num % 1 === 0 ? num.toFixed(0) : num.toFixed(2)) + ' грн';
+      };
+
+      const updatePrice = () => {
+        const selectedSize = sizeSelect.value;
+        const match = variants.find(v => v.size === selectedSize);
+        const newPrice = (match && match.price_override != null) ? match.price_override : basePrice;
+        priceEl.textContent = formatPrice(newPrice);
+
+        const oldPrice = Number.parseFloat(match?.old_price ?? 0);
+        if (oldPrice > 0) {
+          oldPriceEl.textContent = formatPrice(oldPrice);
+          oldPriceEl.classList.remove('d-none');
+        } else {
+          oldPriceEl.textContent = '';
+          oldPriceEl.classList.add('d-none');
+        }
+      };
+
+      sizeSelect.addEventListener('change', updatePrice);
+      // ініціалізація на старті (раптом уже вибраний розмір)
+      updatePrice();
+    });
+  </script>
+  @endpush
 
   {{-- 🔎 попереджувальний банер, якщо не знайшли categorySlug --}}
   @if (empty($categorySlug))
