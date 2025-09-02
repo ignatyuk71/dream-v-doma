@@ -1,7 +1,7 @@
 {
-  "__plugin-vue_export-helper-izem-E_I.js": {
-    "file": "assets/_plugin-vue_export-helper-izem-E_I.js",
-    "name": "_plugin-vue_export-helper"
+  "_index-DIpXTXv3.js": {
+    "file": "assets/index-DIpXTXv3.js",
+    "name": "index"
   },
   "public/assets/img/nova-poshta.svg": {
     "file": "assets/nova-poshta-g-ZN1yRV.svg",
@@ -23,12 +23,12 @@
     "isEntry": true
   },
   "resources/js/admin/index.js": {
-    "file": "assets/index-C2sbdRFw.js",
+    "file": "assets/index-B-RIkR1-.js",
     "name": "index",
     "src": "resources/js/admin/index.js",
     "isEntry": true,
     "imports": [
-      "__plugin-vue_export-helper-izem-E_I.js"
+      "_index-DIpXTXv3.js"
     ],
     "css": [
       "assets/index-Cdtu01y1.css",
@@ -36,12 +36,12 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BDcRI33z.js",
+    "file": "assets/app-BjfPn4hZ.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "__plugin-vue_export-helper-izem-E_I.js"
+      "_index-DIpXTXv3.js"
     ],
     "css": [
       "assets/app-B6hF17Ac.css"
