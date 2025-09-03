@@ -664,117 +664,54 @@ const withStorage = (path) => {
   return '/storage/' + p
 }
 
-/* =========================================================================
-   InitiateCheckout — ПІДКЛЮЧЕНА КОПІЯ (Pixel + CAPI, дедуплікація)
-   - Повага до прапорця з БД: window._mpFlags.ic === false → не шлемо
-   - Єдина event_id для Pixel і CAPI
-   - Guard у localStorage по складу кошика (fingerprint)
-   - Працює, навіть якщо iOS блочить браузерні івенти (через CAPI)
-   ========================================================================= */
+// =====================================================================
+// InitiateCheckout — виклик глобальної функції з Blade-паршалу
+// =====================================================================
+const callInitiateCheckout = (() => {
+  let sent = false
+  return function () {
+    if (sent) return
 
-// окремі унікальні хелпери (щоб не конфліктувати з іншими)
-const icSanitize = (p) => {
-  const n = parseFloat(String(p ?? 0).replace(',', '.').replace(/[^\d.]/g, ''))
-  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0
-}
+    const items = (cart.items || [])
+      .filter(i => (i?.variant_sku ?? '').toString().trim()) // тільки позиції з variant_sku
+      .map(i => ({
+        variant_sku: i.variant_sku,
+        price: i.price,
+        quantity: i.quantity,
+        name: i.name
+      }))
 
-const icBuildContents = (items) =>
-  (items || []).map(i => ({
-    id: String(i.sku || i.id || i.product_id),
-    quantity: Number(i.quantity || 1),
-    item_price: icSanitize(i.price),
-  }))
+    if (!items.length) return
 
-const icFingerprint = (contents, currency) =>
-  contents.map(c => `${c.id}:${c.quantity}:${c.item_price}`).join('|') + `|${currency}`
+    const currency = window.metaPixelCurrency || 'UAH'
 
-const getCookie = (name) =>
-  document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || null
-
-const ensureFbp = () => {
-  let fbp = getCookie('_fbp') || localStorage.getItem('fbp_generated')
-  if (!fbp) {
-    fbp = `fb.1.${Math.floor(Date.now()/1000)}.${Math.floor(Math.random()*1e10)}`
-    localStorage.setItem('fbp_generated', fbp)
-  }
-  return fbp
-}
-
-async function sendInitiateCheckoutOnce() {
-  // вимкнено у налаштуваннях (з БД)?
-  if (window._mpFlags && window._mpFlags.ic === false) {
-    console.info('[IC] disabled via window._mpFlags.ic')
-    return
-  }
-
-  const items = cart.items || []
-  if (!items.length) return
-
-  const currency = window.metaPixelCurrency || 'UAH'
-  const contents = icBuildContents(items)
-  const value = contents.reduce((s, c) => s + c.item_price * c.quantity, 0)
-  const numItems = contents.reduce((s, c) => s + c.quantity, 0)
-
-  // guard від дубляжу для того самого складу кошика
-  const fp = icFingerprint(contents, currency)
-  const fpKey = 'ic_fp_v2'
-  if (localStorage.getItem(fpKey) === fp) return
-
-  // єдина event_id для Pixel + CAPI
-  const sid =
-    (document.cookie.match(/PHPSESSID=([^;]+)/)?.[1]) ||
-    (document.cookie.match(/_session=([^;]+)/)?.[1]) ||
-    Math.random().toString(36).slice(2)
-  const eventId = `ic-${sid}-${Date.now()}`
-
-  const payload = {
-    value: Number(value.toFixed(2)),
-    currency,
-    contents,
-    num_items: numItems,
-    content_type: 'product',
-  }
-
-  // Browser Pixel
-  if (typeof window.fbq === 'function') {
-    try {
-      window.fbq('track', 'InitiateCheckout', payload, { eventID: eventId })
-      console.log('[IC][Pixel] sent', { ...payload, eventId })
-    } catch (e) {
-      console.warn('[IC][Pixel] error', e)
+    // короткий ретрай, поки паршал оголосить window.mpTrackIC
+    const tryCall = (attempt = 0) => {
+      if (typeof window.mpTrackIC === 'function') {
+        window.mpTrackIC({ items, currency })
+        sent = true
+      } else if (attempt < 120) { // ~10 сек @ 80мс
+        setTimeout(() => tryCall(attempt + 1), 80)
+      } else {
+        console.warn('[IC] mpTrackIC is not available')
+      }
     }
-  } else {
-    console.warn('[IC][Pixel] fbq not found')
-  }
 
-  // Server CAPI (шлемо, якщо не вимкнено окремим прапорцем)
-  const capiDisabled = window._mpFlags && window._mpFlags.capi === false
-  if (!capiDisabled) {
-    try {
-      await axios.post('/api/track/ic', {
-        event_id: eventId,
-        event_time: Math.floor(Date.now()/1000),
-        event_source_url: window.location.href,
-        currency,
-        value: payload.value,
-        num_items: numItems,
-        contents,
-        fbp: getCookie('_fbp') || ensureFbp(),
-        fbc: getCookie('_fbc') || null,
-      })
-      console.log('[IC][CAPI] sent')
-    } catch (e) {
-      console.warn('[IC][CAPI] error', e?.response?.data || e)
-    }
+    tryCall()
   }
-
-  // позначаємо, що на цей склад кошика вже відправили
-  localStorage.setItem(fpKey, fp)
-}
+})()
 
 onMounted(() => {
-  // Відправляємо IC один раз після монту
-  sendInitiateCheckoutOnce()
+  // одноразовий виклик на вході в чекаут
+  callInitiateCheckout()
 })
 
+// якщо кошик під’їхав асинхронно після mount — викликни ще раз (одноразово)
+watch(
+  () => cart.items.map(i => `${i.variant_sku}:${i.quantity}:${i.price}`).join('|'),
+  (fp, prev) => {
+    if (!prev && fp) callInitiateCheckout()
+  },
+  { immediate: false }
+)
 </script>

@@ -109,4 +109,5 @@
 
     {{-- Meta Pixel: ViewContent (з БД через паршал) --}}
     @include('partials.meta-pixel-view-content', ['product' => $product])
+    
 @endsection
