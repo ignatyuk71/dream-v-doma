@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex flex-wrap gap-2 mb-4 w-100">
-    <!-- Лічильник -->
+    <!-- Лічильник кількості (1…10) -->
     <div class="count-input">
       <button
         type="button"
@@ -61,48 +61,65 @@
 </template>
 
 <script setup>
+/**
+ * Компонент "Кнопка додати в кошик":
+ * - Читає вибраний розмір із <select name="size"> (верстка поза компонентом).
+ * - Знаходить відповідний варіант із переданих product.variants (або window.productVariants).
+ * - Додає позицію в кошик (Pinia store).
+ * - Відправляє трекінг AddToCart ЧЕРЕЗ глобалку window.mpTrackATC,
+ *   причому content_id = ТІЛЬКИ variant_sku (жодних id/sku продукту).
+ */
+
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCartStore } from '@/stores/cart'
 
-const emit = defineEmits(['added'])
+/* ---- вхідні дані та сервіси ---- */
+const emit  = defineEmits(['added'])
 const props = defineProps({ product: { type: Object, required: true } })
-
 const { locale } = useI18n()
 const cart = useCartStore()
+
+/* ---- локальний стан ---- */
 const quantity = ref(1)
 
-// джерело варіантів: пріоритет — props, fallback — window.productVariants
+/* ---- джерело варіантів:
+ * 1) якщо у пропсах прийшли variants — беремо їх;
+ * 2) інакше спробуємо window.productVariants (фолбек із Blade).
+ */
 const variants = computed(() => {
   if (Array.isArray(props.product?.variants)) return props.product.variants
   if (Array.isArray(window.productVariants)) return window.productVariants
   return []
 })
 
-// число з 2 знаками
+/* ---- утиліти ---- */
+// Безпечне приведення ціни до числа з 2 знаками
 const toNum = (v) => {
   const s = String(v ?? '').replace(',', '.').replace(/[^\d.\-]/g, '')
   const n = parseFloat(s)
   return Number.isFinite(n) ? Number(n.toFixed(2)) : 0
 }
 
+// Керування кількістю
 const increment = () => { if (quantity.value < 10) quantity.value++ }
 const decrement = () => { if (quantity.value > 1) quantity.value-- }
 
-// читаємо вибраний розмір з <select name="size">
+// Зчитати вибраний розмір із селекта поза компонентом
 const getSelectedSize = () => {
   const el = document.querySelector('select[name="size"]')
   return el?.value?.toString() ?? ''
 }
 
+// Знайти варіант за розміром (легко розширити, якщо додасте фільтр за кольором)
 const getMatchedVariant = (size) => {
   if (!size) return null
-  // якщо в майбутньому додасться колір — тут легко розширити
   return variants.value.find(v => (v?.size ?? '') === size) || null
 }
 
+/* ---- головна дія: додати до кошика + трекінг ---- */
 const addToCart = async () => {
-  // 1) вибір розміру
+  // 1) Переконаймось, що обрано розмір
   const sizeSelect = document.querySelector('select[name="size"]')
   const selectedSize = getSelectedSize()
   if (!selectedSize) {
@@ -112,35 +129,38 @@ const addToCart = async () => {
   }
   sizeSelect?.classList.remove('is-invalid')
 
-  // 2) знаходимо варіант
+  // 2) Знайти відповідний варіант
   const matchedVariant = getMatchedVariant(selectedSize)
   if (!matchedVariant) {
     window.showGlobalToast?.('Обраний розмір недоступний', 'danger')
     return
   }
 
-  // 2.1) перевіряємо склад (якщо приходить quantity з бекенда)
+  // 2.1) Перевірити склад (якщо бекенд повертає quantity по варіанту)
   const stock = Number(matchedVariant.quantity ?? 0)
   if (stock > 0 && quantity.value > stock) {
     quantity.value = stock
     window.showGlobalToast?.(`На складі лише ${stock} шт.`, 'warning')
   }
 
-  // 3) дані товару
+  // 3) Зібрати дані позиції (ціна: override або базова ціна продукту)
   const rawPrice   = matchedVariant.price_override ?? props.product.price
   const finalPrice = toNum(rawPrice)
+
+  // Локалізована назва товару
   const productName =
     props.product?.translations?.find(t => t.locale === locale.value)?.name ||
     props.product?.translations?.find(t => t.locale === 'uk')?.name ||
     props.product?.translations?.[0]?.name ||
     props.product?.name || ''
+
   const currency = window.metaPixelCurrency || 'UAH'
 
-  // 4) кладемо в кошик
+  // 4) Додати у кошик (Pinia store)
   await cart.addToCart({
     id: matchedVariant.id,
     product_id: props.product.id,
-    variant_sku: matchedVariant.variant_sku ?? null,
+    variant_sku: matchedVariant.variant_sku ?? null, // збережемо для відображення та трекінгу
     name: productName,
     price: finalPrice,
     image: props.product.images?.[0]?.full_url || props.product.images?.[0]?.url || '',
@@ -150,35 +170,30 @@ const addToCart = async () => {
     color: matchedVariant.color ?? '',
   })
 
-  // 5) UI
+  // 5) UI: тост + відкрити офканвас кошика (якщо доступний)
   emit('added', productName)
   window.showGlobalToast?.('🛒  Товар додано в кошик', 'info')
   const cartEl = document.getElementById('shoppingCart')
   if (cartEl && window.bootstrap?.Offcanvas) new bootstrap.Offcanvas(cartEl).show()
 
-  // 6) ТРЕК ATC: ТІЛЬКИ variant_sku
+  // 6) Трекінг AddToCart:
+  //    відправляємо ЧИСТО variant_sku як content_id.
   const vSku = (matchedVariant.variant_sku ?? '').toString().trim()
   if (!vSku) {
+    // Якщо не згенерувався або не прийшов — не шлемо помилкові ідентифікатори.
     window.showGlobalToast?.('⚠️ Відсутній артикул варіанта (variant_sku). Подія трекінгу пропущена.', 'warning')
-    console.warn('[ATC] variant_sku missing — skip tracking to avoid wrong id!', matchedVariant)
     return
   }
 
-  try {
-    if (typeof window.mpTrackATC === 'function') {
-      console.log('[ATC] sending', { variant_sku: vSku, price: finalPrice, qty: quantity.value })
-      window.mpTrackATC({
-        variant_sku: vSku,
-        price: finalPrice,
-        quantity: quantity.value,
-        name: productName,
-        currency
-      })
-    } else {
-      console.warn('[ATC] mpTrackATC is not defined (partial not loaded yet)')
-    }
-  } catch (e) {
-    console.warn('[ATC] tracking error', e)
+  // Викликаємо глобалку з Blade-паршалу (вона дублює подію у Pixel+CAPI з єдиним event_id)
+  if (typeof window.mpTrackATC === 'function') {
+    window.mpTrackATC({
+      variant_sku: vSku,
+      price: finalPrice,
+      quantity: quantity.value,
+      name: productName,
+      currency
+    })
   }
 }
 </script>
