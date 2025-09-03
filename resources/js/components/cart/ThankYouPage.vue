@@ -170,36 +170,14 @@ const withStorage = (path) => {
 const trackPurchaseOnce = (() => {
   let sent = false
   return (ord) => {
-    console.groupCollapsed('%c[Purchase] prepare', 'color:#09f')
     try {
-      if (sent) { console.info('• skip: already sent'); console.groupEnd(); return }
-      if (!ord || !Array.isArray(ord.items)) {
-        console.warn('• no order or items array', ord)
-        console.groupEnd(); return
-      }
-      if (window._mpFlags && window._mpFlags.purchase === false) {
-        console.info('• skip by flag window._mpFlags.purchase=false'); console.groupEnd(); return
-      }
+      if (sent) return
+      if (!ord || !Array.isArray(ord.items)) return
+      if (window._mpFlags && window._mpFlags.purchase === false) return
 
       const rawItems = ord.items || []
       const withSku  = rawItems.filter(i => String(i?.variant_sku ?? '').trim().length > 0)
-      const noSku    = rawItems.filter(i => !String(i?.variant_sku ?? '').trim().length)
-
-      console.table(rawItems.map(i => ({
-        id: i.id,
-        variant_id: i.variant_id,
-        variant_sku: i.variant_sku,
-        size: i.size,
-        price: i.price,
-        qty: i.quantity,
-        name: i.product_name || i.name || ''
-      })))
-      console.log('• items total:', rawItems.length, ' | with variant_sku:', withSku.length, ' | without:', noSku.length)
-
-      if (!withSku.length) {
-        console.warn('‼️ немає позицій з variant_sku — подію пропущено')
-        console.groupEnd(); return
-      }
+      if (!withSku.length) return
 
       const items = withSku.map(i => ({
         variant_sku: String(i.variant_sku),
@@ -219,7 +197,7 @@ const trackPurchaseOnce = (() => {
         shipping: toNumber(ord.shipping_cost ?? ord.delivery_cost ?? 0),
         tax: toNumber(ord.tax ?? 0),
 
-        // PII — піде лише у CAPI на бек (Pixel не отримає PII)
+        // PII — піде лише у CAPI (Pixel не отримає PII)
         email: ord.customer?.email || null,
         phone: ord.customer?.phone || null,
         first_name: ord.customer?.first_name || ord.customer?.name || null,
@@ -227,45 +205,24 @@ const trackPurchaseOnce = (() => {
         external_id: ord.customer?.id ? String(ord.customer.id) : null
       }
 
-      console.log('• payload ready (trimmed):', {
-        order_number: payload.order_number,
-        currency: payload.currency,
-        value: payload.value,
-        shipping: payload.shipping,
-        tax: payload.tax,
-        items: payload.items
-      })
-
       const tryCall = (attempt = 0) => {
         const exists = typeof window.mpTrackPurchase === 'function'
-        console.log(`• tryCall #${attempt} | mpTrackPurchase present:`, exists)
         if (exists) {
           window.mpTrackPurchase(payload)
           sent = true
-          console.info('✅ mpTrackPurchase called')
-          console.groupEnd()
         } else if (attempt < 120) {
           setTimeout(() => tryCall(attempt + 1), 80)
-        } else {
-          console.warn('❌ mpTrackPurchase is not available after retries')
-          console.groupEnd()
         }
       }
       tryCall()
-    } catch (e) {
-      console.warn('[Purchase] exception in prepare', e)
-      console.groupEnd()
-    }
+    } catch (_) { /* no-op */ }
   }
 })()
 /* ================================================================================ */
 
 onMounted(async () => {
   const orderNumber = localStorage.getItem('lastOrderNumber')
-  console.log('%c[ThankYou] orderNumber from LS:', 'color:#6c5ce7', orderNumber)
-
   if (!orderNumber) {
-    console.warn('[ThankYou] no orderNumber — redirect to home')
     window.location.href = '/'
     return
   }
@@ -273,19 +230,6 @@ onMounted(async () => {
   try {
     const { data } = await axios.get(`/api/orders/${orderNumber}`)
     order.value = data
-
-    console.groupCollapsed('%c[ThankYou] fetched order', 'color:#2ecc71')
-    console.log('• raw order:', JSON.parse(JSON.stringify(data)))
-    console.table((data.items || []).map(i => ({
-      id: i.id,
-      product_id: i.product_id,
-      variant_id: i.variant_id,
-      variant_sku: i.variant_sku,
-      size: i.size,
-      price: i.price,
-      qty: i.quantity,
-    })))
-    console.groupEnd()
 
     // 🔔 Відправляємо Purchase ОДИН РАЗ (через глобалку з паршалу)
     trackPurchaseOnce(order.value)
@@ -297,8 +241,8 @@ onMounted(async () => {
     sessionStorage.removeItem('checkout')
     sessionStorage.clear()
     cart.clearCart?.()
-  } catch (error) {
-    console.error('❌ Помилка при запиті замовлення:', error)
+  } catch (_) {
+    // тихо ігноруємо
   }
 })
 </script>
