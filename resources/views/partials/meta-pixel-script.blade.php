@@ -1,52 +1,66 @@
 @php
   use Illuminate\Support\Facades\DB;
 
+  // Читаємо налаштування трекінгу (може бути null)
   $t = DB::table('tracking_settings')->first();
 
-  $pixelId  = $t->pixel_id ?? null;
-  $currency = $t->default_currency ?? 'UAH';
+  // Базові параметри (без фаталів, завдяки ?->)
+  $pixelId  = $t?->pixel_id ?? null;
+  $currency = $t?->default_currency ?? 'UAH';
 
+  // Глобовий перемикач Pixel: увімкнено + є pixel_id + не адмін-URL
   $enabled  = $t
-    && (int)($t->pixel_enabled ?? 0) === 1
+    && (int)($t?->pixel_enabled ?? 0) === 1
     && !empty($pixelId)
-    && !((int)($t->exclude_admin ?? 1) === 1 && request()->is('admin*'));
+    && !((int)($t?->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
+  // Прапорці подій (за замовчуванням true, окрім lead)
   $flags = [
-    'pv'   => (bool)($t->send_page_view          ?? true),
-    'vc'   => (bool)($t->send_view_content       ?? true),
-    'atc'  => (bool)($t->send_add_to_cart        ?? true),
-    'ic'   => (bool)($t->send_initiate_checkout  ?? true),
-    'pur'  => (bool)($t->send_purchase           ?? true),
-    'lead' => (bool)($t->send_lead               ?? false),
+    'pv'   => (bool)($t?->send_page_view          ?? true),
+    'vc'   => (bool)($t?->send_view_content       ?? true),
+    'atc'  => (bool)($t?->send_add_to_cart        ?? true),
+    'ic'   => (bool)($t?->send_initiate_checkout  ?? true),
+    'pur'  => (bool)($t?->send_purchase           ?? true),
+    'lead' => (bool)($t?->send_lead               ?? false),
   ];
 
+  // Якщо Pixel глобально вимкнено — глушимо всі події
   if (!$enabled) {
     $flags = ['pv'=>false,'vc'=>false,'atc'=>false,'ic'=>false,'pur'=>false,'lead'=>false];
   }
 
-  $testCode = $t->capi_test_code ?? null; // NEW
+  // Тест-код із Events Manager (необов'язковий)
+  $testCode = $t?->capi_test_code ?? null;
 @endphp
 
 <script>
-  window._mpFlags = @json($flags, JSON_UNESCAPED_UNICODE);
+  // Глобальні прапорці та налаштування (видимі на фронті)
+  window._mpFlags          = @json($flags, JSON_UNESCAPED_UNICODE);
   window.metaPixelCurrency = @json($currency);
-  window._mpEnabled = @json($enabled);
-  window._mpPixelId = @json($pixelId);
-  window._mpTestCode = @json($testCode); // NEW
+  window._mpEnabled        = @json($enabled);
+  window._mpPixelId        = @json($pixelId);
+  window._mpTestCode       = @json($testCode);
 
-  // генератор спільних event_id
+  // Генератор спільних event_id для дедупу Pixel↔CAPI
   window._mpGenEventId = function(name){
-    return (name || 'ev') + '-' + Math.random().toString(16).slice(2) + '-' + Date.now();
+    try {
+      var a = new Uint8Array(6);
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      var hex = Array.from(a).map(function(b){ return b.toString(16).padStart(2,'0') }).join('');
+      return (name || 'ev') + '-' + hex + '-' + Math.floor(Date.now()/1000);
+    } catch (_) {
+      return (name || 'ev') + '-' + Math.random().toString(16).slice(2) + '-' + Math.floor(Date.now()/1000);
+    }
   };
 
-  // cookie helper
+  // Хелпер читання cookie
   window._mpGetCookie = function(n){
-    return document.cookie.split('; ').find(r=>r.startsWith(n+'='))?.split('=')[1] || null;
+    return document.cookie.split('; ').find(function(r){ return r.indexOf(n+'=')===0 })?.split('=')[1] || null;
   };
 </script>
 
 @if ($enabled)
-  <!-- Meta Pixel -->
+  <!-- Meta Pixel (браузерний) -->
   <script>
   !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
   n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -56,7 +70,7 @@
 
   fbq('init', '{{ $pixelId }}');
 
-  // Browser PageView з event_id (для дедупу з CAPI)
+  // Browser PageView із спільним event_id (для дедупу з CAPI)
   (function(){
     if (window._mpFlags && window._mpFlags.pv === false) return;
     var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
@@ -65,36 +79,42 @@
   </script>
 @endif
 
-{{-- CAPI PageView з тим самим event_id --}}
+{{-- CAPI PageView (той самий event_id, що й у Pixel) --}}
 <script>
 (function(){
   if (!window._mpFlags || window._mpFlags.pv === false) return;
 
   var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-  // NEW: однаково декодуємо і fbp, і fbc
+  // Акуратне декодування cookie (fbp/fbc можуть бути URL-encoded)
   var safeDecode = function(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } };
-  var fbp = safeDecode(window._mpGetCookie('_fbp')); // NEW
-  var fbc = safeDecode(window._mpGetCookie('_fbc')); // (раніше було тільки для fbc)
+  var fbp = safeDecode(window._mpGetCookie('_fbp'));
+  var fbc = safeDecode(window._mpGetCookie('_fbc'));
 
   var payload = {
     event_id: pvId,
     event_time: Math.floor(Date.now()/1000),
     event_source_url: window.location.href,
-    fbp: fbp, // NEW (декодований)
+    // user_data додається на бекенді (IP/UA + хешовані поля за наявності)
+    fbp: fbp,
     fbc: fbc
   };
 
-  // NEW: якщо є тест-код у БД — додаємо
+  // Додаємо test_event_code, якщо задано в БД
   if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
 
   try {
     var body = JSON.stringify(payload);
+    // Надійна відправка перед навігацією: sendBeacon або keepalive fetch
     if (navigator.sendBeacon) {
-      var blob = new Blob([body], {type: 'application/json'});
-      navigator.sendBeacon('/api/track/pv', blob);
+      navigator.sendBeacon('/api/track/pv', new Blob([body], {type:'application/json'}));
     } else {
-      fetch('/api/track/pv', { method:'POST', headers:{'Content-Type':'application/json'}, body, keepalive:true });
+      fetch('/api/track/pv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true
+      });
     }
   } catch (_) {}
 })();
