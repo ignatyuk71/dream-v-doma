@@ -17,26 +17,36 @@
         <ProductSizeGuide v-model="form.size_guide_id" :errors="errors" />
       </div>
     </div>
+
     <ProductDescription v-model="form.description" :errors="errors" />
     <ProductVariants v-model="form.variants" :errors="errors" />
     <ProductAttributes v-model="form.attributes" :errors="errors" /> 
     <ProductColors v-model="form.colors" :productList="productOptions" :errors="errors" />
   </div>
+
+  <!-- ✅ Повноекранний оверлей -->
+  <GlobalLoadingOverlay
+    :active="saving"
+    label="Зберігаємо товар…"
+    hint="Будь ласка, не закривайте сторінку"
+  />
 </template>
 
 <script>
-import axios from 'axios';
-import ProductHeader from './sections/ProductHeader.vue';
-import ProductTitles from './sections/ProductTitles.vue';
-import ProductSeo from './sections/ProductSeo.vue';
-import ProductImages from './sections/ProductImages.vue';
-import ProductDescription from './sections/ProductDescription.vue';
-import ProductPrice from './sections/ProductPrices.vue';
-import ProductCategory from './sections/ProductCategory.vue';
-import ProductSizeGuide from './sections/ProductSizeGuide.vue';
-import ProductVariants from './sections/ProductVariants.vue';
-import ProductAttributes from './sections/ProductAttributes.vue';
-import ProductColors from './sections/ProductColors.vue';
+import axios from 'axios'
+import GlobalLoadingOverlay from '../../common/GlobalLoadingOverlay.vue' // 👈 шлях до common
+
+import ProductHeader from './sections/ProductHeader.vue'
+import ProductTitles from './sections/ProductTitles.vue'
+import ProductSeo from './sections/ProductSeo.vue'
+import ProductImages from './sections/ProductImages.vue'
+import ProductDescription from './sections/ProductDescription.vue'
+import ProductPrice from './sections/ProductPrices.vue'
+import ProductCategory from './sections/ProductCategory.vue'
+import ProductSizeGuide from './sections/ProductSizeGuide.vue'
+import ProductVariants from './sections/ProductVariants.vue'
+import ProductAttributes from './sections/ProductAttributes.vue'
+import ProductColors from './sections/ProductColors.vue'
 
 export default {
   name: 'ProductForm',
@@ -52,6 +62,7 @@ export default {
     ProductVariants,
     ProductAttributes,
     ProductColors,
+    GlobalLoadingOverlay
   },
   data() {
     return {
@@ -75,11 +86,12 @@ export default {
         variants: [],
         attributes: [],
         colors: [],
-        description: { uk: [], ru: [] },  // опис з картинками!
+        description: { uk: [], ru: [] },
         size_guide_id: '', 
         images: []
       },
       errors: {},
+      saving: false, // ✅ стан для оверлею
       categoryOptions: [
         { id: 1, name: 'Домашні тапочки' },
         { id: 2, name: 'Тапочки з хутром' },
@@ -96,34 +108,42 @@ export default {
   },
   methods: {
     async submitForm() {
-  this.errors = {}; // Очищуємо перед відправкою
-  const formData = new FormData();
-  formData.append('form', JSON.stringify(this.form));
+      if (this.saving) return
+      this.errors = {}
 
-  (this.form.images || []).forEach((img) => {
-    if (img.file) {
-      formData.append('images[]', img.file);
-    }
-  });
+      const formData = new FormData()
+      formData.append('form', JSON.stringify(this.form))
 
-  formData.append('images_meta', JSON.stringify((this.form.images || []).map(img => ({
-    position: img.position,
-    is_main: img.is_main
-  }))));
+      ;(this.form.images || []).forEach((img) => {
+        if (img.file) {
+          formData.append('images[]', img.file)
+        }
+      })
 
-try {
+      formData.append('images_meta', JSON.stringify((this.form.images || []).map(img => ({
+        position: img.position,
+        is_main: img.is_main
+      }))))
+
+      try {
+        this.saving = true // ✅ показати оверлей
+
         await axios.post('/admin/products', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        })
+
+        alert('Товар успішно додано!')
+        window.location.href = '/admin/products'
       } catch (err) {
         if (err.response && err.response.status === 422) {
-          // Сюди потраплять помилки
           this.errors = Object.fromEntries(
             Object.entries(err.response.data.errors).map(([key, val]) => [key, val[0]])
-          );
+          )
         } else {
-          alert('Сталася помилка при збереженні!');
+          alert('Сталася помилка при збереженні!')
         }
+      } finally {
+        this.saving = false // ✅ сховати оверлей
       }
     }
   }
