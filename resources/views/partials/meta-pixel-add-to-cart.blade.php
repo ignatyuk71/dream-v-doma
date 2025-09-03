@@ -74,7 +74,6 @@
       var pidRaw = (opts.variant_sku ?? '').toString().trim();
       if (!pidRaw) {
         // Без variant_sku — навмисно НЕ відправляємо, щоб не засмічувати події
-        console.warn('[ATC] variant_sku missing — tracking skipped!', opts);
         window.showGlobalToast?.('⚠️ Відсутній артикул варіанта (variant_sku). Подія трекінгу пропущена.', 'warning');
         return;
       }
