@@ -22,15 +22,25 @@
         <ProductSizeGuide v-model="form.size_guide_id" :errors="errors" />
       </div>
     </div>
+
     <ProductDescription v-model="form.description" :product-id="form.id || ''" />
     <ProductVariants v-model="form.variants" :errors="errors" />
     <ProductAttributes v-model="form.attributes" :errors="errors" />
     <ProductColors v-model="form.colors" :product-id="form.id || ''" :errors="errors" />
   </div>
+
+  <!-- ✅ Повноекранний оверлей зі спінером -->
+  <GlobalLoadingOverlay
+    :active="loading || saving"
+    :label="loading ? 'Завантажуємо форму…' : 'Публікуємо товар…'"
+    :hint="saving ? 'Будь ласка, не закривайте сторінку' : ''"
+  />
 </template>
 
 <script>
 import axios from 'axios'
+import GlobalLoadingOverlay from '@/admin/components/common/GlobalLoadingOverlay.vue'
+
 import ProductHeader from './sections/ProductHeader.vue'
 import ProductTitles from './sections/ProductTitles.vue'
 import ProductSeo from './sections/ProductSeo.vue'
@@ -57,6 +67,7 @@ export default {
     ProductVariants,
     ProductAttributes,
     ProductColors,
+    GlobalLoadingOverlay
   },
   props: {
     productId: { type: [Number, String], required: true }
@@ -91,6 +102,7 @@ export default {
       categoryOptions: [],
       productOptions: [],
       loading: true,
+      saving: false // ✅ додано для оверлею
     }
   },
   async created() {
@@ -101,7 +113,6 @@ export default {
   },
   methods: {
     updateForm(newForm) {
-      // Очищаємо дублікати категорій при оновленні форми
       if (newForm.categories) {
         newForm.categories = [...new Set(newForm.categories)]
       }
@@ -141,7 +152,7 @@ export default {
           colors: p.colors || [],
           description: {
             uk: ukTranslation.description ? JSON.parse(ukTranslation.description) : [],
-            ru: ruTranslation.description ? JSON.parse(ruTranslation.description) : [],
+            ru: ruTranslation.description ? JSON.parse(ruTranslation.description) : []
           }
         })
       } catch (e) {
@@ -157,70 +168,58 @@ export default {
       }
     },
     async fetchProductOptions() {
-  try {
-    const response = await axios.get('/admin/products/list')
-    console.log('fetchProductOptions response:', response) // повна відповідь
-    const data = response.data
-    console.log('fetchProductOptions data:', data) // саме ті дані, що повертає API
-    
-    this.productOptions = Array.isArray(data) ? data : (data.products || [])
-    console.log('productOptions set to:', this.productOptions) // що саме записується в productOptions
-  } catch (e) {
-    console.error('fetchProductOptions error:', e)
-    this.productOptions = []
-  }
-},
-  async submitForm() {
-    this.errors = {}
-
-    // Очищаємо дублікати категорій перед відправкою
-    this.form.categories = [...new Set(this.form.categories)]
-
-    console.log('[DEBUG SUBMIT PAYLOAD]', JSON.stringify(this.form, null, 2))
-
-    const formData = new FormData()
-    formData.append('form', JSON.stringify(this.form))
-
-    ;(this.form.images || []).forEach((img) => {
-      if (img.file) {
-        formData.append('images[]', img.file)
+      try {
+        const response = await axios.get('/admin/products/list')
+        const data = response.data
+        this.productOptions = Array.isArray(data) ? data : (data.products || [])
+      } catch (e) {
+        this.productOptions = []
       }
-    })
+    },
+    async submitForm() {
+      if (this.saving) return
+      this.errors = {}
+      this.form.categories = [...new Set(this.form.categories)]
 
-    // Додаємо url до images_meta
-    const imagesMeta = (this.form.images || []).map(img => ({
-      position: img.position,
-      is_main: img.is_main,
-      url: img.url || null,
-    }))
+      const formData = new FormData()
+      formData.append('form', JSON.stringify(this.form))
 
-    formData.append('images_meta', JSON.stringify(imagesMeta))
+      ;(this.form.images || []).forEach((img) => {
+        if (img.file) {
+          formData.append('images[]', img.file)
+        }
+      })
 
-    try {
-      await axios.post(
-        `/admin/products/${this.productId}?_method=PUT`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      )
+      const imagesMeta = (this.form.images || []).map(img => ({
+        position: img.position,
+        is_main: img.is_main,
+        url: img.url || null
+      }))
+      formData.append('images_meta', JSON.stringify(imagesMeta))
 
+      try {
+        this.saving = true // ✅ показати оверлей
 
-      // Редірект на список товарів (заміни URL на свій)
-      window.location.href = '/admin/products'
-
-            // Показуємо повідомлення
-      alert('Товар успішно оновлено!')
-    } catch (err) {
-      if (err.response && err.response.status === 422) {
-        this.errors = Object.fromEntries(
-          Object.entries(err.response.data.errors).map(([key, val]) => [key, val[0]])
+        await axios.post(
+          `/admin/products/${this.productId}?_method=PUT`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
         )
-      } else {
-        alert('Сталася помилка при збереженні!')
+
+        alert('Товар успішно оновлено!')
+        window.location.href = '/admin/products'
+      } catch (err) {
+        if (err.response && err.response.status === 422) {
+          this.errors = Object.fromEntries(
+            Object.entries(err.response.data.errors).map(([key, val]) => [key, val[0]])
+          )
+        } else {
+          alert('Сталася помилка при збереженні!')
+        }
+      } finally {
+        this.saving = false // ✅ сховати оверлей
       }
     }
-  }
-
-
   }
 }
 </script>
