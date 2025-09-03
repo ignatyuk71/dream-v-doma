@@ -147,12 +147,13 @@ const { t } = useI18n()
 const cart = useCartStore()
 const order = ref(null)
 
+// ---- helpers
 const toNumber = (v) => {
   if (typeof v === 'number') return v
   const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.]/g, ''))
   return Number.isFinite(n) ? n : 0
 }
-const money = (v) => `${toNumber(v).toFixed(2)} ${t('currency') || 'грн'}`
+const money     = (v) => `${toNumber(v).toFixed(2)} ${t('currency') || 'грн'}`
 const lineTotal = (item) => toNumber(item.price) * toNumber(item.quantity)
 
 const withStorage = (path) => {
@@ -165,54 +166,106 @@ const withStorage = (path) => {
   return '/storage/' + p
 }
 
-/* ============== Meta Pixel: Purchase (одноразово) ==================== */
-const sendPurchaseOnce = (ord) => {
-  if (!ord || !Array.isArray(ord.items) || !ord.items.length) return
+/* ================= Meta Pixel: Purchase (через глобалку з Blade) ================= */
+const trackPurchaseOnce = (() => {
+  let sent = false
+  return (ord) => {
+    console.groupCollapsed('%c[Purchase] prepare', 'color:#09f')
+    try {
+      if (sent) { console.info('• skip: already sent'); console.groupEnd(); return }
+      if (!ord || !Array.isArray(ord.items)) {
+        console.warn('• no order or items array', ord)
+        console.groupEnd(); return
+      }
+      if (window._mpFlags && window._mpFlags.purchase === false) {
+        console.info('• skip by flag window._mpFlags.purchase=false'); console.groupEnd(); return
+      }
 
-  // вимкнено в БД? (прапорець підкидає паршал з пікселем)
-  if (window._mpFlags && window._mpFlags.pur === false) {
-    console.log('[MetaPixel] Purchase disabled by flags')
-    return
+      const rawItems = ord.items || []
+      const withSku  = rawItems.filter(i => String(i?.variant_sku ?? '').trim().length > 0)
+      const noSku    = rawItems.filter(i => !String(i?.variant_sku ?? '').trim().length)
+
+      console.table(rawItems.map(i => ({
+        id: i.id,
+        variant_id: i.variant_id,
+        variant_sku: i.variant_sku,
+        size: i.size,
+        price: i.price,
+        qty: i.quantity,
+        name: i.product_name || i.name || ''
+      })))
+      console.log('• items total:', rawItems.length, ' | with variant_sku:', withSku.length, ' | without:', noSku.length)
+
+      if (!withSku.length) {
+        console.warn('‼️ немає позицій з variant_sku — подію пропущено')
+        console.groupEnd(); return
+      }
+
+      const items = withSku.map(i => ({
+        variant_sku: String(i.variant_sku),
+        price: toNumber(i.price),
+        quantity: Number(i.quantity || 1),
+        name: i.product_name || i.name || ''
+      }))
+
+      const computedItemsSum = items.reduce((s, x) => s + x.price * x.quantity, 0)
+      const payload = {
+        order_number: ord.order_number || ord.id || undefined,
+        items,
+        value: toNumber(
+          (ord.total ?? ord.total_price ?? ord.total_amount ?? computedItemsSum)
+        ),
+        currency: ord.currency || window.metaPixelCurrency || 'UAH',
+        shipping: toNumber(ord.shipping_cost ?? ord.delivery_cost ?? 0),
+        tax: toNumber(ord.tax ?? 0),
+
+        // PII — піде лише у CAPI на бек (Pixel не отримає PII)
+        email: ord.customer?.email || null,
+        phone: ord.customer?.phone || null,
+        first_name: ord.customer?.first_name || ord.customer?.name || null,
+        last_name: ord.customer?.last_name || null,
+        external_id: ord.customer?.id ? String(ord.customer.id) : null
+      }
+
+      console.log('• payload ready (trimmed):', {
+        order_number: payload.order_number,
+        currency: payload.currency,
+        value: payload.value,
+        shipping: payload.shipping,
+        tax: payload.tax,
+        items: payload.items
+      })
+
+      const tryCall = (attempt = 0) => {
+        const exists = typeof window.mpTrackPurchase === 'function'
+        console.log(`• tryCall #${attempt} | mpTrackPurchase present:`, exists)
+        if (exists) {
+          window.mpTrackPurchase(payload)
+          sent = true
+          console.info('✅ mpTrackPurchase called')
+          console.groupEnd()
+        } else if (attempt < 120) {
+          setTimeout(() => tryCall(attempt + 1), 80)
+        } else {
+          console.warn('❌ mpTrackPurchase is not available after retries')
+          console.groupEnd()
+        }
+      }
+      tryCall()
+    } catch (e) {
+      console.warn('[Purchase] exception in prepare', e)
+      console.groupEnd()
+    }
   }
-
-  if (!window.fbq) {
-    console.warn('[MetaPixel] fbq not found — Purchase not sent')
-    return
-  }
-
-  const key = `pixel_purchase_sent_${ord.order_number || ord.id || ''}`
-  if (localStorage.getItem(key)) {
-    console.log('[MetaPixel] Purchase already sent for', key)
-    return
-  }
-
-  const contents = ord.items.map(i => ({
-    id: String(i.sku || i.product_id || i.id),
-    quantity: Number(toNumber(i.quantity) || 1),
-    item_price: Number(toNumber(i.price).toFixed(2)),
-  }))
-
-  const totalFromOrder = toNumber(ord.total ?? ord.total_price ?? ord.total_amount)
-  const calcFromItems = contents.reduce((s, c) => s + c.item_price * c.quantity, 0)
-  const value = totalFromOrder > 0 ? totalFromOrder : calcFromItems
-
-  const payload = {
-    value: Number(value.toFixed(2)),
-    currency: window.metaPixelCurrency || 'UAH',
-    contents,
-    content_type: 'product',
-  }
-  const opts = { eventID: `order-${ord.order_number || ord.id}` }
-
-  console.log('[MetaPixel] Purchase', payload, opts)
-  window.fbq('track', 'Purchase', payload, opts)
-  localStorage.setItem(key, '1') // guard від дубляжу
-}
-/* ===================================================================== */
+})()
+/* ================================================================================ */
 
 onMounted(async () => {
   const orderNumber = localStorage.getItem('lastOrderNumber')
+  console.log('%c[ThankYou] orderNumber from LS:', 'color:#6c5ce7', orderNumber)
+
   if (!orderNumber) {
+    console.warn('[ThankYou] no orderNumber — redirect to home')
     window.location.href = '/'
     return
   }
@@ -221,10 +274,23 @@ onMounted(async () => {
     const { data } = await axios.get(`/api/orders/${orderNumber}`)
     order.value = data
 
-    // 🔔 Відправляємо Purchase ОДИН РАЗ
-    sendPurchaseOnce(order.value)
+    console.groupCollapsed('%c[ThankYou] fetched order', 'color:#2ecc71')
+    console.log('• raw order:', JSON.parse(JSON.stringify(data)))
+    console.table((data.items || []).map(i => ({
+      id: i.id,
+      product_id: i.product_id,
+      variant_id: i.variant_id,
+      variant_sku: i.variant_sku,
+      size: i.size,
+      price: i.price,
+      qty: i.quantity,
+    })))
+    console.groupEnd()
 
-    // Очистка після успішного отримання (не чіпаємо ключ guard'у)
+    // 🔔 Відправляємо Purchase ОДИН РАЗ (через глобалку з паршалу)
+    trackPurchaseOnce(order.value)
+
+    // Очистка після успішного отримання (не чіпаємо guard ключ із паршалу)
     localStorage.removeItem('lastOrderNumber')
     localStorage.removeItem('cart')
     localStorage.removeItem('thankyou')
@@ -233,9 +299,6 @@ onMounted(async () => {
     cart.clearCart?.()
   } catch (error) {
     console.error('❌ Помилка при запиті замовлення:', error)
-    // window.location.href = '/'
   }
 })
 </script>
-
-<style scoped></style>

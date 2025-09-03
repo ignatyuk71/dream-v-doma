@@ -65,5 +65,8 @@ Route::middleware('api')->group(function () {
 
             // Lead (заявка/лист/зворотній зв’язок)
             Route::post('/lead', [TrackController::class, 'lead'])->name('track.lead');
+
+            Route::post('/purchase', [TrackController::class, 'purchase'])->name('track.purchase');
+
         });
 });

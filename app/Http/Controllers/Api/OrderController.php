@@ -209,35 +209,47 @@ class OrderController extends Controller
             'items.product.images',
             'delivery',
         ])->where('order_number', $orderNumber)->firstOrFail();
-
+    
         $delivery = $order->delivery;
-
+    
         $deliveryInfo = [
             'name'    => $delivery->np_description ?? '—',
             'address' => $delivery->np_address ?? ($delivery->courier_address ?? '—'),
         ];
-
+    
         return response()->json([
             'order_number' => $order->order_number,
             'customer' => [
                 'name'  => $order->customer->name,
                 'phone' => $order->customer->phone,
+                'email' => $order->customer->email ?? null, // якщо є
             ],
             'address'  => $order->customer->address?->formatted ?? '—',
             'delivery' => $deliveryInfo,
+    
+            // ⤵️ головне: віддаємо variant_sku
             'items'    => $order->items->map(function ($item) {
                 return [
-                    'id'            => $item->id,
-                    'product_name'  => $item->product_name,    // snapshot
-                    'image_url'     => $item->image_url,       // snapshot
-                    'size'          => $item->size,            // snapshot
-                    'color'         => $item->color,           // snapshot
-                    'quantity'      => $item->quantity,
-                    'price'         => number_format($item->price, 2),
-                    'total'         => number_format($item->total, 2),
+                    'id'           => $item->id,
+                    'product_id'   => $item->product_id,
+                    'variant_id'   => $item->variant_id,
+                    'variant_sku'  => $item->variant_sku,   // ← ДОДАНО
+    
+                    // snapshots
+                    'product_name' => $item->product_name,
+                    'image_url'    => $item->image_url,
+                    'size'         => $item->size,
+                    'color'        => $item->color,
+    
+                    'quantity'     => (int) $item->quantity,
+                    'price'        => (float) $item->price,
+                    'total'        => (float) $item->total,
                 ];
-            }),
-            'total_price' => number_format($order->total_price, 2),
+            })->values(),
+    
+            'total_price' => (float) $order->total_price,
+            'currency'    => $order->currency ?? 'UAH',
         ]);
     }
+    
 }

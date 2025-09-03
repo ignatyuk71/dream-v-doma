@@ -176,6 +176,66 @@ class TrackController extends Controller
         }, flag: 'send_lead');
     }
 
+
+    /**
+     * Purchase — підтвердження покупки.
+     * Підтримує новий формат contents[] та фолбек items[] (variant_sku → id).
+     */
+    public function purchase(Request $request)
+    {
+        return $this->handleEvent('Purchase', $request, function () use ($request) {
+            // 1) Основний шлях: contents[] = [{ id, quantity, item_price }]
+            $contents = $this->contentsFromRequest($request);
+
+            // 2) Фолбек: items[] = [{ variant_sku|sku|id, quantity, price|item_price }]
+            if (empty($contents)) {
+                $items = (array) $request->input('items', []);
+                foreach ($items as $i) {
+                    $id = (string)($i['variant_sku'] ?? $i['sku'] ?? $i['id'] ?? '');
+                    if ($id === '') continue;
+                    $qty = (int)($i['quantity'] ?? 1);
+                    $pr  = $this->num($i['price'] ?? $i['item_price'] ?? 0);
+                    $contents[] = ['id' => $id, 'quantity' => $qty, 'item_price' => $pr];
+                }
+            }
+
+            // 3) Суми / валюта
+            $shipping = $this->num($request->input('shipping', 0));
+            $tax      = $this->num($request->input('tax', 0));
+
+            $value = $request->filled('value')
+                ? $this->num($request->input('value'))
+                : $this->calcValue($contents) + $shipping + $tax;
+
+            $currency  = $request->input('currency', $this->currency());
+            $numItems  = array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0);
+            $contentIds = array_map(fn($c) => (string)$c['id'], $contents);
+
+            // 4) custom_data для Meta
+            $data = [
+                'content_type' => 'product',
+                'content_ids'  => $contentIds,
+                'contents'     => $contents,
+                'num_items'    => $numItems,
+                'value'        => $value,
+                'currency'     => $currency,
+            ];
+
+            // необов’язкові поля — додаємо, якщо є
+            if ($shipping > 0) $data['shipping'] = $shipping;
+            if ($tax > 0)      $data['tax']      = $tax;
+
+            // для власної діагностики (Meta проігнорує, але не завадить)
+            if ($request->filled('order_number')) {
+                $data['order_number'] = (string)$request->input('order_number');
+            }
+
+            return $data;
+        }, flag: 'send_purchase');
+    }
+
+
+
     /* ===================== CORE HANDLER ===================== */
 
     /**
