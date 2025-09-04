@@ -163,7 +163,7 @@
 <!-- Fullscreen overlay loader -->
 <div id="screenLoader" class="screen-loader d-none" aria-hidden="true">
   <div class="text-center">
-    <div class="spinner-border text-light" role="status" style="width:3rem;height:3rem;"></div>
+    <div class="spinner-border text-light" style="color:#7367f0;" role="status" style="width:4rem;height:4rem;"></div>
     <div class="mt-3 text-light fw-semibold">Збереження…</div>
   </div>
 </div>
@@ -174,7 +174,7 @@
   .screen-loader{
     position: fixed;
     inset: 0;
-    background: rgba(234, 14, 102, 0.45); /* напівпрозорий сірий */
+    background: rgba(224, 215, 217, 0.45); /* напівпрозорий сірий */
     backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     display: flex;
