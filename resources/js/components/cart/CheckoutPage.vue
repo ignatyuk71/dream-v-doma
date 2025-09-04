@@ -318,6 +318,7 @@
 }
 .list-group { max-height: 200px; overflow-y: auto; }
 </style>
+
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -404,7 +405,6 @@ const total = computed(() => {
   return Math.max(0, Math.round(sum))
 })
 
-// правильний підрахунок (шт) — сума quantity
 const itemsCountText = computed(() => {
   const units = cart.items.reduce((acc, it) => acc + (it.quantity || 0), 0)
   const one = t('checkout.order.item_one') || 'товар'
@@ -445,7 +445,6 @@ function applyPromo() {
     return
   }
 
-  // не більше, ніж (товари + доставка)
   const maxPossible = Math.max(0, subtotal.value + deliveryCost.value)
   bonuses.value = Math.min(discount, maxPossible)
 
@@ -490,9 +489,12 @@ async function selectCity(cityItem) {
   city.value = cityItem.Present
   isCitySelected.value = true
   cityResults.value = []
+
+  // reset складу/поштомату
   selectedWarehouse.value = null
   warehouseSearch.value = ''
   warehouses.value = []
+
   await loadWarehouses(cityItem)
   await nextTick()
   isCityProgrammaticChange.value = false
@@ -510,7 +512,7 @@ async function loadWarehouses(cityItem = null) {
   isLoadingWarehouses.value = true
   try {
     const res = await axios.get('/nova-poshta/warehouses', { params: { ref } })
-    warehouses.value = res.data
+    warehouses.value = res.data || []
   } catch (e) {
     warehouses.value = []
     console.error('❌ Помилка завантаження відділень:', e)
@@ -522,11 +524,15 @@ async function loadWarehouses(cityItem = null) {
 function selectWarehouseFromList(warehouse) {
   selectedWarehouse.value = warehouse
   warehouseSearch.value = warehouse.Description
-  warehouses.value = []
+  // ❗ FIX: НЕ очищаємо warehouses — інакше повторний вибір неможливий
+  // warehouses.value = []
 }
 
 // Зміна типу доставки → оновити відділення
 watch(deliveryType, async () => {
+  // ❗ FIX: повний ресет вибору пункту при зміні типу
+  selectedWarehouse.value = null
+  warehouseSearch.value = ''
   if (selectedCity.value) {
     await loadWarehouses()
   }
@@ -564,9 +570,13 @@ watch(city, (val, oldVal = '') => {
   }, 1000)
 })
 
-watch(warehouseSearch, (val) => {
+watch(warehouseSearch, async (val) => {
   if (!val) {
     selectedWarehouse.value = null
+    // 🔒 Підстраховка: якщо місто вибране, а список пустий — підвантажити
+    if (selectedCity.value && !warehouses.value.length && !isLoadingWarehouses.value) {
+      await loadWarehouses()
+    }
     return
   }
   if (selectedWarehouse.value && val === selectedWarehouse.value.Description) {
@@ -599,7 +609,6 @@ function openCart() {
 }
 
 async function submitForm() {
-  // 🛑 Порожній кошик
   if (!cart.items.length) {
     alert('🛑 Товарів у кошику немає. Ви будете перенаправлені на головну сторінку.')
     window.location.href = `/${locale.value}`
@@ -673,7 +682,7 @@ const callInitiateCheckout = (() => {
     if (sent) return
 
     const items = (cart.items || [])
-      .filter(i => (i?.variant_sku ?? '').toString().trim()) // тільки позиції з variant_sku
+      .filter(i => (i?.variant_sku ?? '').toString().trim())
       .map(i => ({
         variant_sku: i.variant_sku,
         price: i.price,
@@ -685,12 +694,11 @@ const callInitiateCheckout = (() => {
 
     const currency = window.metaPixelCurrency || 'UAH'
 
-    // короткий ретрай, поки паршал оголосить window.mpTrackIC
     const tryCall = (attempt = 0) => {
       if (typeof window.mpTrackIC === 'function') {
         window.mpTrackIC({ items, currency })
         sent = true
-      } else if (attempt < 120) { // ~10 сек @ 80мс
+      } else if (attempt < 120) {
         setTimeout(() => tryCall(attempt + 1), 80)
       } else {
         console.warn('[IC] mpTrackIC is not available')
@@ -702,11 +710,9 @@ const callInitiateCheckout = (() => {
 })()
 
 onMounted(() => {
-  // одноразовий виклик на вході в чекаут
   callInitiateCheckout()
 })
 
-// якщо кошик під’їхав асинхронно після mount — викликни ще раз (одноразово)
 watch(
   () => cart.items.map(i => `${i.variant_sku}:${i.quantity}:${i.price}`).join('|'),
   (fp, prev) => {
