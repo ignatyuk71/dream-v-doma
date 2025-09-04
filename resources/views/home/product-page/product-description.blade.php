@@ -344,7 +344,7 @@
   /* Мобільні (Bootstrap sm і нижче) */
   @media (max-width: 575.98px) {
     .cms-block-title { font-size: 1.1rem; }        /* заголовок трохи менший на мобайлі */
-    .cms-block-text  { font-size: 1.1rem; line-height: 1.5; }
+    .cms-block-text  { font-size: 1rem; line-height: 1.4; }
   }
 </style>
 
