@@ -3,23 +3,11 @@
 
   // Хелпер: нормалізує шлях до публічного URL
   $toPublicUrl = function ($path) {
-      if (empty($path)) {
-          return asset('assets/img/placeholder.svg');
-      }
-      if (Str::startsWith($path, ['http://', 'https://', '//'])) {
-          return $path; // вже абсолютний URL
-      }
+      if (empty($path)) return asset('assets/img/placeholder.svg');
+      if (Str::startsWith($path, ['http://', 'https://', '//'])) return $path;
       $p = ltrim($path, '/');
-
-      // якщо вже /storage/...
-      if (Str::startsWith($p, 'storage/')) {
-          return asset($p);
-      }
-
-      // прибираємо префікси "public/" або "app/public/"
+      if (Str::startsWith($p, 'storage/')) return asset($p);
       $p = preg_replace('#^(?:app/)?public/#', '', $p);
-
-      // повертаємо як /storage/{p}
       return asset('storage/'.$p);
   };
 
@@ -31,6 +19,14 @@
   // Назва поточною мовою
   $name = $product->translations->firstWhere('locale', $currentLocale)?->name
           ?? ($product->translations->first()->name ?? '—');
+
+  // Ціна
+  $price    = (float) ($product->price ?? 0);
+  $oldPrice = (float) ($product->old_price ?? 0);
+  $hasDiscount = $oldPrice > $price && $price > 0;
+  $priceFmt    = rtrim(rtrim(number_format($price, 2, '.', ' '), '0'), '.');
+  $oldPriceFmt = rtrim(rtrim(number_format($oldPrice, 2, '.', ' '), '0'), '.');
+  $currencyLbl = __('currency');
 
   // Дані для кнопки
   $payload = [
@@ -62,14 +58,24 @@
            style="object-fit:cover; width: 100%; height: 100%;">
     </div>
 
-    <!-- Назва -->
+    <!-- Назва + ціна -->
     <div class="ms-3 flex-grow-1 min-w-0">
-      <div class="fw-semibold text-truncate" style="max-width:170px;">
+      <div class="fw-semibold text-truncate" style="max-width:200px; font-size:.95rem;">
         {{ $name }}
+      </div>
+      <div class="mt-1">
+        <span class="fw-bold" style="font-size:.95rem;">
+          {{ $priceFmt }} {{ $currencyLbl }}
+        </span>
+        @if($hasDiscount)
+          <del class="text-muted ms-2" style="font-size:.85rem;">
+            {{ $oldPriceFmt }} {{ $currencyLbl }}
+          </del>
+        @endif
       </div>
     </div>
 
-    <!-- Кнопка sticky -->
+    <!-- Кнопка sticky (рендериться твоїм компонентом) -->
     <div id="sticky-add-to-cart" data-product='@json($payload)'></div>
   </div>
 </section>

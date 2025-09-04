@@ -1,11 +1,10 @@
 <template>
     <button
       type="button"
-      class="btn btn-lg fw-bold text-white w-100"
-      style="background:#ff4365; border-radius:4px; font-size:1.1rem; padding:10px 0; min-width:110px;"
+      class="btn btn-lg btn-primary w-100 animate-slide-end"
       @click="addToCart"
     >
-      {{ $t('add_to_cart') }}
+      <i class="ci-shopping-cart fs-base animate-target me-2"></i> {{ $t('add_to_cart') }}
     </button>
   </template>
   
