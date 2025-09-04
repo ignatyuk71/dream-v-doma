@@ -176,7 +176,7 @@
     z-index: 2050;
     pointer-events: all;
   }
-  .spinner-border.text-purple { color: #7367f0 !important; }
+  .spinner-border.text-purple.fw-semibold { color: #7367f0 !important; }
 </style>
 @endpush
 

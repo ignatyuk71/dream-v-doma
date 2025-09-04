@@ -185,7 +185,7 @@
   }
 
   /* кастомний фіолетовий для спінера */
-  .spinner-border.text-purple {
+  .spinner-border.text-purple.fw-semibold {
     color: #7367f0 !important;
   }
 </style>
