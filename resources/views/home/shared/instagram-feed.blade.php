@@ -34,7 +34,7 @@
     <div class="text-center pt-1 pb-2 pb-md-3">
         <h2 class="pb-2 mb-1">
             <span class="animate-underline">
-                <a class="animate-target text-dark-emphasis text-decoration-none" href="#!">
+                <a class="animate-target text-dark-emphasis text-decoration-none" href="https://www.instagram.com/dream.v.doma/">
                     @lang('instagram.title')
                 </a>
             </span>

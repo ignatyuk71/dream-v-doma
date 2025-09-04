@@ -73,7 +73,7 @@
 @endphp
 
 @if($count)
-<section class="container pt-1 mt-2 mt-sm-3 mt-lg-4 mt-xl-5">
+<section class="container pt-3 mt-2 mt-sm-3 mt-lg-4 mt-xl-5">
   <h2 class="h3 border-bottom pb-4 mb-0">{{ __('recommended_products') }}</h2>
 
   <div class="position-relative mx-md-1">
