@@ -50,7 +50,7 @@
             $imgStyle = 'max-width:220px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);';
           @endphp
           <img id="imagePreview"
-               src="{{ $specialOffer->image_path ? asset($specialOffer->image_path) : '' }}"
+               src="/storage/{{ $specialOffer->image_path ? asset($specialOffer->image_path) : '' }}"
                alt="Прев'ю"
                style="{{ $imgStyle }} @if(!$specialOffer->image_path) display:none; @endif">
 
@@ -78,7 +78,7 @@
           </div>
 
           <img id="previewPreview"
-               src="{{ $specialOffer->preview_path ? asset($specialOffer->preview_path) : '' }}"
+               src="/storage/{{ $specialOffer->preview_path ? asset($specialOffer->preview_path) : '' }}"
                alt="Прев'ю"
                style="{{ $imgStyle }} @if(!$specialOffer->preview_path) display:none; @endif">
 
