@@ -1,4 +1,4 @@
-<section class="container pt-1 mt-2 mt-sm-3 mt-lg-4 mt-xl-5">
+<section class="container pt-4 mt-2 mt-sm-3 mt-lg-4 mt-xl-5">
   <h3 class="text-center pt-xxl-2 pb-2 pb-md-3">
     {{ __('special_offers.title') }}
   </h3>
