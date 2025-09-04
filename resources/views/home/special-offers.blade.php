@@ -15,6 +15,11 @@
         }' style="max-width: 416px">
           <div class="swiper-wrapper">
             @foreach($specialOffers as $offer)
+              @php
+                $imgMain = $offer->image_path
+                  ? asset('storage/'.$offer->image_path)
+                  : asset('assets/img/placeholder.svg');
+              @endphp
               <div class="swiper-slide h-auto">
                 <div class="card animate-underline h-100 rounded-5 border-0">
                   <div class="pt-3 px-3">
@@ -23,7 +28,7 @@
                         -{{ $offer->discount }}%
                       </span>
                     @endif
-                    <img src="{{ asset($offer->image_path) }}" alt="{{ $offer->title }}">
+                    <img src="{{ $imgMain }}" alt="{{ $offer->title }}">
                   </div>
                   <div class="card-body text-center py-3">
                     <div class="d-flex justify-content-center min-w-0 fs-sm fw-medium text-dark-emphasis mb-2">
@@ -42,19 +47,22 @@
                     @endif
                   </div>
                   <div class="card-footer d-flex flex-column align-items-center border-0 pb-2"
-                      data-countdown-date="{{ \Carbon\Carbon::parse($offer->expires_at)->format('m/d/Y H:i:s') }}">
-                    <div class="mb-1 text-muted small">
-                      до {{ \Carbon\Carbon::parse($offer->expires_at)->translatedFormat('m - d - Y, H:i') }}
-                    </div>
-                    <div class="d-flex align-items-center justify-content-center">
-                      <div class="btn btn-secondary pe-none px-2"><span data-days></span><span>д</span></div>
-                      <div class="animate-blinking text-body-tertiary fs-lg fw-medium mx-2">:</div>
-                      <div class="btn btn-secondary pe-none px-2"><span data-hours></span><span>г</span></div>
-                      <div class="animate-blinking text-body-tertiary fs-lg fw-medium mx-2">:</div>
-                      <div class="btn btn-secondary pe-none px-2"><span data-minutes></span><span>хв</span></div>
-                    </div>
+                       @if($offer->expires_at)
+                         data-countdown-date="{{ \Carbon\Carbon::parse($offer->expires_at)->format('m/d/Y H:i:s') }}"
+                       @endif>
+                    @if($offer->expires_at)
+                      <div class="mb-1 text-muted small">
+                        до {{ \Carbon\Carbon::parse($offer->expires_at)->translatedFormat('m - d - Y, H:i') }}
+                      </div>
+                      <div class="d-flex align-items-center justify-content-center">
+                        <div class="btn btn-secondary pe-none px-2"><span data-days></span><span>д</span></div>
+                        <div class="animate-blinking text-body-tertiary fs-lg fw-medium mx-2">:</div>
+                        <div class="btn btn-secondary pe-none px-2"><span data-hours></span><span>г</span></div>
+                        <div class="animate-blinking text-body-terтіary fs-lg fw-medium mx-2">:</div>
+                        <div class="btn btn-secondary pe-none px-2"><span data-minutes></span><span>хв</span></div>
+                      </div>
+                    @endif
                   </div>
-
                 </div>
               </div>
             @endforeach
@@ -75,11 +83,16 @@
         }'>
           <div class="swiper-wrapper">
             @foreach($specialOffers as $offer)
+              @php
+                $imgPreview = $offer->preview_path
+                  ? asset('storage/'.$offer->preview_path)
+                  : ($offer->image_path ? asset('storage/'.$offer->image_path) : asset('assets/img/placeholder.svg'));
+              @endphp
               <div class="swiper-slide">
                 <div class="d-flex align-items-center justify-content-center h-100 w-100">
-                  <img src="{{ asset($offer->preview_path) }}"
-                      alt="{{ $offer->title }}"
-                      style="max-height: 600px; width: auto; height: auto;">
+                  <img src="{{ $imgPreview }}"
+                       alt="{{ $offer->title }}"
+                       style="max-height: 600px; width: auto; height: auto;">
                 </div>
               </div>
             @endforeach
@@ -98,7 +111,8 @@
       <div class="swiper-wrapper">
         @foreach($specialOffers as $offer)
           <div class="swiper-slide">
-            <span class="position-absolute top-0 start-0 w-100 h-100 rounded-5" style="background-color: {{ $offer->background_path }}"></span>
+            <span class="position-absolute top-0 start-0 w-100 h-100 rounded-5"
+                  style="background-color: {{ $offer->background_path }}"></span>
           </div>
         @endforeach
       </div>
