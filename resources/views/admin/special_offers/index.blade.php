@@ -23,16 +23,19 @@
           {{-- Дві картинки (в один рядок) --}}
           <div class="d-flex align-items-center gap-2" style="width:260px; flex-shrink:0;">
             <div class="border rounded overflow-hidden" style="width:150px; height:150px;">
-              <img src="{{ asset($offer->preview_path ?? $offer->image_path) }}"
-                   alt="{{ $offer->title }}"
-                   style="width:100%; height:100%; object-fit:cover;">
+              <img src="{{ $offer->preview_path 
+                            ? asset('storage/'.$offer->preview_path) 
+                            : asset('storage/'.$offer->image_path) }}"
+                  alt="{{ $offer->title }}"
+                  style="width:100%; height:100%; object-fit:cover;">
             </div>
             <div class="border rounded overflow-hidden" style="width:100px; height:100px;">
-              <img src="{{ asset($offer->image_path) }}"
-                   alt="{{ $offer->title }}"
-                   style="width:100%; height:100%; object-fit:cover;">
+              <img src="{{ asset('storage/'.$offer->image_path) }}"
+                  alt="{{ $offer->title }}"
+                  style="width:100%; height:100%; object-fit:cover;">
             </div>
           </div>
+
 
           {{-- Інфо --}}
           <div class="flex-grow-1">
