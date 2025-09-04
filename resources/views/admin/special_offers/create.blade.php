@@ -78,6 +78,13 @@
         </div>
       </div>
 
+      <!-- Кнопка відкриття каруселі -->
+      <div class="text-end mb-4">
+        <button type="button" id="openPreviewCarouselBtn" class="btn btn-outline-secondary">
+          <i class="bi bi-images me-2"></i> Переглянути у каруселі
+        </button>
+      </div>
+
       <!-- Ціна -->
       <div class="mb-3">
         <label for="price" class="form-label fw-semibold">Ціна ($) <span class="text-danger">*</span></label>
@@ -159,12 +166,61 @@
     </form>
   </div>
 </div>
+
+<!-- Modal: Preview Carousel -->
+<div class="modal fade" id="previewCarouselModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content bg-transparent border-0 shadow-none">
+      <div class="modal-body p-0">
+
+        <div id="previewCarousel" class="carousel slide" data-bs-ride="false">
+          <div class="carousel-inner" id="previewCarouselInner">
+            <!-- слайди генеруються скриптом -->
+          </div>
+
+          <!-- Controls -->
+          <button class="carousel-control-prev" type="button" data-bs-target="#previewCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Попереднє</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#previewCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Наступне</span>
+          </button>
+
+          <!-- Indicators -->
+          <div class="carousel-indicators" id="previewCarouselIndicators"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
+
+@push('page-styles')
+<style>
+  /* сірий напівпрозорий бекдроп для модалки */
+  .modal-backdrop { background-color: rgba(108,117,125, .75) !important; }
+  .modal-backdrop.show { opacity: 1 !important; }
+
+  /* слайди каруселі */
+  #previewCarousel .carousel-item {
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+  }
+  #previewCarousel .carousel-item img {
+    max-height: 75vh; width: auto; height: auto; object-fit: contain;
+    border-radius: .5rem; background: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  }
+</style>
+@endpush
 
 @push('page-scripts')
 <script>
 /**
- * Показати прев’ю вибраного зображення зі спінером і назвою файлу.
+ * Прев’ю вибраного зображення зі спінером і назвою файлу.
  * Очікує:
  *  - <div id="${previewId}Spinner"> … </div>
  *  - <img id="${previewId}">
@@ -175,7 +231,6 @@ window.previewImage = function(input, previewId) {
   const spinner = document.getElementById(previewId + 'Spinner');
   const nameLbl = document.getElementById(previewId + 'Name');
 
-  // скидаємо стан
   if (spinner) spinner.classList.remove('d-none');
   if (img) {
     img.style.display = 'none';
@@ -186,24 +241,18 @@ window.previewImage = function(input, previewId) {
     nameLbl.textContent = '';
   }
 
-  // якщо файл не вибрано
   if (!input.files || !input.files[0]) {
     if (spinner) spinner.classList.add('d-none');
     return;
   }
 
   const file = input.files[0];
-
-  // валідація типу
   if (!file.type || !file.type.startsWith('image/')) {
     if (spinner) spinner.classList.add('d-none');
     input.value = '';
     alert('Будь ласка, оберіть файл зображення (jpg, png, webp...)');
     return;
   }
-
-  // показуємо спінер, поки картинка рендериться у <img>
-  if (spinner) spinner.classList.remove('d-none');
 
   const objectUrl = URL.createObjectURL(file);
 
@@ -213,7 +262,7 @@ window.previewImage = function(input, previewId) {
     URL.revokeObjectURL(objectUrl);
 
     if (nameLbl) {
-      nameLbl.textContent = file.name + (file.size ? ' • ' + (file.size/1024).toFixed(0) + ' KB' : '');
+      nameLbl.textContent = file.name + (file.size ? ' • ' + Math.round(file.size/1024) + ' KB' : '');
       nameLbl.classList.remove('d-none');
     }
   };
@@ -242,6 +291,60 @@ window.previewImage = function(input, previewId) {
     if (sp)  sp.classList.remove('d-none');
     if (txt) txt.textContent = 'Збереження…';
   });
+})();
+
+// Карусель у модалці
+(function () {
+  function collectPreviewSources() {
+    const ids = ['imagePreview','previewImage']; // додай інші id, якщо треба
+    const sources = [];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const src = el.getAttribute('src');
+      const visible = el.style.display !== 'none' && !!src && src !== '#';
+      if (visible) sources.push({ src, label: el.alt || id });
+    });
+    return sources;
+  }
+
+  function buildCarouselSlides(items) {
+    const inner = document.getElementById('previewCarouselInner');
+    const indicators = document.getElementById('previewCarouselIndicators');
+    if (!inner || !indicators) return;
+
+    inner.innerHTML = '';
+    indicators.innerHTML = '';
+
+    items.forEach((it, idx) => {
+      const slide = document.createElement('div');
+      slide.className = 'carousel-item' + (idx === 0 ? ' active' : '');
+      slide.innerHTML = `<img src="${it.src}" alt="${(it.label||'slide')}" class="img-fluid">`;
+      inner.appendChild(slide);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('data-bs-target', '#previewCarousel');
+      btn.setAttribute('data-bs-slide-to', String(idx));
+      btn.setAttribute('aria-label', 'Слайд ' + (idx+1));
+      if (idx === 0) { btn.className = 'active'; btn.setAttribute('aria-current','true'); }
+      indicators.appendChild(btn);
+    });
+  }
+
+  function openPreviewCarousel() {
+    const items = collectPreviewSources();
+    if (!items.length) {
+      alert('Немає зображень для перегляду. Спочатку виберіть файл(и).');
+      return;
+    }
+    buildCarouselSlides(items);
+    const modalEl = document.getElementById('previewCarouselModal');
+    const modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true, focus: true });
+    modal.show();
+  }
+
+  document.getElementById('openPreviewCarouselBtn')?.addEventListener('click', openPreviewCarousel);
 })();
 </script>
 @endpush
