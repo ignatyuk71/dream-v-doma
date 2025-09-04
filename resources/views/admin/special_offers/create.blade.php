@@ -164,7 +164,7 @@
 <div id="screenLoader" class="screen-loader d-none" aria-hidden="true">
   <div class="text-center">
     <div class="spinner-border text-purple" role="status" style="width:4rem;height:4rem;"></div>
-    <div class="mt-3 text-light fw-semibold" style="color: #7367f0;">Збереження…</div>
+    <div class="mt-3 fw-semibold" style="color: #7367f0;">Збереження…</div>
   </div>
 </div>
 @endsection
