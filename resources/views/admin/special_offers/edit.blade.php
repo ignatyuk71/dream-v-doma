@@ -39,30 +39,25 @@
                onchange="window.previewImage(this, 'imagePreview')">
         @error('image_path') <div class="invalid-feedback">{{ $message }}</div> @enderror
 
-        <!-- Превʼю + спінер + назва -->
         <div class="mt-3">
           <div id="imagePreviewSpinner" class="d-flex align-items-center gap-2 d-none">
             <div class="spinner-border text-purple" role="status" style="width:1.25rem;height:1.25rem;"></div>
             <small class="text-muted">Завантаження попереднього перегляду…</small>
           </div>
 
-          @php
-            $imgStyle = 'max-width:220px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);';
-          @endphp
+          @php $imgStyle = 'max-width:220px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);'; @endphp
           <img id="imagePreview"
-               src="/storage/{{ $specialOffer->image_path ? asset($specialOffer->image_path) : '' }}"
+               src="{{ $specialOffer->image_path ? asset('storage/'.$specialOffer->image_path) : '' }}"
                alt="Прев'ю"
                style="{{ $imgStyle }} @if(!$specialOffer->image_path) display:none; @endif">
 
           <div id="imagePreviewName" class="small text-muted mt-2 {{ $specialOffer->image_path ? '' : 'd-none' }}">
-            @if($specialOffer->image_path)
-              {{ basename($specialOffer->image_path) }}
-            @endif
+            @if($specialOffer->image_path) {{ basename($specialOffer->image_path) }} @endif
           </div>
         </div>
       </div>
 
-      <!-- Зображення на ногах (preview) -->
+      <!-- Зображення на ногах -->
       <div class="mb-4">
         <label for="preview_path" class="form-label fw-semibold">Зображення на ногах (preview)</label>
         <input type="file" id="preview_path" name="preview_path" accept="image/*"
@@ -70,7 +65,6 @@
                onchange="window.previewImage(this, 'previewPreview')">
         @error('preview_path') <div class="invalid-feedback">{{ $message }}</div> @enderror
 
-        <!-- Превʼю + спінер + назва -->
         <div class="mt-3">
           <div id="previewPreviewSpinner" class="d-flex align-items-center gap-2 d-none">
             <div class="spinner-border text-purple" role="status" style="width:1.25rem;height:1.25rem;"></div>
@@ -78,14 +72,12 @@
           </div>
 
           <img id="previewPreview"
-               src="/storage/{{ $specialOffer->preview_path ? asset($specialOffer->preview_path) : '' }}"
+               src="{{ $specialOffer->preview_path ? asset('storage/'.$specialOffer->preview_path) : '' }}"
                alt="Прев'ю"
                style="{{ $imgStyle }} @if(!$specialOffer->preview_path) display:none; @endif">
 
           <div id="previewPreviewName" class="small text-muted mt-2 {{ $specialOffer->preview_path ? '' : 'd-none' }}">
-            @if($specialOffer->preview_path)
-              {{ basename($specialOffer->preview_path) }}
-            @endif
+            @if($specialOffer->preview_path) {{ basename($specialOffer->preview_path) }} @endif
           </div>
         </div>
       </div>
@@ -175,7 +167,7 @@
   .screen-loader{
     position: fixed;
     inset: 0;
-    background: rgba(33, 37, 41, .45); /* напівпрозорий сірий */
+    background: rgba(33, 37, 41, .45);
     backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     display: flex;
@@ -184,20 +176,12 @@
     z-index: 2050;
     pointer-events: all;
   }
-  /* Фіолетовий колір спінера */
   .spinner-border.text-purple { color: #7367f0 !important; }
 </style>
 @endpush
 
 @push('page-scripts')
 <script>
-/**
- * Глобальна функція превʼю зображення зі спінером і назвою файлу.
- * Очікує елементи з id:
- *  - ${previewId}Spinner
- *  - ${previewId}
- *  - ${previewId}Name (необовʼязково)
- */
 window.previewImage = function(input, previewId) {
   const img     = document.getElementById(previewId);
   const spinner = document.getElementById(previewId + 'Spinner');
@@ -240,7 +224,6 @@ window.previewImage = function(input, previewId) {
   img.src = objectUrl;
 };
 
-// Оверлей + спінер на кнопці під час сабміту (та захист від повторної відправки)
 (function(){
   const form = document.getElementById('special-offer-form');
   const screenLoader = document.getElementById('screenLoader');
