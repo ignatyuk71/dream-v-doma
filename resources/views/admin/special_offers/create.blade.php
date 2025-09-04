@@ -163,7 +163,7 @@
 <!-- Fullscreen overlay loader -->
 <div id="screenLoader" class="screen-loader d-none" aria-hidden="true">
   <div class="text-center">
-    <div class="spinner-border text-light" style="color:#7367f0;" role="status" style="width:4rem;height:4rem;"></div>
+    <div class="spinner-border text-purple" role="status" style="width:4rem;height:4rem;"></div>
     <div class="mt-3 text-light fw-semibold">Збереження…</div>
   </div>
 </div>
@@ -180,8 +180,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2050; /* поверх усього */
+    z-index: 2050;
     pointer-events: all;
+  }
+
+  /* кастомний фіолетовий для спінера */
+  .spinner-border.text-purple {
+    color: #7367f0 !important;
   }
 </style>
 @endpush
