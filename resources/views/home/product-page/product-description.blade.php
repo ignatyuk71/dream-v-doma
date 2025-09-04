@@ -60,105 +60,108 @@
         @foreach($blocks as $block)
           @php $type = $block['type'] ?? 'text'; @endphp
 
-          <section class="py-3 border-bottom">
-            @switch($type)
 
-              {{-- TEXT BLOCK --}}
-              @case('text')
-                <div class="container-fluid px-4 px-lg-5">
-                  <div class="mx-auto">
-                    @if(!empty($block['title']))
-                      <h2 class="fw-bold mb-3 text-center" style="font-size:1.75rem;">
-                        {{ $block['title'] }}
-                      </h2>
-                    @endif
-                    <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
-                      {!! nl2br(e($block['text'] ?? '')) !!}
-                    </p>
-                  </div>
-                </div>
-              @break
 
-              {{-- IMAGE RIGHT --}}
-              @case('image_right')
-                <div class="container px-4 px-lg-5">
-                  <div class="row align-items-center gx-5 gy-4">
-                    <div class="col-12 col-lg-6">
-                      @if(!empty($block['title']))
-                        <h2 class="fw-bold mb-3" style="font-size:1.75rem;">
-                          {{ $block['title'] }}
-                        </h2>
-                      @endif
-                      <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
-                        {!! nl2br(e($block['text'] ?? '')) !!}
-                      </p>
-                    </div>
-                    <div class="col-12 col-lg-6 text-center">
-                      @if(!empty($block['imageUrl']))
-                        <img src="{{ $toPublicUrl($block['imageUrl']) }}"
-                             alt="{{ $block['title'] ?? 'Product image' }}"
-                             class="img-fluid rounded"
-                             loading="lazy">
-                      @endif
-                    </div>
-                  </div>
-                </div>
-              @break
+<section class="py-3 border-bottom">
+  @switch($type)
 
-              {{-- IMAGE LEFT --}}
-              @case('image_left')
-                <div class="container px-4 px-lg-5">
-                  <div class="row align-items-center gx-5 gy-4 flex-lg-row-reverse">
-                    <div class="col-12 col-lg-6">
-                      @if(!empty($block['title']))
-                        <h2 class="fw-bold mb-3" style="font-size:1.75rem;">
-                          {{ $block['title'] }}
-                        </h2>
-                      @endif
-                      <p class="text-muted" style="font-size:1.1rem; line-height:1.7; white-space:pre-line;">
-                        {!! nl2br(e($block['text'] ?? '')) !!}
-                      </p>
-                    </div>
-                    <div class="col-12 col-lg-6 text-center">
-                      @if(!empty($block['imageUrl']))
-                        <img src="{{ $toPublicUrl($block['imageUrl']) }}"
-                             alt="{{ $block['title'] ?? 'Product image' }}"
-                             class="img-fluid rounded"
-                             loading="lazy">
-                      @endif
-                    </div>
-                  </div>
-                </div>
-              @break
+    {{-- TEXT BLOCK --}}
+    @case('text')
+      <div class="container-fluid px-2 px-lg-5">
+        <div class="mx-auto">
+          @if(!empty($block['title']))
+            <h2 class="fw-bold mb-3 text-center cms-block-title">
+              {{ $block['title'] }}
+            </h2>
+          @endif
+          <p class="text-muted cms-block-text">
+            {!! nl2br(e($block['text'] ?? '')) !!}
+          </p>
+        </div>
+      </div>
+    @break
 
-              {{-- TWO IMAGES --}}
-              @case('two_images')
-                <div class="container px-4 px-lg-5">
-                  <div class="row gx-4 gy-4">
-                    @if(!empty($block['imageUrl1']))
-                      <div class="col-12 col-md-6 text-center">
-                        <img src="{{ $toPublicUrl($block['imageUrl1']) }}"
-                             alt="Gallery image 1"
-                             class="img-fluid rounded shadow"
-                             loading="lazy">
-                      </div>
-                    @endif
-                    @if(!empty($block['imageUrl2']))
-                      <div class="col-12 col-md-6 text-center">
-                        <img src="{{ $toPublicUrl($block['imageUrl2']) }}"
-                             alt="Gallery image 2"
-                             class="img-fluid rounded shadow"
-                             loading="lazy">
-                      </div>
-                    @endif
-                  </div>
-                </div>
-              @break
+    {{-- IMAGE RIGHT --}}
+    @case('image_right')
+      <div class="container px-2 px-lg-5">
+        <div class="row align-items-center gx-5 gy-4">
+          <div class="col-12 col-lg-6">
+            @if(!empty($block['title']))
+              <h2 class="fw-bold mb-3 cms-block-title">
+                {{ $block['title'] }}
+              </h2>
+            @endif
+            <p class="text-muted cms-block-text">
+              {!! nl2br(e($block['text'] ?? '')) !!}
+            </p>
+          </div>
+          <div class="col-12 col-lg-6 text-center">
+            @if(!empty($block['imageUrl']))
+              <img src="{{ $toPublicUrl($block['imageUrl']) }}"
+                   alt="{{ $block['title'] ?? 'Product image' }}"
+                   class="img-fluid rounded"
+                   loading="lazy">
+            @endif
+          </div>
+        </div>
+      </div>
+    @break
 
-              @default
-                {{-- fallback --}}
-            @endswitch
-          </section>
+    {{-- IMAGE LEFT --}}
+    @case('image_left')
+      <div class="container px-2 px-lg-5">
+        <div class="row align-items-center gx-5 gy-4 flex-lg-row-reverse">
+          <div class="col-12 col-lg-6">
+            @if(!empty($block['title']))
+              <h2 class="fw-bold mb-3 cms-block-title">
+                {{ $block['title'] }}
+              </h2>
+            @endif
+            <p class="text-muted cms-block-text">
+              {!! nl2br(e($block['text'] ?? '')) !!}
+            </p>
+          </div>
+          <div class="col-12 col-lg-6 text-center">
+            @if(!empty($block['imageUrl']))
+              <img src="{{ $toPublicUrl($block['imageUrl']) }}"
+                   alt="{{ $block['title'] ?? 'Product image' }}"
+                   class="img-fluid rounded"
+                   loading="lazy">
+            @endif
+          </div>
+        </div>
+      </div>
+    @break
+
+    {{-- TWO IMAGES --}}
+    @case('two_images')
+      <div class="container px-2 px-lg-5">
+        <div class="row gx-4 gy-4">
+          @if(!empty($block['imageUrl1']))
+            <div class="col-12 col-md-6 text-center">
+              <img src="{{ $toPublicUrl($block['imageUrl1']) }}"
+                   alt="Gallery image 1"
+                   class="img-fluid rounded shadow"
+                   loading="lazy">
+            </div>
+          @endif
+          @if(!empty($block['imageUrl2']))
+            <div class="col-12 col-md-6 text-center">
+              <img src="{{ $toPublicUrl($block['imageUrl2']) }}"
+                   alt="Gallery image 2"
+                   class="img-fluid rounded shadow"
+                   loading="lazy">
+            </div>
+          @endif
+        </div>
+      </div>
+    @break
+
+    @default
+      {{-- fallback --}}
+  @endswitch
+</section>
+
         @endforeach
       @endif
 
@@ -333,6 +336,17 @@
     </form>
   </div>
 </div>
+<style>
+  /* Десктоп / за замовчуванням */
+  .cms-block-title { font-size: 1.75rem; }
+  .cms-block-text  { font-size: 1.2rem; line-height: 1.8; white-space: pre-line; }
+
+  /* Мобільні (Bootstrap sm і нижче) */
+  @media (max-width: 575.98px) {
+    .cms-block-title { font-size: 1.1rem; }        /* заголовок трохи менший на мобайлі */
+    .cms-block-text  { font-size: 1rem; line-height: 1.2; }
+  }
+</style>
 
 @push('scripts')
 <script>

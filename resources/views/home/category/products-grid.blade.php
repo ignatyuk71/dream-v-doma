@@ -40,6 +40,7 @@
                                   : ($product->approvedReviews()->count() ?? 0)));
 
         // URL
+        // $slug — slug поточної категорії, приходить з контролера
         $productUrl    = url($locale . '/' . $slug . '/' . $productSlug);
 
         // Валюта + наявність
@@ -128,37 +129,50 @@
             </div>
           </div>
 
-          {{-- Атрибути --}}
+          {{-- ▶️ КОЛЬОРИ (квадратні свотчі на hover) --}}
           @php
-            $attrs = $product->attributeValues
-                ->filter(function($val) use ($locale) {
-                    return (bool) $val->attribute->translations->firstWhere('locale', $locale)
-                        && (bool) $val->translations->firstWhere('locale', $locale);
-                })
-                ->sortBy(fn($val) => $val->attribute->position ?? 9999)
-                ->take(4);
+            /** Очікуємо, що colors підвантажені контролером:
+             *  products.colors (+ linkedProduct.translations & categories.translations)
+             */
+            $colors = $product->colors ?? collect();
+            $maxColors = 5;
+            $visibleColors = $colors->take($maxColors);
+            $remaining = max(0, $colors->count() - $maxColors);
           @endphp
 
-          @if($attrs->isNotEmpty())
+          @if($visibleColors->isNotEmpty())
             <div class="product-card-details position-absolute top-100 start-0 w-100 bg-body rounded-bottom shadow mt-n2 p-3 pt-1">
               <span class="position-absolute top-0 start-0 w-100 bg-body mt-n2 py-2"></span>
-              <ul class="list-unstyled d-flex flex-column gap-2 m-0">
-                @foreach($attrs as $val)
+
+              <div class="d-flex align-items-center flex-wrap gap-3">
+                @foreach($visibleColors as $color)
                   @php
-                    $attrTr   = $val->attribute->translations->firstWhere('locale', $locale);
-                    $valueTr  = $val->translations->firstWhere('locale', $locale);
-                    $attrName = $attrTr?->name  ?? '';
-                    $valText  = $valueTr?->value ?? '';
+                    // абсолютний href для свотча
+                    $href = method_exists($color, 'buildHref')
+                      ? $color->buildHref($locale, $slug, $productSlug)
+                      : $productUrl;
+
+                    $iconUrl   = $color->icon_url ?? null;
+                    $colorName = trim($color->name ?? '');
                   @endphp
-                  @if($attrName && $valText)
-                    <li class="d-flex align-items-center">
-                      <span class="fs-xs">{{ $attrName }}:</span>
-                      <span class="d-block flex-grow-1 border-bottom border-dashed px-1 mt-2 mx-2"></span>
-                      <span class="text-dark-emphasis fs-xs fw-medium text-end">{{ $valText }}</span>
-                    </li>
-                  @endif
+
+                  <a href="{{ $href }}"
+                     class="color-thumb @if(!empty($color->is_default)) is-active @endif"
+                     aria-label="{{ __('product.color') }}: {{ $colorName }}"
+                     title="{{ $colorName }}"
+                     @if($iconUrl) style="background-image:url('{{ $iconUrl }}');" @endif>
+                    @unless($iconUrl)
+                      {{ mb_substr($colorName, 0, 1) }}
+                    @endunless
+                  </a>
                 @endforeach
-              </ul>
+
+                @if($remaining > 0)
+                  <a href="{{ $productUrl }}" class="color-thumb color-thumb-more" title="+{{ $remaining }}">
+                    +{{ $remaining }}
+                  </a>
+                @endif
+              </div>
             </div>
           @endif
         </article>
@@ -166,3 +180,32 @@
     @endforeach
   </div>
 </section>
+
+{{-- Локальний CSS для квадратних свотчів у категоріях --}}
+<style>
+  .product-card-details .color-thumb{
+    width:54px; height:54px;                /* розмір */
+    border-radius:10px;                      /* постав 0 — будуть повністю квадратні */
+    border:1.5px solid rgba(0,0,0,.25);
+    display:flex; align-items:center; justify-content:center;
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+    text-decoration:none; font-size:12px; font-weight:600; color:#333; text-transform:uppercase;
+    transition:box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .product-card-details .color-thumb:hover,
+  .product-card-details .color-thumb:focus{
+    border-color:rgba(0,0,0,.55);
+    box-shadow:0 0 0 4px rgba(0,0,0,.06);
+    transform:translateY(-1px);
+    outline:none;
+  }
+  .product-card-details .color-thumb.is-active{
+    border-color:#0b1320;
+    box-shadow:0 0 0 2px rgba(11,19,32,.08);
+  }
+  .product-card-details .color-thumb-more{
+    border-style:dashed;
+  }
+
+  
+</style>
