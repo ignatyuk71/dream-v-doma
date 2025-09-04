@@ -339,12 +339,12 @@
 <style>
   /* Десктоп / за замовчуванням */
   .cms-block-title { font-size: 1.75rem; }
-  .cms-block-text  { font-size: 1.2rem; line-height: 1.8; white-space: pre-line; }
+  .cms-block-text  { font-size: 1.2rem; line-height: 1.8; }
 
   /* Мобільні (Bootstrap sm і нижче) */
   @media (max-width: 575.98px) {
     .cms-block-title { font-size: 1.1rem; }        /* заголовок трохи менший на мобайлі */
-    .cms-block-text  { font-size: 1rem; line-height: 1.2; }
+    .cms-block-text  { font-size: 1.1rem; line-height: 1.5; }
   }
 </style>
 
