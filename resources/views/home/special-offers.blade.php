@@ -1,5 +1,7 @@
 <section class="container pt-1 mt-2 mt-sm-3 mt-lg-4 mt-xl-5">
-  <h3 class="text-center pt-xxl-2 pb-2 pb-md-3">Special offers for you</h3>
+  <h3 class="text-center pt-xxl-2 pb-2 pb-md-3">
+    {{ __('special_offers.title') }}
+  </h3>
   <div class="position-relative px-4 px-md-3 px-lg-4">
     <div class="row position-relative z-2 justify-content-center">
 
