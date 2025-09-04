@@ -174,7 +174,7 @@
   .screen-loader{
     position: fixed;
     inset: 0;
-    background: rgba(33, 37, 41, .45); /* напівпрозорий сірий */
+    background: rgba(234, 14, 102, 0.45); /* напівпрозорий сірий */
     backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     display: flex;
