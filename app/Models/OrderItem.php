@@ -31,6 +31,28 @@ class OrderItem extends Model
         'attributes_json' => 'array',
     ];
 
+    /** торкаємо батьківське замовлення при зміні позиції */
+    protected $touches = ['order'];
+
+    protected static function booted(): void
+    {
+        // Перед збереженням — нормалізуємо qty/price і рахуємо total
+        static::saving(function (OrderItem $i) {
+            $qty = (int)($i->quantity ?? 0);
+            if ($qty <= 0) { $qty = 1; }
+            $i->quantity = $qty;
+
+            $price = (float)($i->price ?? 0);
+            $i->price = round($price, 2);
+
+            $i->total = round($i->price * $i->quantity, 2);
+        });
+
+        // Після змін — оновлюємо підсумок замовлення
+        static::saved(function (OrderItem $i)  { $i->order?->recalcTotals(); });
+        static::deleted(function (OrderItem $i){ $i->order?->recalcTotals(); });
+    }
+
     /**
      * Замовлення, до якого належить позиція
      */

@@ -13,6 +13,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\Api\CategoryController as ApiCategoryController;
 use App\Http\Controllers\Api\ProductController as ApiProductController;
 use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 
 
 // 🔁 Редірект з кореня на дефолтну мову
@@ -123,6 +124,12 @@ Route::middleware(['auth'])->group(function () {
 
     // Додатковий маршрут для отримання списку продуктів (API чи AJAX)
     Route::get('/admin/products/list', [App\Http\Controllers\Admin\ProductController::class, 'list']);
+
+     // Замовлення (адмінка)
+     Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
+     Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
+     Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
+ 
 });
 
 // 🔑 Аутентифікація

@@ -81,32 +81,32 @@
       </ul>
     </li>
 
-    <!-- Замовлення -->
-    <li class="menu-item {{ $isOrders ? 'active open' : '' }}">
-      <a href="javascript:void(0);" class="menu-link menu-toggle">
-        <i class="menu-icon icon-base ti tabler-file-dollar"></i>
-        <div data-i18n="Orders">Замовлення</div>
-      </a>
-      <ul class="menu-sub">
-        <li class="menu-item {{ request()->routeIs('admin.orders.index') ? 'active' : '' }}">
-          <a href="" class="menu-link">
-            <div data-i18n="Order List">Список</div>
-          </a>
-        </li>
-        <li class="menu-item {{ request()->routeIs('admin.orders.show') ? 'active' : '' }}">
-          <a href="" class="menu-link">
-            <div data-i18n="Order Details">Деталі</div>
-          </a>
-        </li>
-      </ul>
-    </li>
-    
-    <li class="menu-item {{ $isChat ? 'active' : '' }}">
-      <a href="" class="menu-link">
-        <i class="menu-icon icon-base ti tabler-message-circle"></i>
-        <div data-i18n="Chat">Чат</div>
+<!-- Замовлення -->
+<li class="menu-item {{ $isOrders ? 'active open' : '' }}">
+  <a href="javascript:void(0);" class="menu-link menu-toggle">
+    <i class="menu-icon icon-base ti tabler-file-dollar"></i>
+    <div data-i18n="Orders">Замовлення</div>
+  </a>
+
+  @php
+    $routeOrder    = request()->route('order'); // може бути ID або модель
+    $currentOrderId = is_object($routeOrder) ? ($routeOrder->id ?? null) : (is_numeric($routeOrder) ? $routeOrder : null);
+  @endphp
+
+  <ul class="menu-sub">
+    <li class="menu-item {{ request()->routeIs('admin.orders.index') ? 'active' : '' }}">
+      <a href="{{ route('admin.orders.index') }}" class="menu-link">
+        <div data-i18n="Order List">Список</div>
       </a>
     </li>
+    <li class="menu-item {{ request()->routeIs('admin.orders.show') ? 'active' : '' }}">
+      <a href="{{ $currentOrderId ? route('admin.orders.show', $currentOrderId) : route('admin.orders.index') }}" class="menu-link">
+        <div data-i18n="Order Details">Деталі</div>
+      </a>
+    </li>
+  </ul>
+</li>
+
 
 
     <!-- Банери -->
