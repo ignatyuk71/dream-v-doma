@@ -209,9 +209,6 @@
 
                           <div class="d-flex gap-2 mt-3">
                             <button class="btn btn-sm btn-success" type="button">Створити ТТН</button>
-                            @if($d?->np_ref)
-                              <a class="btn btn-sm btn-outline-secondary" target="_blank" href="#">TTN: {{ $d->np_ref }}</a>
-                            @endif
                           </div>
                         </div>
                       </div>
