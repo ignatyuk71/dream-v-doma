@@ -89,7 +89,10 @@ class OrderController extends Controller
                 ]
             );
 
-            $orderNumber = 'ORD-'.time().rand(1000, 9999);
+            // короткий № замовлення (7 символів): ORD + 4 цифри
+            do {
+                $orderNumber = 'ORD-' . str_pad((string) random_int(0, 9999), 6, '0', STR_PAD_LEFT);
+            } while (Order::where('order_number', $orderNumber)->exists());
 
             $order = Order::create([
                 'customer_id'  => $customer->id,

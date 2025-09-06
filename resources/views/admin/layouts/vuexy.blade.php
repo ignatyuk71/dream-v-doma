@@ -44,7 +44,7 @@
 
     {{-- Сюди сторінки можуть пушити додаткові вендорні стилі (apexcharts, datatables, тощо) --}}
     @stack('vendor-styles')
-
+    @stack('styles')
     {{-- Сюди сторінки можуть пушити свої локальні стилі --}}
     @stack('page-styles')
     <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
