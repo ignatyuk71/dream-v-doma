@@ -67,7 +67,7 @@
         Експорт
       </div>
       <div class="tool muted" id="bulk-print">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18v4h12v-4"/><rect x="6" y="12" width="12" height="8"/><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18v4h12v-4"></path><rect x="6" y="12" width="12" height="8"></rect><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"></path></svg>
         Друк
       </div>
     </div>
@@ -116,15 +116,14 @@
                 <div class="small muted">{{ $o->created_at?->format('d.m.Y, H:i') }}</div>
 
                 <div class="payline small">
-                  <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
                   {{ $o->payment_method ?? 'Спосіб оплати не вказано' }}
                 </div>
 
                 @if($o->delivery?->np_ref)
                   <div class="payline small">
-                    <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/></svg>
+                    <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M15 9l-6 6"></path></svg>
                     <b>ТТН:</b>
-                    <a target="_blank" rel="noopener" href="https://tracking.novaposhta.ua/#/uk/search?cargo_number={{ $o->delivery->np_ref }}">{{ $o->delivery->np_ref }}</a>
                   </div>
                 @endif
               </td>
@@ -145,9 +144,14 @@
               <td>
                 <div class="buyer-name">{{ $o->customer->name ?? '—' }}</div>
                 @if($o->customer?->phone)
-                  <div class="small muted">
+                  <div class="small muted d-flex align-items-center gap-2">
                     <a href="tel:{{ preg_replace('/\s+/', '', $o->customer->phone) }}">{{ $o->customer->phone }}</a>
-                    <button class="btn btn-xs btn-link copy" data-copy="{{ $o->customer->phone }}">копіювати</button>
+                    <button type="button"
+                            class="btn p-0 border-0 bg-transparent js-copy"
+                            title="Копіювати"
+                            data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone) }}">
+                      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+                    </button>
                   </div>
                 @endif
                 @if($o->customer?->email)
@@ -165,24 +169,23 @@
                 @endif
               </td>
 
-              <td>
-                <!-- Оплата + зміна статусу -->
-                <div class="d-flex flex-column gap-2">
-                  <div class="dropdown status-dd">
-                    <span class="{{ $badge($statusVal) }} rounded-pill fw-bold status-pill"
-                          data-status-badge data-status="{{ $statusVal }}">{{ $statusLbl }}</span>
+              <!-- Статус праворуч, в один ряд -->
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center gap-2 flex-wrap justify-content-end w-100">
+                  <span class="{{ $badge($statusVal) }} rounded-pill fw-bold status-pill"
+                        data-status-badge data-status="{{ $statusVal }}">{{ $statusLbl }}</span>
 
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle mt-1 w-auto"
+                  <div class="dropdown dropstart">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
                             type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      Змінити статус
+                      Змінити
                     </button>
-
-                    <ul class="dropdown-menu p-2">
+                    <ul class="dropdown-menu dropdown-menu-end p-2">
                       @foreach($statusLabels as $val => $label)
                         <li>
                           <button type="button"
                                   class="dropdown-item d-flex align-items-center gap-2 status-change"
-                                  data-url=""
+                                  data-url="" {{-- сюди постав свій маршрут, якщо треба --}}
                                   data-id="{{ $o->id }}"
                                   data-status="{{ $val }}">
                             <span class="{{ $badge($val) }} rounded-pill">{{ strtoupper($label) }}</span>
@@ -197,16 +200,10 @@
               <td class="text-end">
                 <div class="actions">
                   <a class="a" href="{{ route('admin.orders.show',$o) }}" title="Відкрити">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v7h-7"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M21 14v7h-7"></path></svg>
                   </a>
                   <button class="a js-print" data-id="{{ $o->id }}" title="Друк">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18v4h12v-4"/><rect x="6" y="12" width="12" height="8"/><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"/></svg>
-                  </button>
-                  <button class="a js-ttn" data-id="{{ $o->id }}" title="Створити ТТН">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h7"/></svg>
-                  </button>
-                  <button class="a js-remind" data-id="{{ $o->id }}" title="Нагадування">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2Z"/><path d="M8 8a4 4 0 1 1 8 0v3a7 7 0 0 0 2 5H6a7 7 0 0 0 2-5Z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18v4h12v-4"></path><rect x="6" y="12" width="12" height="8"></rect><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"></path></svg>
                   </button>
                 </div>
               </td>
@@ -233,14 +230,14 @@
                             <div class="d-flex justify-content-between align-items-center">
                               <div class="text-muted small d-flex align-items-center gap-2">
                                 Отримувач
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M12 5v3m0 8v3m7-7h-3M8 12H5"/></svg>
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7Z"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M12 5v3"></path><path d="M12 16v3"></path><path d="M19 12h-3"></path><path d="M8 12H5"></path></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3Z"></path><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7Z"></path></svg>
                               </div>
                               <div class="d-flex align-items-center gap-2">
                                 <a class="text-body text-decoration-none" href="tel:{{ $o->customer->phone ?? '' }}">
                                   {{ $o->customer->phone ?? '—' }}
                                 </a>
-                                <button type="button" class="btn p-0 border-0 bg-transparent" title="Копіювати телефон">
+                                <button type="button" class="btn p-0 border-0 bg-transparent js-copy" title="Копіювати телефон" data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone ?? '') }}">
                                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
                                 </button>
                               </div>
@@ -256,7 +253,7 @@
                                 <a class="text-body text-decoration-none" href="tel:{{ $o->customer->phone ?? '' }}">
                                   {{ $o->customer->phone ?? '—' }}
                                 </a>
-                                <button type="button" class="btn p-0 border-0 bg-transparent" title="Копіювати телефон">
+                                <button type="button" class="btn p-0 border-0 bg-transparent js-copy" title="Копіювати телефон" data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone ?? '') }}">
                                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
                                 </button>
                               </div>
@@ -267,7 +264,7 @@
                           <!-- Кількість покупок -->
                           <div class="py-3">
                             <div class="d-flex align-items-center gap-2">
-                              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 17 18ZM6.2 4l-.3-2H1v2h3l2.4 12.2A2 2 0 0 0 8.4 18h8.9a2 2 0 0 0 2-1.6L21 8H6.6L6.2 4Zm12.6 6-1.2 6H8.4L7.3 10h11.5Z"/></svg>
+                              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"></path><path d="M17 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"></path><path d="M6.2 4l-.3-2H1v2h3l2.4 12.2A2 2 0 0 0 8.4 18h8.9a2 2 0 0 0 2-1.6L21 8H6.6L6.2 4Z"></path><path d="M18.8 10l-1.2 6H8.4L7.3 10h11.5Z"></path></svg>
                               <span>Кількість покупок: {{ $o->customer?->orders_count ?? 1 }}</span>
                             </div>
                           </div>
@@ -280,9 +277,6 @@
                       <div class="card shadow-sm">
                         <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                           <h5 class="mb-0">Адреса доставки</h5>
-                          <button type="button" class="btn p-0 border-0 bg-transparent" title="Копіювати">
-                            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
-                          </button>
                         </div>
 
                         <div class="card-body">
@@ -291,13 +285,13 @@
                             <div class="text-muted small">Служба</div>
                             <div class="mt-1 fw-semibold d-flex align-items-center gap-2">
                               @if(($o->delivery->delivery_type ?? '') === 'courier')
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8h-3V4H3v10h1a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h1v-4l-2-2Zm-3 6H10a3 3 0 0 0-5.83 0H5V6h10v3h3l2 2v3h-.17A3 3 0 0 0 17 14Z"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8h-3V4H3v10h1a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h1v-4l-2-2Z"></path><path d="M17 14H10a3 3 0 0 0-5.83 0H5V6h10v3h3l2 2v3h-.17A3 3 0 0 0 17 14Z"></path></svg>
                                 <span>курєр</span>
                               @elseif(($o->delivery->delivery_type ?? '') === 'branch')
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3V5Zm2 2в2l7 4 7-4V7H5Z"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3V5Z"></path><path d="M5 7v2l7 4 7-4V7H5Z"></path></svg>
                                 <span>на пошту</span>
                               @elseif(($o->delivery->delivery_type ?? '') === 'postomat')
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3V4Zm2 2v12h14V6H5Zm2 2h4v3H7V8Zm5 0h5v3h-5V8Zm-5 4h4v3H7v-3Zm5 0h5v3h-5v-3Z"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3V4Z"></path><path d="M5 6v12h14V6H5Z"></path><path d="M7 8h4v3H7V8Z"></path><path d="M12 8h5v3h-5V8Z"></path><path d="M7 12h4v3H7v-3Z"></path><path d="M12 12h5v3h-5v-3Z"></path></svg>
                                 <span>поштомат</span>
                               @else
                                 <span>{{ $o->delivery->delivery_type ?? '—' }}</span>
@@ -322,7 +316,7 @@
                               <div class="text-muted small">ТТН</div>
                               <div class="mt-1 fw-semibold d-flex align-items-center gap-2">
                                 <span>{{ $o->delivery->np_ref }}</span>
-                                <button type="button" class="btn p-0 border-0 bg-transparent" title="Копіювати ТТН">
+                                <button type="button" class="btn p-0 border-0 bg-transparent js-copy" title="Копіювати ТТН" data-copy="{{ $o->delivery->np_ref }}">
                                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
                                 </button>
                               </div>
@@ -331,7 +325,7 @@
 
                           <div class="pt-3">
                             <div class="d-flex align-items-center gap-2">
-                              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7H3v8a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7Zm-4 7H7v-2h10v2Zm0-4H7V8h10v2Z"/></svg>
+                              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7H3v8a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7Z"></path><path d="M17 14H7v-2h10v2Z"></path><path d="M17 10H7V8h10v2Z"></path></svg>
                               <span>Зворотна доставка коштів: {{ ($o->delivery->cod ?? false) ? 'увімкнено' : 'вимкнено' }}</span>
                             </div>
                           </div>
@@ -380,7 +374,7 @@
                               <div class="text-muted small d-flex align-items-center gap-1">
                                 Вартість доставки для покупця
                                 <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-                                  <circle cx="12" cy="12" r="2"/><path d="M12 5v3m0 8v3m7-7h-3M8 12H5"/>
+                                  <circle cx="12" cy="12" r="2"></circle><path d="M12 5v3"></path><path d="M12 16v3"></path><path d="M19 12h-3"></path><path d="M8 12H5"></path>
                                 </svg>
                               </div>
                               <div class="fw-medium">
@@ -577,7 +571,7 @@
   const CSRF = '{{ csrf_token() }}';
   const STATUS_META = @json($statusMeta);
 
-  // Клік по всьому рядку (крім інтерактивних елементів) — відкриває/закриває деталі
+  // Клік по всьому рядку (крім інтерактивних) — відкриває/закриває деталі
   document.addEventListener('click', function (e) {
     const row = e.target.closest('tr.order-row');
     if (!row) return;
@@ -585,44 +579,58 @@
     row.querySelector('.toggle-row')?.click();
   });
 
-  // Копіювання телефона
-  document.querySelectorAll('#tpl-orders .copy').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      e.preventDefault();
-      const text = btn.dataset.copy || '';
-      if (!text) return;
-      navigator.clipboard?.writeText(text).then(()=>{
-        btn.textContent = 'скопійовано';
-        setTimeout(()=>btn.textContent='копіювати', 1200);
+  // Копіювання (телефон/ТТН)
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.js-copy');
+    if (!btn) return;
+    e.preventDefault();
+    const text = btn.dataset.copy || '';
+    if (!text) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(()=>{
+        const prev = btn.innerHTML;
+        btn.innerHTML = '✔ скопійовано';
+        setTimeout(()=> btn.innerHTML = prev, 1200);
+      })
+      .catch(()=>{
+        const tmp = document.createElement('input');
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        try { document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(tmp);
       });
-    });
   });
 
-  // Зміна статусу з dropdown (optimistic UI + PATCH)
-  document.querySelectorAll('#tpl-orders .status-change').forEach(item=>{
-    item.addEventListener('click', async ()=>{
-      const status = item.dataset.status;
-      const url    = item.dataset.url;
-      const cell   = item.closest('td');
-      const pill   = cell.querySelector('[data-status-badge]');
+  // Зміна статусу (optimistic UI; POST якщо задано data-url)
+  document.addEventListener('click', async function(e){
+    const item = e.target.closest('.status-change');
+    if (!item) return;
 
-      // optimistic UI
-      applyStatus(pill, status);
+    const status = item.dataset.status;
+    const url    = item.dataset.url;
+    const cell   = item.closest('td');
+    const pill   = cell.querySelector('[data-status-badge]');
 
-      try{
-        const form = new FormData();
-        form.append('_token', CSRF);
-        form.append('_method','PATCH');
-        form.append('status', status);
-        const res = await fetch(url, { method:'POST', body: form });
-        if(!res.ok) throw new Error(await res.text());
-      }catch(err){
-        // відкат якщо помилка
-        const prev = pill.getAttribute('data-status');
-        applyStatus(pill, prev);
-        alert('Не вдалося оновити статус. Перевір, чи є маршрут admin.orders.updateStatus');
-      }
-    });
+    // optimistic UI
+    applyStatus(pill, status);
+
+    if (!url) return; // якщо бек не підключений — просто міняємо UI
+
+    try{
+      const form = new FormData();
+      form.append('_token', CSRF);
+      form.append('_method','PATCH');
+      form.append('status', status);
+      const res = await fetch(url, { method:'POST', body: form });
+      if(!res.ok) throw new Error(await res.text());
+    }catch(err){
+      // відкат
+      const prev = pill.getAttribute('data-status');
+      applyStatus(pill, prev);
+      console.error('Status update failed:', err);
+      alert('Не вдалося оновити статус');
+    }
   });
 
   function applyStatus(pill, status){
@@ -631,10 +639,5 @@
     pill.textContent = meta.label;
     pill.setAttribute('data-status', status);
   }
-
-  // плейсхолдери для дій
-  document.querySelectorAll('#tpl-orders .js-print').forEach(b=>b.addEventListener('click',()=>alert('Друк накладної — підключи маршрут')));
-  document.querySelectorAll('#tpl-orders .js-ttn').forEach(b=>b.addEventListener('click',()=>alert('Створення ТТН — підключи інтеграцію')));
-  document.querySelectorAll('#tpl-orders .js-remind').forEach(b=>b.addEventListener('click',()=>alert('Надіслати нагадування — підключи логіку')));
 </script>
 @endpush
