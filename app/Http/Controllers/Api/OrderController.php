@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Product;
 use App\Models\ProductTranslation;
 use App\Models\ProductVariant;
+use Illuminate\Validation\Rule;
+use App\Enums\OrderStatus;
 
 class OrderController extends Controller
 {
@@ -254,5 +256,4 @@ class OrderController extends Controller
             'currency'    => $order->currency ?? 'UAH',
         ]);
     }
-    
 }

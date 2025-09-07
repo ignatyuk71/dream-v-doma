@@ -98,7 +98,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/categories/{category}', [AdminCategoryController::class, 'update'])->name('admin.categories.update');
     Route::delete('/admin/categories/{category}', [AdminCategoryController::class, 'destroy'])->name('admin.categories.destroy');
 
-    // Банери (як у категорій)
+    // Банери
     Route::get('/admin/banners', [\App\Http\Controllers\Admin\BannerController::class, 'index'])->name('admin.banners.index');
     Route::get('/admin/banners/create', [\App\Http\Controllers\Admin\BannerController::class, 'create'])->name('admin.banners.create');
     Route::post('/admin/banners', [\App\Http\Controllers\Admin\BannerController::class, 'store'])->name('admin.banners.store');
@@ -125,11 +125,13 @@ Route::middleware(['auth'])->group(function () {
     // Додатковий маршрут для отримання списку продуктів (API чи AJAX)
     Route::get('/admin/products/list', [App\Http\Controllers\Admin\ProductController::class, 'list']);
 
-     // Замовлення (адмінка)
-     Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
-     Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
-     Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
- 
+    // Замовлення (адмінка)
+    Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
+    Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
+    Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
+
+    // ✅ ОКРЕМИЙ PATCH для оновлення СТАТУСУ (AJAX, без перезавантаження)
+    Route::patch('/admin/orders/{order}/status', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('admin.orders.status.update');
 });
 
 // 🔑 Аутентифікація

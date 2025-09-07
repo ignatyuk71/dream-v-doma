@@ -19,25 +19,26 @@
   };
   $money = fn($n, $cur = 'UAH') => number_format((float)$n, 2, '.', ' ') . ' ' . $cur;
 
-  // Bootstrap/Vuexy бейджі для статусів
+  // Bootstrap/Vuexy бейджі для статусів — стиль як у прикладі (badge px-2 bg-label-* text-capitalized)
   $badge = fn($s) => match($s) {
-    'pending'   => 'badge bg-label-warning text-bg-warning',
-    'confirmed' => 'badge bg-label-info text-bg-info',
-    'packed'    => 'badge bg-label-secondary text-bg-secondary',
-    'shipped'   => 'badge bg-label-primary text-bg-primary',
-    'delivered' => 'badge bg-label-success text-bg-success',
-    'cancelled' => 'badge bg-label-dark text-bg-dark',
-    'returned'  => 'badge bg-label-danger text-bg-danger',
-    'refunded'  => 'badge bg-label-success text-bg-success',
-    default     => 'badge bg-label-secondary text-bg-secondary',
+    'pending'   => 'badge px-2 bg-label-warning text-capitalized',
+    'confirmed' => 'badge px-2 bg-label-info text-capitalized',
+    'processing' => 'badge px-2 bg-label-success text-capitalized',
+    'packed'    => 'badge px-2 bg-label-secondary text-capitalized',
+    'shipped'   => 'badge px-2 bg-label-primary text-capitalized',
+    'delivered' => 'badge px-2 bg-label-success text-capitalized',
+    'cancelled' => 'badge px-2 bg-label-dark text-capitalized',
+    'returned'  => 'badge px-2 bg-label-danger text-capitalized',
+    'refunded'  => 'badge px-2 bg-label-success text-capitalized',
+    default     => 'badge px-2 bg-label-secondary text-capitalized',
   };
 
-  // JSON для JS (optimistic UI)
+  // JSON для JS (optimistic UI), без UPPERCASE
   $statusMeta = [];
   foreach ($statusLabels as $val => $label) {
     $statusMeta[$val] = [
-      'label' => strtoupper($label),
-      'class' => $badge($val) . ' rounded-pill fw-bold',
+      'label' => $label,
+      'class' => $badge($val),
     ];
   }
 @endphp
@@ -63,11 +64,9 @@
       <div class="spacer"></div>
 
       <div class="tool" id="bulk-export">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         Експорт
       </div>
       <div class="tool muted" id="bulk-print">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18v4h12v-4"></path><rect x="6" y="12" width="12" height="8"></rect><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"></path></svg>
         Друк
       </div>
     </div>
@@ -93,7 +92,7 @@
               $firstItem  = $o->items->first();
               $collapseId = 'ord-'.$o->id;
               $statusVal  = $o->status->value ?? (string)$o->status;
-              $statusLbl  = strtoupper($statusLabels[$statusVal] ?? $statusVal);
+              $statusLbl  = $statusLabels[$statusVal] ?? (string)$statusVal; // без strtoupper
               $qtySum     = (int)($o->items->sum('quantity') ?: $o->items->count());
               $paidState  = $o->payment_status ?? ($o->paid_at ? 'paid' : 'unpaid');
               $shipCost   = $o->shipping_price ?? null;
@@ -101,113 +100,113 @@
               $coupon     = $o->coupon_code ?? null;
             @endphp
 
-            <!-- summary -->
-            <tr class="order-row">
-              <td class="left-gutter">
-                <button class="btn btn-sm btn-link p-0 toggle-row" type="button"
-                        data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}"
-                        aria-expanded="false" aria-controls="{{ $collapseId }}">
-                  <span class="chev">▶</span>
-                </button>
-              </td>
+<!-- summary -->
+<tr class="order-row">
+  <td class="left-gutter">
+    <button class="btn btn-sm btn-link p-0 toggle-row" type="button"
+            data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}"
+            aria-expanded="false" aria-controls="{{ $collapseId }}">
+      <span class="chev">▶</span>
+    </button>
+  </td>
 
-              <td>
-                <div class="order-no">#{{ $o->order_number ?? $o->id }}</div>
-                <div class="small muted">{{ $o->created_at?->format('d.m.Y, H:i') }}</div>
+  <td>
+    <div class="order-no">#{{ $o->order_number ?? $o->id }}</div>
+    <div class="small muted">{{ $o->created_at?->format('d.m.Y, H:i') }}</div>
 
-                <div class="payline small">
-                  <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
-                  {{ $o->payment_method ?? 'Спосіб оплати не вказано' }}
-                </div>
+    <div class="payline small">
+      <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+      {{ $o->payment_method ?? 'Спосіб оплати не вказано' }}
+    </div>
 
-                @if($o->delivery?->np_ref)
-                  <div class="payline small">
-                    <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M15 9l-6 6"></path></svg>
-                    <b>ТТН:</b>
-                  </div>
-                @endif
-              </td>
+    @if($o->delivery?->np_ref)
+      <div class="payline small">
+        <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M15 9l-6 6"></path></svg>
+        <b>ТТН:</b>
+      </div>
+    @endif
+  </td>
 
-              <td>
-                <div class="d-flex align-items-center gap-2">
-                  @if($firstItem?->image_url)
-                    <img src="{{ $img($firstItem->image_url) }}" alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
-                  @else
-                    <div class="thumb"></div>
-                  @endif
-                  <div class="small">
-                    <div><b>Товарів:</b> {{ $qtySum }}</div>
-                  </div>
-                </div>
-              </td>
+  <td>
+    <div class="d-flex align-items-center gap-2">
+      @if($firstItem?->image_url)
+        <img src="{{ $img($firstItem->image_url) }}" alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
+      @else
+        <div class="thumb"></div>
+      @endif
+      <div class="small">
+        <div><b>Товарів:</b> {{ $qtySum }}</div>
+      </div>
+    </div>
+  </td>
 
-              <td>
-                <div class="buyer-name">{{ $o->customer->name ?? '—' }}</div>
-                @if($o->customer?->phone)
-                  <div class="small muted d-flex align-items-center gap-2">
-                    <a href="tel:{{ preg_replace('/\s+/', '', $o->customer->phone) }}">{{ $o->customer->phone }}</a>
-                    <button type="button"
-                            class="btn p-0 border-0 bg-transparent js-copy"
-                            title="Копіювати"
-                            data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone) }}">
-                      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
-                    </button>
-                  </div>
-                @endif
-                @if($o->customer?->email)
-                  <div class="small muted"><a href="mailto:{{ $o->customer->email }}">{{ $o->customer->email }}</a></div>
-                @endif
-              </td>
+  <td>
+    <div class="buyer-name">{{ $o->customer->name ?? '—' }}</div>
+    @if($o->customer?->phone)
+      <div class="small muted d-flex align-items-center gap-2">
+        <a href="tel:{{ preg_replace('/\s+/', '', $o->customer->phone) }}">{{ $o->customer->phone }}</a>
+        <button type="button"
+                class="btn p-0 border-0 bg-transparent js-copy"
+                title="Копіювати"
+                data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone) }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+        </button>
+      </div>
+    @endif
+    @if($o->customer?->email)
+      <div class="small muted"><a href="mailto:{{ $o->customer->email }}">{{ $o->customer->email }}</a></div>
+    @endif
+  </td>
 
-              <td class="right nowrap text-end">
-                <div class="fw-semibold">{{ $money($o->total_price, $o->currency ?? $currency) }}</div>
-                @if($discount || $shipCost)
-                  <div class="small muted">
-                    @if($discount)<span>знижка: -{{ $money($discount, $o->currency ?? $currency) }}</span>@endif
-                    @if($shipCost)<span class="ms-2">доставка: {{ is_numeric($shipCost) ? $money($shipCost, $o->currency ?? $currency) : 'перевізник' }}</span>@endif
-                  </div>
-                @endif
-              </td>
+  <td class="right nowrap text-end">
+    <div class="fw-semibold">{{ $money($o->total_price, $o->currency ?? $currency) }}</div>
+    @if($discount || $shipCost)
+      <div class="small muted">
+        @if($discount)<span>знижка: -{{ $money($discount, $o->currency ?? $currency) }}</span>@endif
+        @if($shipCost)<span class="ms-2">доставка: {{ is_numeric($shipCost) ? $money($shipCost, $o->currency ?? $currency) : 'перевізник' }}</span>@endif
+      </div>
+    @endif
+  </td>
 
-              <!-- Статус праворуч, в один ряд -->
-              <td class="text-end">
-                <div class="d-inline-flex align-items-center gap-2 flex-wrap justify-content-end w-100">
-                  <span class="{{ $badge($statusVal) }} rounded-pill fw-bold status-pill"
-                        data-status-badge data-status="{{ $statusVal }}">{{ $statusLbl }}</span>
+  <!-- Статус праворуч, в один ряд -->
+  <td class="text-end">
+    <div class="d-inline-flex align-items-center gap-2 flex-wrap justify-content-end w-100">
+      <span class="{{ $badge($statusVal) }} status-pill"
+            data-status-badge data-status="{{ $statusVal }}">{{ $statusLbl }}</span>
 
-                  <div class="dropdown dropstart">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      Змінити
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end p-2">
-                      @foreach($statusLabels as $val => $label)
-                        <li>
-                          <button type="button"
-                                  class="dropdown-item d-flex align-items-center gap-2 status-change"
-                                  data-url="" {{-- сюди постав свій маршрут, якщо треба --}}
-                                  data-id="{{ $o->id }}"
-                                  data-status="{{ $val }}">
-                            <span class="{{ $badge($val) }} rounded-pill">{{ strtoupper($label) }}</span>
-                          </button>
-                        </li>
-                      @endforeach
-                    </ul>
-                  </div>
-                </div>
-              </td>
+      <div class="dropdown dropstart">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Змінити
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end p-2">
+          @foreach($statusLabels as $val => $label)
+            <li>
+              <button type="button"
+                      class="dropdown-item d-flex align-items-center gap-2 status-change"
+                      data-url="{{ route('admin.orders.status.update', $o) }}"
+                      data-id="{{ $o->id }}"
+                      data-status="{{ $val }}">
+                <span class="{{ $badge($val) }}">{{ $label }}</span>
+              </button>
+            </li>
+          @endforeach
+        </ul>
+      </div>
+    </div>
+  </td>
 
-              <td class="text-end">
-                <div class="actions">
-                  <a class="a" href="{{ route('admin.orders.show',$o) }}" title="Відкрити">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M21 14v7h-7"></path></svg>
-                  </a>
-                  <button class="a js-print" data-id="{{ $o->id }}" title="Друк">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18v4h12v-4"></path><rect x="6" y="12" width="12" height="8"></rect><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"></path></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
+  <td class="text-end">
+    <div class="actions">
+      <a class="a" href="{{ route('admin.orders.show',$o) }}" title="Відкрити">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M21 14v7h-7"></path></svg>
+      </a>
+      <button class="a js-print" data-id="{{ $o->id }}" title="Друк">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18v4h12v-4"></path><rect x="6" y="12" width="12" height="8"></rect><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"></path></svg>
+      </button>
+    </div>
+  </td>
+</tr>
 
             <!-- details -->
             <tr class="details-row">
@@ -302,13 +301,13 @@
                           @if($o->delivery?->np_description)
                             <div class="py-3 border-bottom">
                               <div class="text-muted small">Відділення</div>
-                              <div class="mt-1">{{ $o->delivery->np_description }}</div>
+                              <div class="mt-1 fw-medium">{{ $o->delivery->np_description }}</div>
                             </div>
                           @endif
 
                           <div class="py-3 border-bottom">
                             <div class="text-muted small">Адреса</div>
-                            <div class="mt-1">{{ $o->delivery->np_address ?? $o->delivery->courier_address ?? '—' }}</div>
+                            <div class="mt-1 fw-medium">{{ $o->delivery->np_address ?? $o->delivery->courier_address ?? '—' }}</div>
                           </div>
 
                           @if($o->delivery?->np_ref)
@@ -500,7 +499,8 @@
 
 @push('page-styles')
 <style>
-  #tpl-orders{ --bg:#f5f6fa; --card:#fff; --muted:#6b7280; --text:#2f3342; --border:#e6e8ef; --hover:#f3f4f6; }
+  /* базові змінні (посилив контраст значень через --text) */
+  #tpl-orders{ --bg:#f5f6fa; --card:#fff; --muted:#6b7280; --text:#111; --border:#e6e8ef; --hover:#f3f4f6; }
   #tpl-orders *{ box-sizing:border-box }
   #tpl-orders{ color:var(--text) }
 
@@ -563,10 +563,30 @@
   }
 
   .btn.btn-xs{--bs-btn-padding-y: .05rem; --bs-btn-padding-x: .25rem; --bs-btn-font-size: .72rem}
+
+  /* ===== контраст значень: робимо текст значень чорним навіть у "приглушених" класах ===== */
+  #tpl-orders .text-secondary-emphasis{ color: var(--text) !important; }
+  #tpl-orders .fw-medium,
+  #tpl-orders .fw-semibold,
+  #tpl-orders .buyer-name,
+  #tpl-orders .order-no,
+  #tpl-orders .k-val,
+  #tpl-orders .card-body .fs-4{
+    color: var(--text) !important;
+  }
+
+  /* Fallback для класу з прикладу */
+  #tpl-orders .text-capitalized { text-transform: capitalize; }
+
+  /* ===== turn off any box-shadows & pulse on status badges ===== */
+  #tpl-orders .badge{ box-shadow: none !important; }
+  #tpl-orders [data-status-badge]{ animation: none !important; box-shadow: none !important; }
+  #tpl-orders .status-pill{ box-shadow: none !important; }
+
 </style>
 @endpush
 
-@push('scripts')
+@push('page-scripts')
 <script>
   const CSRF = '{{ csrf_token() }}';
   const STATUS_META = @json($statusMeta);
@@ -602,41 +622,80 @@
       });
   });
 
-  // Зміна статусу (optimistic UI; POST якщо задано data-url)
+  // Зміна статусу
   document.addEventListener('click', async function(e){
     const item = e.target.closest('.status-change');
     if (!item) return;
 
+    e.preventDefault();
+    console.log('🔵 Клікнули по пункту статусу:', item);
+
     const status = item.dataset.status;
     const url    = item.dataset.url;
-    const cell   = item.closest('td');
-    const pill   = cell.querySelector('[data-status-badge]');
+    console.log('👉 Новий статус:', status, 'URL:', url);
 
-    // optimistic UI
+    let pill = item.closest('td')?.querySelector('[data-status-badge]');
+    if (!pill) {
+      const openedToggle = document.querySelector('button[data-bs-toggle="dropdown"].show');
+      pill = openedToggle?.closest('td')?.querySelector('[data-status-badge]');
+    }
+
+    if (!pill) {
+      console.error('❌ Не знайшов бейдж у рядку');
+      return;
+    }
+
+    const prev = pill.getAttribute('data-status');
+    console.log('📌 Попередній статус:', prev);
     applyStatus(pill, status);
+    console.log('✅ UI змінено оптимістично');
 
-    if (!url) return; // якщо бек не підключений — просто міняємо UI
+    if (!url) {
+      console.warn('⚠️ URL відсутній, бекенд не викликаємо');
+      return;
+    }
 
     try{
-      const form = new FormData();
-      form.append('_token', CSRF);
-      form.append('_method','PATCH');
-      form.append('status', status);
-      const res = await fetch(url, { method:'POST', body: form });
-      if(!res.ok) throw new Error(await res.text());
+      console.log('🚀 Відправляю PATCH на бекенд...');
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': CSRF,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ status }),
+        credentials: 'same-origin'
+      });
+
+      console.log('📥 Відповідь сервера:', res.status, res.statusText);
+
+      const ctype = res.headers.get('content-type') || '';
+      console.log('📥 Content-Type:', ctype);
+
+      if (res.redirected || ctype.startsWith('text/html')) {
+        throw new Error('Отримав redirect або HTML замість JSON');
+      }
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || ('HTTP ' + res.status));
+      }
+
+      const json = await res.json();
+      console.log('✅ Сервер повернув JSON:', json);
+
     }catch(err){
-      // відкат
-      const prev = pill.getAttribute('data-status');
+      console.error('❌ Status update failed:', err);
       applyStatus(pill, prev);
-      console.error('Status update failed:', err);
       alert('Не вдалося оновити статус');
     }
   });
 
   function applyStatus(pill, status){
-    const meta = STATUS_META[status] || {label: status.toUpperCase(), class: 'badge bg-secondary rounded-pill fw-bold'};
-    pill.className = meta.class + ' status-pill';
-    pill.textContent = meta.label;
+    const info = STATUS_META[status] || {label: status, class: 'badge px-2 bg-label-secondary text-capitalized'};
+    pill.className = info.class + ' status-pill';
+    pill.textContent = info.label;
     pill.setAttribute('data-status', status);
   }
 </script>

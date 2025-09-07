@@ -15,7 +15,7 @@ class OrderController extends Controller
         // Статуси для селекторів/бейджів
         $statuses = OrderStatus::labels();
 
-        // Статистика (для верхніх віджетів, якщо захочеш показати)
+        // Статистика
         $raw = Order::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c','status');
         $stats = [
             'pending'   => (int) ($raw['pending']   ?? 0),
@@ -24,15 +24,17 @@ class OrderController extends Controller
             'failed'    => (int) ($raw['cancelled'] ?? 0), // Failed == cancelled
         ];
 
-        // Список замовлень (розгортання потребує items+delivery+customer)
+        // Список замовлень
         $orders = Order::with(['items', 'delivery', 'customer'])
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = trim($request->get('q'));
-                $q->where('order_number', 'like', "%{$term}%")
-                ->orWhereHas('customer', function ($qq) use ($term) {
-                    $qq->where('name','like',"%{$term}%")
-                        ->orWhere('phone','like',"%{$term}%")
-                        ->orWhere('email','like',"%{$term}%");
+                $q->where(function ($qq) use ($term) {
+                    $qq->where('order_number', 'like', "%{$term}%")
+                       ->orWhereHas('customer', function ($qc) use ($term) {
+                           $qc->where('name','like',"%{$term}%")
+                              ->orWhere('phone','like',"%{$term}%")
+                              ->orWhere('email','like',"%{$term}%");
+                       });
                 });
             })
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->get('status')))
@@ -41,7 +43,6 @@ class OrderController extends Controller
             ->orderByDesc('created_at')
             ->paginate(25)
             ->withQueryString();
-    
 
         return view('admin.orders.index', compact('orders', 'statuses', 'stats'));
     }
@@ -54,6 +55,9 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order', 'statuses'));
     }
 
+    /**
+     * Оновлення через звичайну форму (HTML)
+     */
     public function update(Request $request, Order $order)
     {
         $request->validate([
@@ -69,5 +73,23 @@ class OrderController extends Controller
         return back()->with('success', 'Статус замовлення оновлено');
     }
 
-    
+    /**
+     * Оновлення статусу через AJAX без перезавантаження (JSON)
+     * Маршрут: PATCH /admin/orders/{order}/status  -> name: admin.orders.status.update
+     */
+    public function updateStatus(Order $order, Request $request)
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::enum(OrderStatus::class)],
+        ]);
+
+        $order->status = OrderStatus::from($data['status']);
+        $order->save();
+
+        return response()->json([
+            'ok'     => true,
+            'status' => $order->status->value,
+            'label'  => OrderStatus::labels()[$order->status->value] ?? $order->status->value,
+        ]);
+    }
 }
