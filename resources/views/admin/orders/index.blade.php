@@ -628,35 +628,23 @@
     if (!item) return;
 
     e.preventDefault();
-    console.log('🔵 Клікнули по пункту статусу:', item);
 
     const status = item.dataset.status;
     const url    = item.dataset.url;
-    console.log('👉 Новий статус:', status, 'URL:', url);
 
     let pill = item.closest('td')?.querySelector('[data-status-badge]');
     if (!pill) {
       const openedToggle = document.querySelector('button[data-bs-toggle="dropdown"].show');
       pill = openedToggle?.closest('td')?.querySelector('[data-status-badge]');
     }
-
-    if (!pill) {
-      console.error('❌ Не знайшов бейдж у рядку');
-      return;
-    }
+    if (!pill) return;
 
     const prev = pill.getAttribute('data-status');
-    console.log('📌 Попередній статус:', prev);
-    applyStatus(pill, status);
-    console.log('✅ UI змінено оптимістично');
+    applyStatus(pill, status); // optimistic UI
 
-    if (!url) {
-      console.warn('⚠️ URL відсутній, бекенд не викликаємо');
-      return;
-    }
+    if (!url) return;
 
     try{
-      console.log('🚀 Відправляю PATCH на бекенд...');
       const res = await fetch(url, {
         method: 'PATCH',
         headers: {
@@ -669,25 +657,13 @@
         credentials: 'same-origin'
       });
 
-      console.log('📥 Відповідь сервера:', res.status, res.statusText);
-
       const ctype = res.headers.get('content-type') || '';
-      console.log('📥 Content-Type:', ctype);
-
-      if (res.redirected || ctype.startsWith('text/html')) {
-        throw new Error('Отримав redirect або HTML замість JSON');
-      }
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || ('HTTP ' + res.status));
-      }
-
-      const json = await res.json();
-      console.log('✅ Сервер повернув JSON:', json);
+      if (res.redirected || ctype.startsWith('text/html')) throw new Error('redirect/html');
+      if (!res.ok) throw new Error(await res.text() || ('HTTP ' + res.status));
+      await res.json().catch(()=>({}));
 
     }catch(err){
-      console.error('❌ Status update failed:', err);
-      applyStatus(pill, prev);
+      applyStatus(pill, prev); // rollback
       alert('Не вдалося оновити статус');
     }
   });
