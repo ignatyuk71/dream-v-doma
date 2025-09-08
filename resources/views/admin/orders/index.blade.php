@@ -133,17 +133,17 @@ $placeholder = '/assets/img/placeholder.svg';
 
   <td>
   @php
-  $imagePath = $firstItem?->image_url;
-  $exists = $imagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($imagePath);
-  $src = $exists ? $img($imagePath) : $placeholder;
+    $imagePath = $firstItem?->image_url;
+    $exists = $imagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($imagePath);
+    $src = $exists ? $img($imagePath) : $placeholder;
 @endphp
 
 <div class="d-flex align-items-center gap-2">
-  <img src="{{ $src }}" alt="" width="74" height="74"
-       style="object-fit:cover;border-radius:10px;">
-  <div class="small">
-    <div><b>Товарів:</b> {{ $qtySum }}</div>
-  </div>
+    <img src="{{ $src }}" alt="" width="74" height="74"
+         style="object-fit:cover;border-radius:10px;">
+    <div class="small">
+        <div><b>Товарів:</b> {{ $qtySum }}</div>
+    </div>
 </div>
 
 </td>
