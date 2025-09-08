@@ -23,7 +23,11 @@
               <!-- Product -->
               <td>
                 <div class="d-flex align-items-center">
-                  <img :src="product.image" class="avatar me-3"/>
+                  <img
+                    :src="product.image || placeholder"
+                    class="avatar me-3"
+                    @error="onImgError"
+                  />
                   <div class="min-w-0">
                     <div class="fw-medium text-truncate">{{ product.name }}</div>
                     <small class="text-muted text-truncate">{{ product.brand }}</small>
@@ -91,7 +95,6 @@
   </div>
 </template>
 
-
 <script>
 import axios from 'axios'
 
@@ -102,13 +105,14 @@ export default {
   },
   data() {
     return {
-      menuOpen: null
+      menuOpen: null,
+      placeholder: 'https://dream-v-doma.site/assets/img/placeholder.svg'
     }
   },
-  mounted() {
-    console.log('📦 Products received:', this.products)
-  },
   methods: {
+    onImgError(e) {
+      e.target.src = this.placeholder
+    },
     statusLabel(status) {
       if (status == 1) return 'Опубліковано'
       if (status == 2) return 'Заплановано'
@@ -125,22 +129,14 @@ export default {
       const oldStatus = product.status
       product.status = oldStatus == 1 ? 0 : 1
 
-      console.log('🔄 toggleStatus → sending:', {
-        id: product.id,
-        newStatus: product.status
-      })
-
       try {
-        const response = await axios.post(`/api/products/${product.id}/toggle-status`, { status: product.status })
-        console.log('✅ toggleStatus → response:', response.data)
+        await axios.post(`/api/products/${product.id}/toggle-status`, { status: product.status })
       } catch (error) {
         product.status = oldStatus
-        console.error('❌ toggleStatus → error:', error)
         alert('Помилка збереження статусу')
       }
     },
     openMenu(idx) {
-      console.log('📂 openMenu idx:', idx)
       if (this.menuOpen === idx) {
         this.closeMenu()
       } else {
@@ -149,56 +145,42 @@ export default {
       }
     },
     closeMenu() {
-      console.log('📂 closeMenu')
       this.menuOpen = null
       document.removeEventListener('click', this.handleOutsideClick)
     },
     handleOutsideClick(e) {
-      console.log('👆 handleOutsideClick target:', e.target)
       if (!e.target.closest('.dropdown-menu') && !e.target.closest('.dots-menu')) {
         this.closeMenu()
       }
     },
     async deleteProduct(product) {
       this.closeMenu()
-      console.log('🗑 deleteProduct:', product)
 
       if (!confirm('Підтвердіть видалення товару. Операція незворотна і не може бути скасована.')) {
-        console.log('❌ deleteProduct → cancelled by user')
         return
       }
 
       try {
-        const response = await axios.delete(`/api/products/${product.id}`)
-        console.log('✅ deleteProduct → response:', response.data)
+        await axios.delete(`/api/products/${product.id}`)
         alert('Товар успішно видалено')
         window.location.reload()
       } catch (error) {
-        console.error('❌ deleteProduct → error:', error)
         alert('Помилка видалення товару')
       }
     },
     download(product) {
       this.closeMenu()
-      console.log('⬇️ downloadProduct:', product)
       alert(`Download product #${product.id}`)
     },
     duplicate(product) {
       this.closeMenu()
-      console.log('📑 duplicateProduct:', product)
       this.$emit('duplicate', product)
     }
   }
 }
 </script>
 
-
-
-
-  
 <style scoped>
-
-
 .toggle-switch {
   width: 38px;
   height: 20px;
@@ -218,64 +200,48 @@ export default {
   left: 2px;
   transition: all 0.3s ease;
 }
-
 .toggle-switch.active::before {
   transform: translateX(18px);
 }
-  
-Ї.table th {
-    color: #6b7280;
-    font-weight: 600;
-    text-transform: uppercase;
-    background: #f9fafb;
-  }
-
-  
-  /* Аватар */
-  .avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
-    object-fit: cover;
-    margin-right: 12px;
-  }
-
-  
-  /* Статус */
-  .status-badge {
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    display: inline-block;
-    white-space: nowrap;
-  }
-  
-  .status-publish {
-    background-color: #e9fdf0;
-    color: #22c55e;
-  }
-  
-  .status-scheduled {
-    background-color: #fff7ed;
-    color: #f59e0b;
-  }
-  
-  .status-inactive {
-    background-color: #ffecec;
-    color: #ef4444;
-  }
-  
-
-  
-  .toggle-switch.active {
-    background-color: #6366f1;
-  }
-  
-  .toggle-switch.active::before {
-    transform: translateX(18px);
-  }
-  
-  
-  </style>
-  
+.table th {
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: #f9fafb;
+}
+/* Аватар */
+.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-right: 12px;
+}
+/* Статус */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-block;
+  white-space: nowrap;
+}
+.status-publish {
+  background-color: #e9fdf0;
+  color: #22c55e;
+}
+.status-scheduled {
+  background-color: #fff7ed;
+  color: #f59e0b;
+}
+.status-inactive {
+  background-color: #ffecec;
+  color: #ef4444;
+}
+.toggle-switch.active {
+  background-color: #6366f1;
+}
+.toggle-switch.active::before {
+  transform: translateX(18px);
+}
+</style>
