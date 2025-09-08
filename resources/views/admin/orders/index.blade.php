@@ -442,12 +442,13 @@ $placeholder = 'https://dream-v-doma.site/assets/img/placeholder.svg';
                           <div class="d-flex align-items-center py-2 border-bottom">
                             <!-- thumb -->
                             <div class="flex-shrink-0 me-3">
-                              @if($it->image_url)
-                                <img src="{{ $img($it->image_url) }}" alt=""
-                                     class="rounded-2 border" style="width:60px;height:60px;object-fit:cover;">
-                              @else
-                                <div class="rounded-2 border bg-light" style="width:60px;height:60px;"></div>
-                              @endif
+                            @if($it->image_url)
+                              <img src="{{ $img($it->image_url) }}"
+                                  onerror="this.onerror=null;this.src='{{ $placeholder }}';"
+                                  alt="" class="rounded-2 border" style="width:60px;height:60px;object-fit:cover;">
+                            @else
+                              <img src="{{ $placeholder }}" alt="" class="rounded-2 border" style="width:60px;height:60px;object-fit:cover;">
+                            @endif
                             </div>
 
                             <!-- center -->
