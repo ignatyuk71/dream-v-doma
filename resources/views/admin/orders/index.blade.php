@@ -45,8 +45,6 @@
     ];
   }
 
-
-  $imgUrl = $firstItem?->image_url ? $img($firstItem->image_url) : $placeholder;
 @endphp
 
 <div class="container-xxl flex-grow-1 container-p-y">
@@ -134,14 +132,21 @@
   </td>
 
   <td>
-    <div class="d-flex align-items-center gap-2">
-      <img src="{{ $imgUrl }}"
-          onerror="this.onerror=null;this.src='{{ $placeholder }}';"
-          alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
-      <div class="small">
-        <div><b>Товарів:</b> {{ $qtySum }}</div>
-      </div>
+  @php
+    use Illuminate\Support\Facades\Storage;
+
+    $imagePath = $firstItem?->image_url;
+    $exists = $imagePath && Storage::disk('public')->exists($imagePath);
+    $src = $exists ? $img($imagePath) : $placeholder;
+  @endphp
+
+  <div class="d-flex align-items-center gap-2">
+    <img src="{{ $src }}" alt="" width="74" height="74"
+        style="object-fit:cover;border-radius:10px;">
+    <div class="small">
+      <div><b>Товарів:</b> {{ $qtySum }}</div>
     </div>
+  </div>
   </td>
 
   <td>
