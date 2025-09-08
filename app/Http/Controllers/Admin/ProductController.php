@@ -735,15 +735,21 @@ class ProductController extends Controller
         return $savedImages;
     }
 
-    /**
+   /**
      * Зберігає url зображень продукту у таблицю product_images
      */
     private function saveProductImagesToDB($productId, array $images)
     {
         foreach ($images as $img) {
+            // Гарантуємо, що url починається з /storage/
+            $url = $img['url'];
+            if (!str_starts_with($url, '/storage/')) {
+                $url = '/storage/' . ltrim($url, '/');
+            }
+
             \App\Models\ProductImage::create([
                 'product_id' => $productId,
-                'url'        => $img['url'],
+                'url'        => $url,
                 'is_main'    => isset($img['is_main']) ? (int)$img['is_main'] : 0,
                 'position'   => isset($img['position']) ? (int)$img['position'] : 0,
             ]);
