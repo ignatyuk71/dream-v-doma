@@ -131,13 +131,18 @@ $placeholder = 'https://dream-v-doma.site/assets/img/placeholder.svg';
   </td>
 
   <td>
-  <div class="d-flex align-items-center gap-2">
-     @if($firstItem?->image_url) 
-     <img src="{{ $img($firstItem->image_url) }}" alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;"> 
-     @else <div class="thumb"></div> 
-     @endif <div class="small"> 
-      <div><b>Товарів:</b> {{ $qtySum }}</div> 
-    </div> </div>
+    <div class="d-flex align-items-center gap-2">
+    @if($firstItem?->image_url)
+      <img src="{{ $img($firstItem->image_url) }}"
+          onerror="this.onerror=null;this.src='{{ $placeholder }}';"
+          alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
+    @else
+      <img src="{{ $placeholder }}" alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
+    @endif
+      <div class="small">
+        <div><b>Товарів:</b> {{ $qtySum }}</div>
+      </div>
+    </div>
   </td>
 
   <td>
