@@ -237,7 +237,7 @@ class ProductController extends Controller
     
             ProductImage::create([
                 'product_id' => $product->id,
-                'url' => "{$folder}/{$filename}",
+                'url' => "/storage/{$folder}/{$filename}",
                 'position' => (int)$position,
                 'is_main' => (bool)$isMain,
             ]);
