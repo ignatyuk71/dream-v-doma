@@ -133,10 +133,8 @@ $placeholder = '/assets/img/placeholder.svg';
 
   <td>
   @php
-  use Illuminate\Support\Facades\Storage;
-
   $imagePath = $firstItem?->image_url;
-  $exists = $imagePath && Storage::disk('public')->exists($imagePath);
+  $exists = $imagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($imagePath);
   $src = $exists ? $img($imagePath) : $placeholder;
 @endphp
 
@@ -147,6 +145,7 @@ $placeholder = '/assets/img/placeholder.svg';
     <div><b>Товарів:</b> {{ $qtySum }}</div>
   </div>
 </div>
+
 </td>
 
 
