@@ -108,38 +108,68 @@ class ProductController extends Controller
     {
         $form = json_decode($request->input('form'), true);
     
+        \Log::info('🔹 Update Product START', [
+            'product_id' => $product->id,
+            'request_all' => $request->all(),
+            'form' => $form,
+        ]);
+    
         DB::beginTransaction();
     
         try {
-            // Оновлення основних даних продукту
+            // Основні дані
             $this->updateProduct($product, $form);
+            \Log::info('✅ updateProduct ok', ['product_id' => $product->id]);
     
-            // Оновлення перекладів
+            // Переклади
             $this->updateProductTranslations($product, $form);
+            \Log::info('✅ updateProductTranslations ok');
     
-            // Оновлення категорій, варіантів, характеристик, кольорів
+            // Категорії
             $this->updateCategories($product, $form);
-            $this->updateVariants($product, $form['variants'] ?? []);
-            $this->updateAttributes($product, $form['attributes'] ?? []);
-            $this->updateColors($product, $form['colors'] ?? []);
+            \Log::info('✅ updateCategories ok');
     
-            // Оновлення опису
+            // Варіанти
+            $this->updateVariants($product, $form['variants'] ?? []);
+            \Log::info('✅ updateVariants ok');
+    
+            // Характеристики
+            $this->updateAttributes($product, $form['attributes'] ?? []);
+            \Log::info('✅ updateAttributes ok');
+    
+            // Кольори
+            $this->updateColors($product, $form['colors'] ?? []);
+            \Log::info('✅ updateColors ok');
+    
+            // Опис
             if (isset($form['description'])) {
                 $this->updateProductDescription($product, $form['description']);
+                \Log::info('✅ updateProductDescription ok');
             }
     
-            // Оновлення зображень (передаємо весь Request, бо там є файли і метадані)
+            // Зображення
             $this->updateProductImages($product, $request);
+            \Log::info('✅ updateProductImages ok');
     
             DB::commit();
     
+            \Log::info('🎉 Product update success', ['product_id' => $product->id]);
+    
             return response()->json(['success' => true, 'message' => 'Продукт оновлено']);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
+    
+            \Log::error('❌ Update product FAILED', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'form' => $form,
+            ]);
     
             return response()->json(['error' => 'Помилка оновлення: ' . $e->getMessage()], 500);
         }
     }
+    
     
 
     public function updateProductImages(Product $product, Request $request)
