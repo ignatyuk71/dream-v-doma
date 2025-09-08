@@ -24,9 +24,7 @@ import Sortable from 'sortablejs'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
-  /** опціонально: підкинь id продукту явно, інакше візьму з URL */
   productId: { type: [Number, String], default: null },
-  /** на випадок іншої структури */
   imagesFolder: { type: String, default: 'products' },
 })
 
@@ -47,58 +45,28 @@ const productIdFromUrl = computed(() => {
   return m ? Number(m[1]) : null
 })
 
-function stripPublic(p) {
-  return String(p).replace(/^public\//, '')
-}
-function joinPath(...parts) {
-  return '/' + parts
-    .map(p => String(p || '').replace(/^\/+|\/+$/g, ''))
-    .filter(Boolean)
-    .join('/')
-}
-
+/**
+ * Повертає коректний URL для перегляду
+ */
 function viewUrl(img) {
-  let u =
-    img?.url ||
-    img?.full_url ||
-    img?.path ||
-    img?.storage_path ||
-    img?.image ||
-    img?.filepath ||
-    img?.filename ||
-    img?.name
+  let u = img?.full_url || img?.url
 
-  if (!u) return ''
-
-  u = String(u)
+  if (!u) return '/images/placeholder.png'
 
   // blob/data/http(s)
-  if (u.startsWith('blob:') || u.startsWith('data:') || /^https?:\/\//i.test(u)) return u
-  // абсолютний від кореня
-  if (u.startsWith('/')) return u
+  if (u.startsWith('blob:') || u.startsWith('data:') || /^https?:\/\//i.test(u)) {
+    return u
+  }
 
-  // вже зі storage
-  if (u.startsWith('storage/')) return joinPath(u)
-  const storageIdx = u.indexOf('/storage/')
-  if (storageIdx !== -1) return u.slice(storageIdx)
+  // якщо в БД збережено як "products/91/file.jpg"
+  if (!u.startsWith('/')) {
+    return '/storage/' + u
+  }
 
-  // прибрати public/
-  u = stripPublic(u)
-
-  // якщо у — з підкаталогом (наприклад 'products/79/img.png')
-  if (u.includes('/')) return joinPath('storage', u)
-
-  // якщо лише ім'я файлу — будуємо шлях: /storage/products/{id}/{filename}
-  const pid = productIdFromUrl.value
-  if (pid) return joinPath('storage', props.imagesFolder, pid, u)
-
-  // фолбек (без id): спробуємо /storage/{filename}
-  console.warn('[images] filename without productId — додай prop :product-id або збережи шлях із каталогом', u)
-  return joinPath('storage', u)
+  return u
 }
 
 function onImgError(e) {
-  // Плейсхолдер — заміни під свій
   e.target.src = '/images/placeholder.png'
 }
 
@@ -116,7 +84,7 @@ function handleFilesChange(event) {
     images.value.push({
       id: Date.now() + Math.random(),
       file,
-      url: URL.createObjectURL(file), // preview
+      url: URL.createObjectURL(file),
       position: images.value.length,
       is_main: false
     })
@@ -152,6 +120,7 @@ onMounted(() => {
   })
 })
 </script>
+
 
 <style scoped>
 .image-item {
