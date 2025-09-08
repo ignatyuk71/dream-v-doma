@@ -5,7 +5,7 @@
 @section('content')
 @php
 
-$placeholder = asset('assets/img/placeholder.svg');
+
 
   // ===== helpers =====
   $statusLabels = \App\Enums\OrderStatus::labels();
@@ -44,6 +44,9 @@ $placeholder = asset('assets/img/placeholder.svg');
       'class' => $badge($val),
     ];
   }
+
+
+  $imgUrl = $firstItem?->image_url ? $img($firstItem->image_url) : $placeholder;
 @endphp
 
 <div class="container-xxl flex-grow-1 container-p-y">
@@ -131,20 +134,14 @@ $placeholder = asset('assets/img/placeholder.svg');
   </td>
 
   <td>
-  <div class="d-flex align-items-center gap-2">
-  @if(!empty($firstItem?->image_url))
-    <img src="{{ $img($firstItem->image_url) }}"
-         onerror="this.onerror=null;this.src='{{ $placeholder }}';"
-         alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
-  @else
-    <img src="{{ $placeholder }}" 
-         alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
-  @endif
-
-  <div class="small">
-    <div><b>Товарів:</b> {{ $qtySum }}</div>
-  </div>
-</div>
+    <div class="d-flex align-items-center gap-2">
+      <img src="{{ $imgUrl }}"
+          onerror="this.onerror=null;this.src='{{ $placeholder }}';"
+          alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
+      <div class="small">
+        <div><b>Товарів:</b> {{ $qtySum }}</div>
+      </div>
+    </div>
   </td>
 
   <td>
