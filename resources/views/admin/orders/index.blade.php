@@ -132,15 +132,7 @@ $placeholder = '/assets/img/placeholder.svg';
   </td>
 
   <td>
-  <div class="d-flex align-items-center gap-2">
-    <img src="{{ $img($firstItem?->image_url) }}"
-         onerror="this.onerror=null;this.src='{{ $placeholder }}';"
-         alt="" width="74" height="74"
-         style="object-fit:cover;border-radius:10px;">
-    <div class="small">
-        <div><b>Товарів:</b> {{ $qtySum }}</div>
-    </div>
-</div>
+
 
 
 </td>
