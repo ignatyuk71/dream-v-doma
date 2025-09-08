@@ -5,7 +5,7 @@
 @section('content')
 @php
 
-
+$placeholder = '/assets/img/placeholder.svg';
 
   // ===== helpers =====
   $statusLabels = \App\Enums\OrderStatus::labels();
@@ -133,18 +133,19 @@
 
   <td>
   @php
-  $imagePath = $firstItem?->image_url;
-  $exists = $imagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($imagePath);
-  $src = $exists ? $img($imagePath) : $placeholder;
+  $imgUrl = $firstItem?->image_url ? $img($firstItem->image_url) : $placeholder;
 @endphp
 
 <div class="d-flex align-items-center gap-2">
-  <img src="{{ $src }}" alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
+  <img src="{{ $imgUrl }}"
+       onerror="this.onerror=null;this.src='{{ $placeholder }}';"
+       alt="" width="74" height="74" style="object-fit:cover;border-radius:10px;">
   <div class="small">
     <div><b>Товарів:</b> {{ $qtySum }}</div>
   </div>
 </div>
-  </td>
+</td>
+
 
   <td>
     <div class="buyer-name">{{ $o->customer->name ?? '—' }}</div>
