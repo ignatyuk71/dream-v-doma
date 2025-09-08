@@ -479,108 +479,104 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. Отримуємо formData у форматі JSON
         $data = $request->input('form');
         $parsed = json_decode($data, true);
     
-        // 2. Валідація даних (винесе errors у разі фейлу)
+        // ✅ Валідація
         if ($validator = $this->validateProductData($request, $parsed)) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
     
-        // 3. Транзакція — всі дії збереження атомарно
         DB::beginTransaction();
         try {
-            // 4. Створення основного запису продукту
-            $product = \App\Models\Product::create([
-                'sku' => $parsed['sku'] ?? null,
-                'price' => $parsed['price'] ?? null,
+            // ✅ Створення продукту
+            $product = Product::create([
+                'sku'               => $parsed['sku'] ?? null,
+                'price'             => $parsed['price'] ?? null,
                 'quantity_in_stock' => $parsed['quantity_in_stock'] ?? null,
-                'status' => $parsed['status'] ?? 1,
-                'meta_description' => $parsed['meta_description'] ?? null,
-                'size_guide_id' => $parsed['size_guide_id'] ?? null,
-                'is_popular' => $parsed['is_popular'] ?? false,
+                'status'            => $parsed['status'] ?? 1,
+                'size_guide_id'     => $parsed['size_guide_id'] ?? null,
+                'is_popular'        => $parsed['is_popular'] ?? false,
             ]);
-            $productId = $product->id;
-
-            // 5. Варіанти товару (наприклад, розміри/кольори як комбінації)
-            if (isset($parsed['variants']) && is_array($parsed['variants']) && count($parsed['variants'])) {
-                $this->saveProductVariants($productId, $parsed['variants']);
-            }
-
-            // 6. Категорії (багато до багатьох)
-            $this->syncProductCategories($product, $parsed['categories'] ?? []);
-
-            // 7. Опис із картинками (зберігаємо base64-картинки в /storage/)
-            if (isset($parsed['description']) && is_array($parsed['description'])) {
-                $parsed['description'] = $this->handleDescriptionImages($parsed['description'], $productId);
-            }
-
-            // 8. Зберігаємо переклади продукту для двох мов
-            $locales = ['uk', 'ru'];
-            foreach ($locales as $locale) {
-                $name = $parsed["name_{$locale}"] ?? '';
-                $slug = $parsed["slug_{$locale}"] ?? '';
-                if (!$slug && $name) {
-                    $slug = $this->generateUniqueSlug($name, $productId, $locale);
-                }
-                $description = $parsed["description"][$locale] ?? [];
-                $meta_title = $parsed["meta_title_{$locale}"] ?? null;
-                $meta_description = $parsed["meta_description_{$locale}"] ?? null;
     
-                DB::table('product_translations')->updateOrInsert(
-                    ['product_id' => $productId, 'locale' => $locale],
-                    [
-                        'name' => $name,
-                        'slug' => $slug,
-                        'description' => json_encode($description),
-                        'meta_title' => $meta_title,
-                        'meta_description' => $meta_description,
-                        'updated_at' => now(),
-                        'created_at' => now(),
-                    ]
+            // ✅ Варіанти
+            if (!empty($parsed['variants'])) {
+                $this->saveProductVariants($product->id, $parsed['variants']);
+            }
+    
+            // ✅ Категорії
+            $this->syncProductCategories($product, $parsed['categories'] ?? []);
+    
+            // ✅ Опис
+            if (!empty($parsed['description'])) {
+                $parsed['description'] = $this->handleDescriptionImages($parsed['description'], $product->id);
+            }
+    
+            // ✅ Переклади (уніфіковано з update)
+            foreach (['uk', 'ru'] as $locale) {
+                $fields = [
+                    'name'             => $parsed["name_{$locale}"] ?? null,
+                    'slug'             => $parsed["slug_{$locale}"] ?? null,
+                    'meta_title'       => $parsed["meta_title_{$locale}"] ?? null,
+                    'meta_description' => $parsed["meta_description_{$locale}"] ?? null,
+                    'description'      => isset($parsed['description'][$locale])
+                                            ? json_encode($parsed['description'][$locale], JSON_UNESCAPED_UNICODE)
+                                            : null,
+                ];
+    
+                if (empty($fields['slug']) && !empty($fields['name'])) {
+                    $fields['slug'] = $this->generateUniqueSlug($fields['name'], $product->id, $locale);
+                }
+    
+                $product->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    array_filter($fields)
                 );
             }
-
-            // 9. Кольори (base64 збереження + БД)
-            if (isset($parsed['colors']) && is_array($parsed['colors'])) {
-                $this->handleColorImages($parsed['colors'], $productId); // base64 -> storage
-                $this->saveProductColors($productId, $parsed['colors']); // дані у БД
+    
+            // ✅ Кольори
+            if (!empty($parsed['colors'])) {
+                $this->handleColorImages($parsed['colors'], $product->id);
+                $this->saveProductColors($product->id, $parsed['colors']);
             }
-
-            // 10. Галерея товару (upload фоток + БД)
+    
+            // ✅ Галерея
             $imagePaths = [];
             if ($request->hasFile('images')) {
                 $imagePaths = $this->saveProductImages(
-                    $productId,
+                    $product->id,
                     $request->file('images'),
                     $request->input('images_meta', []),
                     $parsed['name_uk'] ?? 'dream-v-doma'
                 );
             }
-            $this->saveProductImagesToDB($productId, $imagePaths);
-
-            // 11. Зберігаємо характеристики товару
-            if (isset($parsed['attributes']) && is_array($parsed['attributes'])) {
+            $this->saveProductImagesToDB($product->id, $imagePaths);
+    
+            // ✅ Характеристики
+            if (!empty($parsed['attributes'])) {
                 $this->saveProductAttributes($product->id, $parsed['attributes']);
             }
     
-            // 12. Все добре — фіксуємо зміни
             DB::commit();
+    
             return response()->json([
-                'success' => true,
-                'product_id' => $productId,
-                'received_form' => $parsed,
-                'images' => $imagePaths,
+                'success'     => true,
+                'product_id'  => $product->id,
+                'images'      => $imagePaths,
             ]);
-        } catch (\Exception $e) {
-            // В разі помилки — відкочуємо всі зміни
+        } catch (\Throwable $e) {
             DB::rollBack();
+            \Log::error('❌ Store product FAILED', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'form'  => $parsed,
+            ]);
             return response()->json([
                 'error' => 'Сталася помилка при збереженні продукту: ' . $e->getMessage()
             ], 500);
         }
     }
+    
 
     /**
      * Зберігає base64-зображення для description у /images/description/{productId}/
