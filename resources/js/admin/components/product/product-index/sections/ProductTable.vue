@@ -105,6 +105,9 @@ export default {
       menuOpen: null
     }
   },
+  mounted() {
+    console.log('📦 Products received:', this.products)
+  },
   methods: {
     statusLabel(status) {
       if (status == 1) return 'Опубліковано'
@@ -122,14 +125,22 @@ export default {
       const oldStatus = product.status
       product.status = oldStatus == 1 ? 0 : 1
 
+      console.log('🔄 toggleStatus → sending:', {
+        id: product.id,
+        newStatus: product.status
+      })
+
       try {
-        await axios.post(`/api/products/${product.id}/toggle-status`, { status: product.status })
+        const response = await axios.post(`/api/products/${product.id}/toggle-status`, { status: product.status })
+        console.log('✅ toggleStatus → response:', response.data)
       } catch (error) {
         product.status = oldStatus
+        console.error('❌ toggleStatus → error:', error)
         alert('Помилка збереження статусу')
       }
     },
     openMenu(idx) {
+      console.log('📂 openMenu idx:', idx)
       if (this.menuOpen === idx) {
         this.closeMenu()
       } else {
@@ -138,41 +149,48 @@ export default {
       }
     },
     closeMenu() {
+      console.log('📂 closeMenu')
       this.menuOpen = null
       document.removeEventListener('click', this.handleOutsideClick)
     },
     handleOutsideClick(e) {
+      console.log('👆 handleOutsideClick target:', e.target)
       if (!e.target.closest('.dropdown-menu') && !e.target.closest('.dots-menu')) {
         this.closeMenu()
       }
     },
     async deleteProduct(product) {
-    this.closeMenu()
+      this.closeMenu()
+      console.log('🗑 deleteProduct:', product)
 
-    if (!confirm('Підтвердіть видалення товару. Операція незворотна і не може бути скасована.')) {
-      return
-    }
+      if (!confirm('Підтвердіть видалення товару. Операція незворотна і не може бути скасована.')) {
+        console.log('❌ deleteProduct → cancelled by user')
+        return
+      }
 
-    try {
-      await axios.delete(`/api/products/${product.id}`)
-      alert('Товар успішно видалено')
-      window.location.reload()
-    } catch (error) {
-      alert('Помилка видалення товару')
-    }
-  },
+      try {
+        const response = await axios.delete(`/api/products/${product.id}`)
+        console.log('✅ deleteProduct → response:', response.data)
+        alert('Товар успішно видалено')
+        window.location.reload()
+      } catch (error) {
+        console.error('❌ deleteProduct → error:', error)
+        alert('Помилка видалення товару')
+      }
+    },
     download(product) {
       this.closeMenu()
+      console.log('⬇️ downloadProduct:', product)
       alert(`Download product #${product.id}`)
     },
     duplicate(product) {
       this.closeMenu()
+      console.log('📑 duplicateProduct:', product)
       this.$emit('duplicate', product)
     }
   }
 }
 </script>
-
 
 
 
