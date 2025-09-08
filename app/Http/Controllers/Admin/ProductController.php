@@ -141,11 +141,11 @@ class ProductController extends Controller
             $this->updateColors($product, $form['colors'] ?? []);
             \Log::info('✅ updateColors ok');
     
-            // Опис
+            /* Опис
             if (isset($form['description'])) {
                 $this->updateProductDescription($product, $form['description']);
                 \Log::info('✅ updateProductDescription ok');
-            }
+            }*/
     
             // Зображення
             $this->updateProductImages($product, $request);
