@@ -4,42 +4,45 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use App\Enums\OrderStatus;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
+    /**
+     * Список замовлень + фільтри + легка статистика.
+     */
     public function index(Request $request)
     {
-        // Статуси для селекторів/бейджів
         $statuses = OrderStatus::labels();
 
-        // Статистика
-        $raw = Order::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c','status');
+        // Легка статистика по сторінці (за наявним фільтром) або глобальна — за бажанням
+        $raw = Order::selectRaw('status, COUNT(*) cnt')->groupBy('status')->pluck('cnt', 'status');
         $stats = [
-            'pending'   => (int) ($raw['pending']   ?? 0),
-            'completed' => (int) ($raw['delivered'] ?? 0), // Completed == delivered
-            'refunded'  => (int) ($raw['refunded']  ?? 0),
-            'failed'    => (int) ($raw['cancelled'] ?? 0), // Failed == cancelled
+            'pending'   => (int)($raw['pending']   ?? 0),
+            'delivered' => (int)($raw['delivered'] ?? 0),
+            'refunded'  => (int)($raw['refunded']  ?? 0),
+            'cancelled' => (int)($raw['cancelled'] ?? 0),
         ];
 
-        // Список замовлень
         $orders = Order::with(['items', 'delivery', 'customer'])
             ->when($request->filled('q'), function ($q) use ($request) {
-                $term = trim($request->get('q'));
+                $term = trim($request->string('q'));
                 $q->where(function ($qq) use ($term) {
                     $qq->where('order_number', 'like', "%{$term}%")
                        ->orWhereHas('customer', function ($qc) use ($term) {
-                           $qc->where('name','like',"%{$term}%")
-                              ->orWhere('phone','like',"%{$term}%")
-                              ->orWhere('email','like',"%{$term}%");
+                           $qc->where('name',  'like', "%{$term}%")
+                              ->orWhere('phone','like', "%{$term}%")
+                              ->orWhere('email','like', "%{$term}%");
                        });
                 });
             })
-            ->when($request->filled('status'), fn($q) => $q->where('status', $request->get('status')))
-            ->when($request->filled('from'), fn($q) => $q->whereDate('created_at', '>=', request('from')))
-            ->when($request->filled('to'),   fn($q) => $q->whereDate('created_at', '<=', request('to')))
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('from'),   fn($q) => $q->whereDate('created_at', '>=', $request->date('from')))
+            ->when($request->filled('to'),     fn($q) => $q->whereDate('created_at', '<=', $request->date('to')))
             ->orderByDesc('created_at')
             ->paginate(25)
             ->withQueryString();
@@ -47,6 +50,9 @@ class OrderController extends Controller
         return view('admin.orders.index', compact('orders', 'statuses', 'stats'));
     }
 
+    /**
+     * Деталі замовлення.
+     */
     public function show(Order $order)
     {
         $order->load(['items', 'delivery', 'customer']);
@@ -56,28 +62,28 @@ class OrderController extends Controller
     }
 
     /**
-     * Оновлення через звичайну форму (HTML)
+     * Оновлення (через звичайну HTML-форму).
      */
     public function update(Request $request, Order $order)
     {
-        $request->validate([
-            'status' => ['required', Rule::in(array_column(OrderStatus::cases(), 'value'))],
+        $validated = $request->validate([
+            'status' => ['required', Rule::enum(OrderStatus::class)],
             'notes'  => ['nullable', 'string'],
         ]);
 
         $order->update([
-            'status' => $request->string('status'),
-            'notes'  => $request->string('notes'),
+            'status' => OrderStatus::from($validated['status']),
+            'notes'  => $validated['notes'] ?? null,
         ]);
 
         return back()->with('success', 'Статус замовлення оновлено');
     }
 
     /**
-     * Оновлення статусу через AJAX без перезавантаження (JSON)
-     * Маршрут: PATCH /admin/orders/{order}/status  -> name: admin.orders.status.update
+     * PATCH /admin/orders/{order}/status (AJAX)
+     * Оновлення статусу без перезавантаження.
      */
-    public function updateStatus(Order $order, Request $request)
+    public function updateStatus(Request $request, Order $order)
     {
         $data = $request->validate([
             'status' => ['required', Rule::enum(OrderStatus::class)],
@@ -91,5 +97,44 @@ class OrderController extends Controller
             'status' => $order->status->value,
             'label'  => OrderStatus::labels()[$order->status->value] ?? $order->status->value,
         ]);
+    }
+
+    /**
+     * DELETE /admin/orders/{order}
+     * Видалення замовлення з дочірніми записами (items, delivery) в транзакції.
+     */
+    public function destroy(Request $request, Order $order)
+    {
+        try {
+            DB::transaction(function () use ($order) {
+                // дочірні
+                $order->items()->delete();
+                $order->delivery()->delete();
+                // якщо є інші звʼязки — додай тут:
+                // $order->payments()->delete();
+                // $order->history()->delete();
+                // ...
+
+                // саме замовлення
+                $order->delete();
+            });
+
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => true]);
+            }
+
+            return back()->with('success', 'Замовлення видалено');
+        } catch (\Throwable $e) {
+            Log::error('Order delete failed', [
+                'order_id' => $order->id,
+                'error'    => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'message' => 'Помилка видалення'], 500);
+            }
+
+            return back()->with('error', 'Не вдалося видалити замовлення');
+        }
     }
 }

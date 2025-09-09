@@ -202,14 +202,28 @@ $placeholder = '/assets/img/placeholder.svg';
 
   <td class="text-end">
     <div class="actions">
-      <a class="a" href="{{ route('admin.orders.show',$o) }}" title="Відкрити">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M21 14v7h-7"></path></svg>
-      </a>
-      <button class="a js-print" data-id="{{ $o->id }}" title="Друк">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18v4h12v-4"></path><rect x="6" y="12" width="12" height="8"></rect><path d="M20 12v-1a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v1"></path></svg>
-      </button>
+        <!-- Відкрити -->
+        <a class="a" href="{{ route('admin.orders.show', $o) }}" title="Відкрити">
+            <i class="bi bi-box-arrow-up-right text-success"></i>
+        </a>
+
+        <!-- Друк -->
+        <button class="a js-print" data-id="{{ $o->id }}" title="Друк">
+            <i class="bi bi-printer text-primary"></i>
+        </button>
+
+        <!-- Видалити -->
+        <form action="{{ route('admin.orders.destroy', $o) }}" method="POST" class="d-inline"
+              onsubmit="return confirm('Точно видалити замовлення #{{ $o->id }}?')">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="a border-0 bg-transparent" title="Видалити">
+                <i class="bi bi-trash text-danger"></i>
+            </button>
+        </form>
     </div>
-  </td>
+</td>
+
 </tr>
 
             <!-- details -->

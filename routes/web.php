@@ -132,6 +132,8 @@ Route::middleware(['auth'])->group(function () {
 
     // ✅ ОКРЕМИЙ PATCH для оновлення СТАТУСУ (AJAX, без перезавантаження)
     Route::patch('/admin/orders/{order}/status', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('admin.orders.status.update');
+    // ✅ Видалення замовлення
+    Route::delete('/admin/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'destroy'])->name('admin.orders.destroy');
 });
 
 // 🔑 Аутентифікація
