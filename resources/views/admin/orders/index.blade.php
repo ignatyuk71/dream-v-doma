@@ -48,6 +48,62 @@ $placeholder = '/assets/img/placeholder.svg';
 @endphp
 
 <div class="container-xxl flex-grow-1 container-p-y">
+{{-- ===== Filters ===== --}}
+<form method="GET" action="{{ url()->current() }}" class="card mb-3">
+  <div class="card-body py-3">
+    <div class="row g-2 align-items-end">
+
+      {{-- Пошук --}}
+      <div class="col-12 col-md-5">
+        <label class="form-label mb-1">Пошук</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input
+            type="text"
+            name="q"
+            value="{{ request('q') }}"
+            class="form-control"
+            placeholder="Ім’я / телефон / email / № замовлення / артикул"
+          >
+        </div>
+      </div>
+
+      {{-- Статус --}}
+      <div class="col-12 col-md-3">
+        <label class="form-label mb-1">Статус</label>
+        <select name="status" class="form-select">
+          <option value="">— Усі статуси —</option>
+          @foreach($statuses as $val => $label)
+            <option value="{{ $val }}" @selected(request('status')===$val)>{{ $label }}</option>
+          @endforeach
+        </select>
+      </div>
+
+      {{-- Дата від --}}
+      <div class="col-6 col-md-2">
+        <label class="form-label mb-1">З дати</label>
+        <input type="date" name="from" value="{{ request('from') }}" class="form-control">
+      </div>
+
+      {{-- Дата до --}}
+      <div class="col-6 col-md-2">
+        <label class="form-label mb-1">По дату</label>
+        <input type="date" name="to" value="{{ request('to') }}" class="form-control">
+      </div>
+
+      <div class="col-12 d-flex gap-2 justify-content-end mt-2">
+        <a href="{{ url()->current() }}" class="btn btn-light">
+          <i class="bi bi-x-circle"></i> Скинути
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-funnel"></i> Застосувати
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+
   <div id="tpl-orders">
 
     <!-- ===== Toolbar / KPIs ===== -->
