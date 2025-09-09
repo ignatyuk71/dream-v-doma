@@ -17,38 +17,87 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        // Мапа статусів для селекторів/бейджів
         $statuses = OrderStatus::labels();
-
-        // Легка статистика по сторінці (за наявним фільтром) або глобальна — за бажанням
+    
+        // ---- фільтри ----
+        $term = trim((string) $request->input('q', ''));
+        // дозволені значення статусів
+        $allowedStatuses = array_map(fn($c) => $c->value, OrderStatus::cases());
+        // приймаємо і рядок, і масив; нормалізуємо в масив унікальних валідних значень
+        $statusFilter = $request->has('status')
+            ? (array) $request->input('status')
+            : [];
+        $statusFilter = array_values(array_unique(array_filter(
+            array_map('strval', $statusFilter),
+            fn($s) => in_array($s, $allowedStatuses, true)
+        )));
+    
+        // дати (без падіння на кривих значеннях)
+        $from = $request->input('from');
+        $to   = $request->input('to');
+    
+        // ---- статистика (глобальна; можна перевести на фільтровану за потреби) ----
         $raw = Order::selectRaw('status, COUNT(*) cnt')->groupBy('status')->pluck('cnt', 'status');
         $stats = [
-            'pending'   => (int)($raw['pending']   ?? 0),
-            'delivered' => (int)($raw['delivered'] ?? 0),
-            'refunded'  => (int)($raw['refunded']  ?? 0),
-            'cancelled' => (int)($raw['cancelled'] ?? 0),
+            'pending'   => (int) ($raw['pending']   ?? 0),
+            'delivered' => (int) ($raw['delivered'] ?? 0),
+            'refunded'  => (int) ($raw['refunded']  ?? 0),
+            'cancelled' => (int) ($raw['cancelled'] ?? 0),
         ];
-
+    
+        // ---- запит ----
         $orders = Order::with(['items', 'delivery', 'customer'])
-            ->when($request->filled('q'), function ($q) use ($request) {
-                $term = trim($request->string('q'));
-                $q->where(function ($qq) use ($term) {
+            // Пошук
+            ->when($term !== '', function ($q) use ($term) {
+                // нормалізуємо телефон для пошуку по цифрах
+                $digits = preg_replace('/\D+/', '', $term);
+    
+                $q->where(function ($qq) use ($term, $digits) {
                     $qq->where('order_number', 'like', "%{$term}%")
-                       ->orWhereHas('customer', function ($qc) use ($term) {
+                       // покупець
+                       ->orWhereHas('customer', function ($qc) use ($term, $digits) {
                            $qc->where('name',  'like', "%{$term}%")
-                              ->orWhere('phone','like', "%{$term}%")
                               ->orWhere('email','like', "%{$term}%");
+    
+                           if ($digits !== '') {
+                               // шукаємо телефон як підрядок цифр
+                               $qc->orWhereRaw("REGEXP_REPLACE(phone, '[^0-9]', '') LIKE ?", ["%{$digits}%"]);
+                           }
+                       })
+                       // артикул з позицій
+                       ->orWhereHas('items', function ($qi) use ($term) {
+                           $qi->where('variant_sku', 'like', "%{$term}%")
+                              ->orWhere('product_name', 'like', "%{$term}%");
                        });
                 });
             })
-            ->when($request->filled('status'), fn($q) => $q->where('status', $request->string('status')))
-            ->when($request->filled('from'),   fn($q) => $q->whereDate('created_at', '>=', $request->date('from')))
-            ->when($request->filled('to'),     fn($q) => $q->whereDate('created_at', '<=', $request->date('to')))
+            // Мульти-статус
+            ->when(!empty($statusFilter), fn($q) => $q->whereIn('status', $statusFilter))
+            // Дата від
+            ->when($from, function ($q) use ($from) {
+                $q->whereDate('created_at', '>=', $from);
+            })
+            // Дата до
+            ->when($to, function ($q) use ($to) {
+                $q->whereDate('created_at', '<=', $to);
+            })
             ->orderByDesc('created_at')
             ->paginate(25)
             ->withQueryString();
-
-        return view('admin.orders.index', compact('orders', 'statuses', 'stats'));
+    
+        return view('admin.orders.index', [
+            'orders'        => $orders,
+            'statuses'      => $statuses,
+            'stats'         => $stats,
+            // для зручності — віддати назад застосовані фільтри (якщо потрібно у в’ю)
+            'statusFilter'  => $statusFilter,
+            'q'             => $term,
+            'from'          => $from,
+            'to'            => $to,
+        ]);
     }
+    
 
     /**
      * Деталі замовлення.

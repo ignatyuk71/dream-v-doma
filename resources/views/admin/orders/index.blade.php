@@ -4,112 +4,53 @@
 
 @section('content')
 @php
-
 $placeholder = '/assets/img/placeholder.svg';
 
-  // ===== helpers =====
-  $statusLabels = \App\Enums\OrderStatus::labels();
-  $pageSum      = $orders->sum('total_price'); // сума на сторінці
-  $ordersCount  = $orders->count();
-  $avgOrder     = $ordersCount ? round($pageSum / $ordersCount, 2) : 0;
-  $currency     = $orders->first()->currency ?? 'UAH';
+// ===== helpers =====
+$statusLabels = \App\Enums\OrderStatus::labels();
+$pageSum      = $orders->sum('total_price'); // сума на сторінці
+$ordersCount  = $orders->count();
+$avgOrder     = $ordersCount ? round($pageSum / $ordersCount, 2) : 0;
+$currency     = $orders->first()->currency ?? 'UAH';
 
-  $img = function($url) {
-    if (!$url) return null;
-    return (str_starts_with($url,'http://') || str_starts_with($url,'https://') || str_starts_with($url,'//'))
-      ? $url
-      : '/storage/' . ltrim($url,'/');
-  };
-  $money = fn($n, $cur = 'UAH') => number_format((float)$n, 2, '.', ' ') . ' ' . $cur;
+$img = function($url) {
+  if (!$url) return null;
+  return (str_starts_with($url,'http://') || str_starts_with($url,'https://') || str_starts_with($url,'//'))
+    ? $url
+    : '/storage/' . ltrim($url,'/');
+};
+$money = fn($n, $cur = 'UAH') => number_format((float)$n, 2, '.', ' ') . ' ' . $cur;
 
-  // Bootstrap/Vuexy бейджі для статусів — стиль як у прикладі (badge px-2 bg-label-* text-capitalized)
-  $badge = fn($s) => match($s) {
-    'pending'   => 'badge px-2 bg-label-warning text-capitalized',
-    'confirmed' => 'badge px-2 bg-label-info text-capitalized',
-    'processing' => 'badge px-2 bg-label-success text-capitalized',
-    'packed'    => 'badge px-2 bg-label-secondary text-capitalized',
-    'shipped'   => 'badge px-2 bg-label-primary text-capitalized',
-    'delivered' => 'badge px-2 bg-label-success text-capitalized',
-    'cancelled' => 'badge px-2 bg-label-dark text-capitalized',
-    'returned'  => 'badge px-2 bg-label-danger text-capitalized',
-    'refunded'  => 'badge px-2 bg-label-success text-capitalized',
-    default     => 'badge px-2 bg-label-secondary text-capitalized',
-  };
+// Bootstrap/Vuexy бейджі
+$badge = fn($s) => match($s) {
+  'pending'    => 'badge px-2 bg-label-warning text-capitalized',
+  'confirmed'  => 'badge px-2 bg-label-info text-capitalized',
+  'processing' => 'badge px-2 bg-label-success text-capitalized',
+  'packed'     => 'badge px-2 bg-label-secondary text-capitalized',
+  'shipped'    => 'badge px-2 bg-label-primary text-capitalized',
+  'delivered'  => 'badge px-2 bg-label-success text-capitalized',
+  'cancelled'  => 'badge px-2 bg-label-dark text-capitalized',
+  'returned'   => 'badge px-2 bg-label-danger text-capitalized',
+  'refunded'   => 'badge px-2 bg-label-success text-capitalized',
+  default      => 'badge px-2 bg-label-secondary text-capitalized',
+};
 
-  // JSON для JS (optimistic UI), без UPPERCASE
-  $statusMeta = [];
-  foreach ($statusLabels as $val => $label) {
-    $statusMeta[$val] = [
-      'label' => $label,
-      'class' => $badge($val),
-    ];
-  }
-
+$statusMeta = [];
+foreach ($statusLabels as $val => $label) {
+  $statusMeta[$val] = [
+    'label' => $label,
+    'class' => $badge($val),
+  ];
+}
 @endphp
 
 <div class="container-xxl flex-grow-1 container-p-y">
-{{-- ===== Filters ===== --}}
-<form method="GET" action="{{ url()->current() }}" class="card mb-3">
-  <div class="card-body py-3">
-    <div class="row g-2 align-items-end">
-
-      {{-- Пошук --}}
-      <div class="col-12 col-md-5">
-        <label class="form-label mb-1">Пошук</label>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input
-            type="text"
-            name="q"
-            value="{{ request('q') }}"
-            class="form-control"
-            placeholder="Ім’я / телефон / email / № замовлення / артикул"
-          >
-        </div>
-      </div>
-
-      {{-- Статус --}}
-      <div class="col-12 col-md-3">
-        <label class="form-label mb-1">Статус</label>
-        <select name="status" class="form-select">
-          <option value="">— Усі статуси —</option>
-          @foreach($statuses as $val => $label)
-            <option value="{{ $val }}" @selected(request('status')===$val)>{{ $label }}</option>
-          @endforeach
-        </select>
-      </div>
-
-      {{-- Дата від --}}
-      <div class="col-6 col-md-2">
-        <label class="form-label mb-1">З дати</label>
-        <input type="date" name="from" value="{{ request('from') }}" class="form-control">
-      </div>
-
-      {{-- Дата до --}}
-      <div class="col-6 col-md-2">
-        <label class="form-label mb-1">По дату</label>
-        <input type="date" name="to" value="{{ request('to') }}" class="form-control">
-      </div>
-
-      <div class="col-12 d-flex gap-2 justify-content-end mt-2">
-        <a href="{{ url()->current() }}" class="btn btn-light">
-          <i class="bi bi-x-circle"></i> Скинути
-        </a>
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-funnel"></i> Застосувати
-        </button>
-      </div>
-    </div>
-  </div>
-</form>
-
-
   <div id="tpl-orders">
 
     <!-- ===== Toolbar / KPIs ===== -->
     <div class="toolbar">
       <div class="t-chip">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="3" stroke="#16a34a"></rect>
           <path d="M7 12l3 3 7-7" stroke="#16a34a"></path>
         </svg>
@@ -123,13 +64,96 @@ $placeholder = '/assets/img/placeholder.svg';
 
       <div class="spacer"></div>
 
-      <div class="tool" id="bulk-export">
-        Експорт
-      </div>
-      <div class="tool muted" id="bulk-print">
-        Друк
-      </div>
+      <div class="tool" id="bulk-export">Експорт</div>
+      <div class="tool muted" id="bulk-print">Друк</div>
     </div>
+
+    {{-- ===== Filters ===== --}}
+    <form method="GET" action="{{ url()->current() }}" class="card mb-3">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-end">
+
+          {{-- Пошук --}}
+          <div class="col-12 col-md-5">
+            <label class="form-label mb-1">Пошук</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+                     placeholder="Ім’я / телефон / email / № замовлення / артикул">
+            </div>
+          </div>
+
+          {{-- Статуси (мультивибір) --}}
+          @php
+            $selectedStatuses = collect((array)request('status'))
+              ->map(fn($v)=> (string)$v)->unique()->values()->all();
+          @endphp
+          <div class="col-12 col-md-4">
+            <label class="form-label mb-1 d-block">Статуси</label>
+
+            <div class="status-chip-select" data-name="status[]">
+              <button type="button" class="form-control d-flex align-items-center justify-content-between"
+                      data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="chips d-flex flex-wrap gap-2">
+                  @forelse($selectedStatuses as $s)
+                    <span class="badge bg-success d-inline-flex align-items-center gap-2" data-chip="{{ $s }}">
+                      {{ $statusLabels[$s] ?? $s }}
+                      <i class="bi bi-x-lg" data-remove="{{ $s }}" role="button"></i>
+                    </span>
+                  @empty
+                    <span class="text-muted">Усі статуси</span>
+                  @endforelse
+                </span>
+                <i class="bi bi-caret-down-fill ms-auto"></i>
+              </button>
+
+              <div class="dropdown-menu p-2 w-100">
+                <div class="d-flex justify-content-between align-items-center px-1 pb-2">
+                  <strong>Обрати статуси</strong>
+                  <button type="button" class="btn btn-sm btn-link text-decoration-none js-clear-status">Очистити</button>
+                </div>
+                <div class="status-list" style="max-height:220px; overflow:auto;">
+                  @foreach($statusLabels as $val => $label)
+                    <label class="dropdown-item d-flex align-items-center gap-2">
+                      <input type="checkbox" class="form-check-input"
+                             value="{{ $val }}" @checked(in_array($val,$selectedStatuses,true))>
+                      <span>{{ $label }}</span>
+                    </label>
+                  @endforeach
+                </div>
+              </div>
+
+              <div class="hidden-inputs">
+                @foreach($selectedStatuses as $s)
+                  <input type="hidden" name="status[]" value="{{ $s }}">
+                @endforeach
+              </div>
+            </div>
+          </div>
+
+          {{-- Дата від --}}
+          <div class="col-6 col-md-1">
+            <label class="form-label mb-1">З дати</label>
+            <input type="date" name="from" value="{{ request('from') }}" class="form-control">
+          </div>
+
+          {{-- Дата до --}}
+          <div class="col-6 col-md-1">
+            <label class="form-label mb-1">По дату</label>
+            <input type="date" name="to" value="{{ request('to') }}" class="form-control">
+          </div>
+
+          <div class="col-12 d-flex gap-2 justify-content-end mt-2">
+            <a href="{{ url()->current() }}" class="btn btn-light">
+              <i class="bi bi-x-circle"></i> Скинути
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-funnel"></i> Застосувати
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
 
     <!-- ===== Table ===== -->
     <div class="card">
@@ -262,11 +286,6 @@ $placeholder = '/assets/img/placeholder.svg';
         <a class="a" href="{{ route('admin.orders.show', $o) }}" title="Відкрити">
             <i class="bi bi-box-arrow-up-right text-success"></i>
         </a>
-
-        <!-- Друк -->
-        <button class="a js-print" data-id="{{ $o->id }}" title="Друк">
-            <i class="bi bi-printer text-primary"></i>
-        </button>
 
         <!-- Видалити -->
         <form action="{{ route('admin.orders.destroy', $o) }}" method="POST" class="d-inline"
@@ -562,7 +581,6 @@ $placeholder = '/assets/img/placeholder.svg';
         </table>
       </div>
     </div>
-
     <!-- ===== Pagination ===== -->
     <div class="pt-3">
       {{ $orders->onEachSide(1)->links('pagination::bootstrap-5') }}
@@ -571,11 +589,11 @@ $placeholder = '/assets/img/placeholder.svg';
 </div>
 @endsection
 
-
 @push('page-styles')
 <style>
-  /* базові змінні (посилив контраст значень через --text) */
-  #tpl-orders{ --bg:#f5f6fa; --card:#fff; --muted:#6b7280; --text:#111; --border:#e6e8ef; --hover:#f3f4f6; }
+
+   /* базові змінні (посилив контраст значень через --text) */
+   #tpl-orders{ --bg:#f5f6fa; --card:#fff; --muted:#6b7280; --text:#111; --border:#e6e8ef; --hover:#f3f4f6; }
   #tpl-orders *{ box-sizing:border-box }
   #tpl-orders{ color:var(--text) }
 
@@ -658,10 +676,105 @@ $placeholder = '/assets/img/placeholder.svg';
   #tpl-orders [data-status-badge]{ animation: none !important; box-shadow: none !important; }
   #tpl-orders .status-pill{ box-shadow: none !important; }
 
+  .status-chip-select .form-control { cursor: pointer; }
+  .status-chip-select .chips { min-height: 1.6rem; }
+  .status-chip-select .badge .bi-x-lg { font-size: .7rem; opacity:.9 }
+  .status-chip-select .dropdown-menu { max-width: 100%; }
+  /* ——— компактний мультивибір статусів ——— */
+.status-chip-select button.form-control{
+  padding: .35rem .5rem;         /* менший внутрішній відступ */
+  min-height: 40px;               /* нижча "висота" поля у закритому стані */
+}
+
+/* чипи трохи менші */
+.status-chip-select .chips .badge{
+  font-size: .8rem;
+  padding: .35rem .45rem;
+  border-radius: .6rem;
+}
+
+/* саме меню робимо не на всю ширину та з меншим скролом */
+/* робимо випадаюче меню статусів меншим */
+.status-chip-select .dropdown-menu {
+  width: 320px !important;    /* фіксована ширина */
+  max-width: 90vw;            /* щоб на малих екранах не вилазило */
+  padding: .5rem .75rem;      /* компактні паддінги */
+  border-radius: .5rem;       /* плавні краї */
+}
+
+/* список опцій нижчий */
+.status-chip-select .status-list{
+  max-height: 160px;              /* було ~220 — зменшили */
+  overflow: auto;
+}
+
+/* рядки опцій компактніші */
+.status-chip-select .dropdown-item{
+  padding: .25rem .5rem;          /* менший вертикальний паддінг */
+  font-size: .95rem;
+  line-height: 1.2;
+}
+
+/* чекбокси менші й вирівняні по центру */
+.status-chip-select .dropdown-item .form-check-input{
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0;
+}
+
 </style>
 @endpush
 
 @push('page-scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const selects = document.querySelectorAll('.status-chip-select');
+    selects.forEach(function (el) {
+      const hiddenInputs = el.querySelector('.hidden-inputs');
+      const checkboxes   = el.querySelectorAll('.status-list input[type=checkbox]');
+      const chipsWrap    = el.querySelector('.chips');
+      const clearBtn     = el.querySelector('.js-clear-status');
+
+      function renderHidden() {
+        hiddenInputs.innerHTML = '';
+        chipsWrap.innerHTML = '';
+        let any = false;
+        checkboxes.forEach(cb => {
+          if (cb.checked) {
+            any = true;
+            hiddenInputs.insertAdjacentHTML('beforeend',
+              `<input type="hidden" name="status[]" value="${cb.value}">`);
+            chipsWrap.insertAdjacentHTML('beforeend',
+              `<span class="badge bg-success d-inline-flex align-items-center gap-2" data-chip="${cb.value}">
+                ${cb.nextElementSibling.textContent}
+                <i class="bi bi-x-lg" data-remove="${cb.value}" role="button"></i>
+              </span>`);
+          }
+        });
+        if (!any) {
+          chipsWrap.innerHTML = '<span class="text-muted">Усі статуси</span>';
+        }
+      }
+
+      checkboxes.forEach(cb => cb.addEventListener('change', renderHidden));
+
+      chipsWrap.addEventListener('click', function(e){
+        const rm = e.target.closest('[data-remove]');
+        if (!rm) return;
+        const val = rm.getAttribute('data-remove');
+        const cb  = el.querySelector(`.status-list input[value="${val}"]`);
+        if (cb) cb.checked = false;
+        renderHidden();
+      });
+
+      if (clearBtn) clearBtn.addEventListener('click', function(){
+        checkboxes.forEach(cb => cb.checked = false);
+        renderHidden();
+      });
+    });
+  });
+</script>
+
 <script>
   const CSRF = '{{ csrf_token() }}';
   const STATUS_META = @json($statusMeta);
