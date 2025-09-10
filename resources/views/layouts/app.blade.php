@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover">
+  
+    <!-- тег для заборони індексації сайта -->
+  <meta name="robots" content="noindex, nofollow, noarchive">
 
   <title>@yield('title', 'Dream V Doma')</title>
   <meta name="description" content="Інтернет-магазин Dream V Doma — мода, комфорт і стиль вдома">
