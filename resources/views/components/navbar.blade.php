@@ -1,6 +1,17 @@
 @php
   use Illuminate\Support\Facades\App;
   $locale = App::getLocale();
+
+  // Мінімізований payload для свічера: лише locale+slug категорії (якщо є)
+  $langSwitcherCategory = null;
+  if (!empty($category) && !empty($category->translations)) {
+      $langSwitcherCategory = [
+          'translations' => $category->translations->map(fn($t) => [
+              'locale' => $t->locale,
+              'slug'   => $t->slug,
+          ])->values()->all(),
+      ];
+  }
 @endphp
 
 @push('styles')
@@ -79,12 +90,21 @@
 
             <!-- Language switcher -->
             <div class="dropdown pb-lg-2">
-              <div data-component="language-switcher"
-                   data-props='@json([
-                      "product" => $product ?? null,
-                      "category" => $category ?? null
-                   ])'>
-              </div>
+              <!-- Безпечний JSON у скрипті -->
+              <script type="application/json" id="language-switcher-props">
+                @json(
+                  ["category" => $langSwitcherCategory],
+                  JSON_UNESCAPED_UNICODE
+                  | JSON_UNESCAPED_SLASHES
+                  | JSON_HEX_TAG
+                  | JSON_HEX_AMP
+                  | JSON_HEX_APOS
+                  | JSON_HEX_QUOT
+                )
+              </script>
+
+              <!-- Монтувальна точка, що посилається на скрипт вище -->
+              <div data-component="language-switcher" data-props-el="language-switcher-props"></div>
             </div>
 
             <!-- ===== МОБІЛЬНЕ МЕНЮ: просто всі категорії ===== -->
@@ -187,7 +207,7 @@
             <!-- Search toggle (desktop only) -->
             <button type="button" class="btn btn-outline-secondary justify-content-start w-100 px-3 mb-lg-2 ms-3 d-none d-lg-inline-flex" style="max-width: 240px" data-bs-toggle="offcanvas" data-bs-target="#searchBox" aria-controls="searchBox">
               <i class="ci-search fs-base ms-n1 me-2"></i>
-              <span class="text-body-tertiary fw-normal">{{ __('Пошук') }}</span>
+              <span class="text-body-terтіary fw-normal">{{ __('Пошук') }}</span>
             </button>
           </div>
         </div>
