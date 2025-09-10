@@ -79,14 +79,12 @@
 
             <!-- Language switcher -->
             <div class="dropdown pb-lg-2">
-            <div id="language-switcher"></div>
-
-              <script id="language-switcher-props" type="application/json">
-                @json([
-                  "product" => $product ?? null,
-                  "category" => $category ?? null
-                ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
-              </script>
+              <div data-component="language-switcher"
+                   data-props='@json([
+                      "product" => $product ?? null,
+                      "category" => $category ?? null
+                   ])'>
+              </div>
             </div>
 
             <!-- ===== МОБІЛЬНЕ МЕНЮ: просто всі категорії ===== -->
