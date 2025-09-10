@@ -11,17 +11,10 @@ import AddToCartProduct from './components/productPage/AddToCartProduct.vue'
 import StickyAddToCartButton from './components/cart/StickyAddToCartButton.vue'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
 import CartOffcanvas from './components/cart/CartOffcanvas.vue'
-import CartItems from './components/cart/CartItems.vue' // ← це і є кнопка
-// ──────────────────────────────────────────────────────────────
-// StockProgress: прогрес до безкоштовної доставки
-//   • Компонент показує, скільки ще залишилось до ліміту free-shipping.
-//   • Дані бере зі СПІЛЬНОГО Pinia-стору (subtotal) і оновлюється автоматично.
-//   • Жодних props не потребує — достатньо плейсхолдера <div id="stock-progress">.
-// ──────────────────────────────────────────────────────────────
+import CartItems from './components/cart/CartItems.vue'
 import StockProgress from './components/productPage/StockProgress.vue'
 import CheckoutPage from './components/cart/CheckoutPage.vue'
 import ThankYouPage from './components/cart/ThankYouPage.vue'
-
 
 // ===== Глобальний toast =====
 window.showGlobalToast = function (message = 'Успішно', color = 'success') {
@@ -81,39 +74,32 @@ document.querySelectorAll('[data-add-to-cart]').forEach(el => {
   el.setAttribute('data-mounted', '1')
 })
 
-/* ===== Language Switcher ===== */
-document.querySelectorAll('[data-component="language-switcher"]').forEach(el => {
-  if (el.hasAttribute('data-mounted')) return
-  const props = JSON.parse(el.dataset.props || '{}')
-  const app = createApp(LanguageSwitcher, props)
-  app.use(pinia).use(i18n).mount(el) // теж підключаємо СПІЛЬНИЙ pinia (раптом треба)
-  el.setAttribute('data-mounted', '1')
-})
+/* ===== Language Switcher (новий безпечний варіант) ===== */
+const langEl = document.getElementById('language-switcher')
+if (langEl && !langEl.hasAttribute('data-mounted')) {
+  const raw = document.getElementById('language-switcher-props')?.textContent || '{}'
+  let props = {}
+  try { props = JSON.parse(raw) } catch (e) { console.error('Bad JSON for LanguageSwitcher', e) }
+  mount(LanguageSwitcher, props, langEl)
+  langEl.setAttribute('data-mounted', '1')
+}
 
 // ...внизу, замість CartButton монтуємо CartItems:
 document.querySelectorAll('[data-component="cart-button"]').forEach(el => {
   if (el.hasAttribute('data-mounted')) return
   const app = createApp(CartItems)
-  app.use(pinia).use(i18n).mount(el)   // спільний Pinia вже створений вище
+  app.use(pinia).use(i18n).mount(el)
   el.setAttribute('data-mounted', '1')
 })
 
-
-
-// Монтуємо, тільки якщо на сторінці є плейсхолдер і він ще не змонтований.
-// Атрибут data-mounted захищає від повторного монтування при повторних ініціалізаціях.
+// Монтуємо StockProgress
 const sp = document.getElementById('stock-progress')
 if (sp && !sp.hasAttribute('data-mounted')) {
   mount(StockProgress, {}, sp)
   sp.setAttribute('data-mounted', '1')
 }
 
-// ──────────────────────────────────────────────────────────────
-// CheckoutPage: оформлення замовлення
-//   • Монтуємо у <div id="checkout-page" data-locale="...">
-//   • Використовує спільний Pinia (cart store) та i18n
-//   • Атрибут data-mounted захищає від повторного монтування
-// ──────────────────────────────────────────────────────────────
+// CheckoutPage
 const checkoutHost = document.getElementById('checkout-page')
 if (checkoutHost && !checkoutHost.hasAttribute('data-mounted')) {
   const localeProp = checkoutHost.dataset.locale || document.documentElement.lang || 'uk'
@@ -121,12 +107,7 @@ if (checkoutHost && !checkoutHost.hasAttribute('data-mounted')) {
   checkoutHost.setAttribute('data-mounted', '1')
 }
 
-// ──────────────────────────────────────────────────────────────
-/* ThankYouPage: сторінка "Дякуємо за замовлення"
-   • Монтуємо у <div id="thank-you">
-   • Використовує спільний Pinia (cart store) та i18n
-   • data-mounted — захист від повторного монтування */
-// ──────────────────────────────────────────────────────────────
+// ThankYouPage
 const thankYouHost = document.getElementById('thank-you')
 if (thankYouHost && !thankYouHost.hasAttribute('data-mounted')) {
   mount(ThankYouPage, {}, thankYouHost)
