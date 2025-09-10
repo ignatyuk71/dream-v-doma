@@ -121,6 +121,7 @@ if (checkoutHost && !checkoutHost.hasAttribute('data-mounted')) {
   checkoutHost.setAttribute('data-mounted', '1')
 }
 
+
 // ──────────────────────────────────────────────────────────────
 /* ThankYouPage: сторінка "Дякуємо за замовлення"
    • Монтуємо у <div id="thank-you">
