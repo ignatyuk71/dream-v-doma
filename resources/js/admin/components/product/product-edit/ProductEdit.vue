@@ -143,7 +143,6 @@ export default {
           barcode: p.barcode,
           quantity_in_stock: p.quantity_in_stock,
           status: Boolean(p.status),
-          is_popular: Boolean(p.is_popular),
           categories: p.categories ? p.categories.map(c => c.id) : [],
           size_guide_id: p.size_guide_id,
           images: p.images || [],
