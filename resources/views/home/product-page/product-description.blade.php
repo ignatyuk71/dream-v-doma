@@ -339,7 +339,7 @@
 <style>
   /* Десктоп / за замовчуванням */
   .cms-block-title { font-size: 1.75rem; }
-  .cms-block-text  { font-size: 1.2rem; line-height: 1.8; }
+  .cms-block-text  { font-size: 1.1rem; line-height: 1.5; }
 
   /* Мобільні (Bootstrap sm і нижче) */
   @media (max-width: 575.98px) {
