@@ -391,13 +391,15 @@ const isFreeShipping = computed(() => subtotal.value >= 1000)
 const deliveryCost = computed(() => {
   if (isFreeShipping.value) return 0
   switch (deliveryType.value) {
-    case 'branch': return 90
-    case 'postomat': return 55
-    case 'courier': return 135
+    case 'branch': return 80     // доставка у відділення
+    case 'postomat': return 55   // доставка у поштомат
+    case 'courier': return 135   // курʼєрська доставка
     default: return 0
   }
 })
-const codFee = 26
+
+const codFee = 26 // комісія післяплати
+
 
 const total = computed(() => {
   let sum = subtotal.value + deliveryCost.value - bonuses.value
