@@ -1,6 +1,7 @@
 <template>
   <div class="card mb-4 p-4">
     <h5 class="fw-bold mb-3">Кольори товару</h5>
+
     <div class="color-list d-flex flex-column gap-3">
       <div
         v-for="(color, idx) in localColors"
@@ -57,6 +58,7 @@
               placeholder="Назва кольору"
             />
           </div>
+
           <div class="col-12">
             <Multiselect
               v-model="editForm.product"
@@ -87,7 +89,7 @@
               <template #singleLabel="{ option }">
                 <div class="d-flex align-items-center gap-2">
                   <img
-                    v-if="option.image"
+                    v-if="option && option.image"
                     :src="fullImageUrl(option.image)"
                     alt=""
                     style="width: 38px; height: 38px; object-fit: cover; border-radius: 7px;"
@@ -97,6 +99,7 @@
               </template>
             </Multiselect>
           </div>
+
           <div class="col-12 col-md-6">
             <input type="file" class="form-control mb-3" @change="onEditImageChange" />
             <img v-if="editForm.image" :src="fullImageUrl(editForm.image)" alt="" class="color-img-preview mb-2" />
@@ -107,7 +110,7 @@
         <div v-else class="d-flex align-items-center">
           <img
             v-if="color.icon_path"
-            :src="fullImageListUrl(color.icon_path)"
+            :src="fullImageUrl(color.icon_path)"
             alt="color image"
             class="me-4"
             style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #f2f4f8; background: #fff;"
@@ -142,6 +145,7 @@
               placeholder="Назва кольору"
             />
           </div>
+
           <div class="col-12">
             <Multiselect
               v-model="editForm.product"
@@ -171,7 +175,7 @@
               <template #singleLabel="{ option }">
                 <div class="d-flex align-items-center gap-2">
                   <img
-                    v-if="option.image"
+                    v-if="option && option.image"
                     :src="fullImageUrl(option.image)"
                     alt=""
                     style="width: 38px; height: 38px; object-fit: cover; border-radius: 7px;"
@@ -181,26 +185,23 @@
               </template>
             </Multiselect>
           </div>
+
           <div class="col-12 col-md-6">
             <input type="file" class="form-control mb-3" @change="onEditImageChange" />
             <img v-if="editForm.image" :src="fullImageUrl(editForm.image)" alt="" class="color-img-preview mb-2" />
           </div>
+
           <div class="col-12 d-flex gap-2">
-            <button type="button" class="btn btn-success flex-fill" @click="saveAdd">
-              Додати
-            </button>
-            <button type="button" class="btn btn-outline-secondary flex-fill" @click="cancelEdit">
-              Скасувати
-            </button>
+            <button type="button" class="btn btn-success flex-fill" @click="saveAdd">Додати</button>
+            <button type="button" class="btn btn-outline-secondary flex-fill" @click="cancelEdit">Скасувати</button>
           </div>
         </div>
       </div>
     </div>
+
     <!-- Кнопка ДОДАТИ КОЛІР -->
     <div class="mt-3">
-      <button class="btn btn-primary w-100" @click="showAddForm">
-        + Додати колір
-      </button>
+      <button class="btn btn-primary w-100" @click="showAddForm">+ Додати колір</button>
     </div>
   </div>
 </template>
@@ -212,39 +213,32 @@ import Multiselect from 'vue-multiselect'
 import 'vue-multiselect/dist/vue-multiselect.css'
 
 const props = defineProps({
-  modelValue: {
-    type: Array,
-    default: () => [],
-  },
-  productId: {
-    type: [Number, String],
-    required: true
-  }
+  modelValue: { type: Array, default: () => [] },
+  productId:  { type: [Number, String], required: true }
 })
-
 const emit = defineEmits(['update:modelValue'])
 
 const localColors = ref([...props.modelValue])
 watch(() => props.modelValue, v => { localColors.value = [...v] })
 
-// --- Linked products API ---
-const linkedProducts = ref({})
+// ---------- URL normalizer ----------
 function fullImageUrl(path) {
   if (!path) return ''
-  if (path.startsWith('http') || path.startsWith('/storage/') || path.startsWith('/')) {
-    return path
-  }
-  return '/storage/' + path.replace(/^\/+/, '')
+  // Абсолютні URL (http/https, data:, blob:) — не чіпаємо
+  if (/^(https?:)?\/\//i.test(path) || /^data:/.test(path) || /^blob:/.test(path)) return path
+
+  // Прибрати провідні слеші та "public/"
+  let p = String(path).replace(/^\/+/, '').replace(/^public\//, '')
+
+  // Якщо вже 'storage/...'
+  if (p.startsWith('storage/')) return '/' + p
+
+  // Інакше додаємо /storage/
+  return '/storage/' + p
 }
 
-function fullImageListUrl(path) {
-  if (!path) return ''
-  // Якщо шлях не починається з http або /, додаємо провідний /
-  if (path.startsWith('http') || path.startsWith('/')) {
-    return path
-  }
-  return '/' + path.replace(/^\/+/, '')
-}
+// ---------- Linked products ----------
+const linkedProducts = ref({})
 
 function productUrl(slug) {
   if (!slug) return '#'
@@ -264,11 +258,10 @@ async function fetchLinkedProducts() {
     linkedProducts.value = {}
   }
 }
-
 onMounted(fetchLinkedProducts)
 watch(() => localColors.value.map(c => c.linked_product_id).join(','), fetchLinkedProducts)
 
-// --- Multiselect Products ---
+// ---------- Multiselect Products ----------
 const products = ref([])
 onMounted(async () => {
   try {
@@ -284,17 +277,16 @@ function productLabel(option) {
   return option.sku ? `${option.name} (SKU: ${option.sku})` : option.name
 }
 
-
 function customFilter(option, search) {
   if (!search) return true
   const name = (option.name || '').toLowerCase()
-  const sku = (option.sku || '').toLowerCase()
+  const sku  = (option.sku  || '').toLowerCase()
   const q = search.toLowerCase()
   return name.includes(q) || sku.includes(q)
 }
 
-// --- Inline редагування/додавання ---
-const editIdx = ref(null)
+// ---------- Inline edit/add ----------
+const editIdx  = ref(null)
 const editForm = ref({ name: '', linked_product_id: '', icon_path: '', product: null, image: '' })
 
 function startEdit(idx) {
@@ -356,7 +348,7 @@ function removeColor(idx) {
   emit('update:modelValue', [...localColors.value])
 }
 
-// --- Upload image and save only url ---
+// ---------- Upload image (returns URL) ----------
 async function uploadImage(file) {
   if (!file) return ''
   if (!props.productId) {
@@ -366,11 +358,12 @@ async function uploadImage(file) {
   const formData = new FormData()
   formData.append('image', file)
   formData.append('product_id', props.productId)
+
   try {
     const resp = await axios.post('/api/upload-image-color', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    console.log('uploadImage response:', resp.data)
+    // може бути 'products/..' або '/storage/products/..' або повний URL
     return resp.data.url || ''
   } catch (e) {
     console.error('uploadImage error:', e)
