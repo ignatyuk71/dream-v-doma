@@ -9,9 +9,7 @@
     <div class="mb-2 color-picker-row">
       <label class="form-label fw-semibold mb-0">
         {{ __('product.color') }}:
-        <span class="text-body fw-normal" id="selected-color-label">
-          {{ $product->colors->firstWhere('is_default', true)?->name ?? $product->colors->first()?->name }}
-        </span>
+        
       </label>
 
       <div class="color-swatches">
