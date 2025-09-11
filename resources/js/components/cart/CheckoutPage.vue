@@ -163,7 +163,7 @@
                 <span>{{ $t('checkout.delivery.branch') }}</span>
               </div>
               <span class="badge bg-light text-dark fs-sm">
-                {{ !isFreeShipping ? '90 грн' : $t('checkout.order.free') }}
+                {{ !isFreeShipping ? '80 грн' : $t('checkout.order.free') }}
               </span>
             </label>
 
@@ -173,7 +173,7 @@
                 <span>{{ $t('checkout.delivery.postomat') }}</span>
               </div>
               <span class="badge bg-light text-dark fs-sm">
-                {{ !isFreeShipping ? '55 грн' : $t('checkout.order.free') }}
+                {{ !isFreeShipping ? '80 грн' : $t('checkout.order.free') }}
               </span>
             </label>
 
@@ -183,7 +183,7 @@
                 <span>{{ $t('checkout.delivery.courier') }}</span>
               </div>
               <span class="badge bg-light text-dark fs-sm">
-                {{ !isFreeShipping ? '135 грн' : $t('checkout.order.free') }}
+                {{ !isFreeShipping ? '115 грн' : $t('checkout.order.free') }}
               </span>
             </label>
           </div>
@@ -392,8 +392,8 @@ const deliveryCost = computed(() => {
   if (isFreeShipping.value) return 0
   switch (deliveryType.value) {
     case 'branch': return 80     // доставка у відділення
-    case 'postomat': return 55   // доставка у поштомат
-    case 'courier': return 135   // курʼєрська доставка
+    case 'postomat': return 80   // доставка у поштомат
+    case 'courier': return 115   // курʼєрська доставка
     default: return 0
   }
 })
