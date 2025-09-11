@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover">
-  
-    <!-- тег для заборони індексації сайта -->
+
+  <!-- Заборона індексації (стейджинг) -->
   <meta name="robots" content="noindex, nofollow, noarchive">
 
   <title>@yield('title', 'Dream V Doma')</title>
@@ -12,9 +12,10 @@
   <meta name="keywords" content="тапки, домашній одяг, вʼєтнамки, шльопанці, покупки онлайн, магазин">
   <meta name="author" content="Dream V Doma">
 
-  {{-- Meta Pixel (скрипт і init) --}}
+  {{-- Meta Pixel --}}
   @include('partials.meta-pixel-script')
   @include('partials.meta-pixel-add-to-cart')
+
   <!-- PWA / icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -22,26 +23,54 @@
   <link rel="apple-touch-icon" href="/assets/app-icons/icon-180x180.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#ff6b6b">
-  <!-- Theme switcher має бути рано -->
-  <script src="/assets/js/theme-switcher.js"></script>
 
-  <!-- Fonts (твій Manrope) -->
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Tiny inline theme to avoid FOUC -->
+  <script>
+    try{var t=localStorage.getItem('theme'); if(t){document.documentElement.setAttribute('data-bs-theme', t)}}catch(e){}
+  </script>
+  <!-- основний скрипт теми вже не блокує -->
+  <script src="/assets/js/theme-switcher.js" defer></script>
+
+  <!-- Preconnects (швидший старт шрифтів/пікселя) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
 
-  <!-- Icons + vendor CSS -->
-  <link rel="stylesheet" href="/assets/icons/cartzilla-icons.min.css">
+  <!-- Google Fonts: async-підключення -->
+  <link rel="preload"
+        as="style"
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
+        media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+  </noscript>
+
+  <!-- Vendor CSS (preload + підключення) -->
+  <link rel="preload" href="/assets/vendor/swiper/swiper-bundle.min.css" as="style">
+  <link rel="preload" href="/assets/vendor/simplebar/dist/simplebar.min.css" as="style">
   <link rel="stylesheet" href="/assets/vendor/swiper/swiper-bundle.min.css">
   <link rel="stylesheet" href="/assets/vendor/simplebar/dist/simplebar.min.css">
 
-  <!-- Theme CSS (без RTL preload) -->
-  <link rel="preload" href="/assets/css/theme.min.css" as="style">
+  <!-- Theme CSS -->
+  <link rel="preload" as="style" href="/assets/css/theme.min.css">
   <link rel="stylesheet" href="/assets/css/theme.min.css" id="theme-styles">
+
+  <!-- LCP image preload (заміни шлях на свій герой) -->
+  <!--
+  <link rel="preload" as="image"
+        href="/storage/hero-1200.webp"
+        imagesrcset="/storage/hero-800.webp 800w, /storage/hero-1200.webp 1200w"
+        imagesizes="(max-width:768px) 100vw, 50vw"
+        fetchpriority="high">
+  -->
 
   @vite(['resources/css/app-index.css', 'resources/js/app.js'])
   @stack('styles')
 </head>
+
 <body>
   {{-- NOSCRIPT — одразу після <body> --}}
   @include('partials.meta-pixel-noscript')
