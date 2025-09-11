@@ -10,7 +10,7 @@
         $categoryName     = $catTranslation->name ?? '';
         $categorySlug     = $catTranslation->slug ?? $category->id;
         $categoryUrl      = url($locale . '/' . $categorySlug);
-        $categoryProducts = $category->products->take(8);
+        $categoryProducts = $category->products->take(12);
     @endphp
 
     {{-- Заголовок категорії + "Переглянути всі" --}}
