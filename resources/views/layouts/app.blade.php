@@ -28,17 +28,15 @@
   <script>
     try{var t=localStorage.getItem('theme'); if(t){document.documentElement.setAttribute('data-bs-theme', t)}}catch(e){}
   </script>
-  <!-- основний скрипт теми вже не блокує -->
   <script src="/assets/js/theme-switcher.js" defer></script>
 
-  <!-- Preconnects (швидший старт шрифтів/пікселя) -->
+  <!-- Preconnects -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
 
-  <!-- Google Fonts: async-підключення -->
-  <link rel="preload"
-        as="style"
+  <!-- Google Fonts (async) -->
+  <link rel="preload" as="style"
         href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
   <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
@@ -48,7 +46,13 @@
           href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
   </noscript>
 
-  <!-- Vendor CSS (preload + підключення) -->
+  <!-- ICONS (Cartzilla) — ПОВЕРНУЛИ -->
+  <link rel="preload" href="/assets/icons/cartzilla-icons.min.css" as="style">
+  <link rel="stylesheet" href="/assets/icons/cartzilla-icons.min.css">
+  {{-- (Необов’язково) Якщо знаєш точний шлях до woff2, розкоментуй preload нижче --}}
+  {{-- <link rel="preload" as="font" href="/assets/icons/cartzilla-icons.woff2" type="font/woff2" crossorigin> --}}
+
+  <!-- Vendor CSS -->
   <link rel="preload" href="/assets/vendor/swiper/swiper-bundle.min.css" as="style">
   <link rel="preload" href="/assets/vendor/simplebar/dist/simplebar.min.css" as="style">
   <link rel="stylesheet" href="/assets/vendor/swiper/swiper-bundle.min.css">
@@ -58,14 +62,14 @@
   <link rel="preload" as="style" href="/assets/css/theme.min.css">
   <link rel="stylesheet" href="/assets/css/theme.min.css" id="theme-styles">
 
-  <!-- LCP image preload (заміни шлях на свій герой) -->
-  <!--
+  <!-- LCP image preload (підстав свій шлях) -->
+  {{-- 
   <link rel="preload" as="image"
         href="/storage/hero-1200.webp"
         imagesrcset="/storage/hero-800.webp 800w, /storage/hero-1200.webp 1200w"
         imagesizes="(max-width:768px) 100vw, 50vw"
         fetchpriority="high">
-  -->
+  --}}
 
   @vite(['resources/css/app-index.css', 'resources/js/app.js'])
   @stack('styles')
@@ -74,8 +78,6 @@
 <body>
   {{-- NOSCRIPT — одразу після <body> --}}
   @include('partials.meta-pixel-noscript')
-
-
 
   @yield('content')
   <div id="cart-offcanvas"></div>
