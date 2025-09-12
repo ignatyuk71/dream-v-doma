@@ -17,11 +17,7 @@
         <ProductSizeGuide v-model="form.size_guide_id" :errors="errors" />
       </div>
     </div>
-
-    <ProductDescription v-model="form.description" :errors="errors" />
     <ProductVariants v-model="form.variants" :errors="errors" />
-    <ProductAttributes v-model="form.attributes" :errors="errors" /> 
-    <ProductColors v-model="form.colors" :productList="productOptions" :errors="errors" />
   </div>
 
   <!-- ✅ Повноекранний оверлей -->
