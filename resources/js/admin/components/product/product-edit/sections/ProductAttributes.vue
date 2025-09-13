@@ -1,74 +1,109 @@
 <template>
-  <div class="card mb-4 p-4">
-    <h5 class="fw-bold mb-3">Характеристики товару</h5>
-    <!-- Tabs -->
-    <ul class="nav nav-tabs mb-3">
-      <li class="nav-item">
-        <button class="nav-link" :class="{active: lang === 'uk'}" @click="lang = 'uk'">Українська</button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" :class="{active: lang === 'ru'}" @click="lang = 'ru'">Російська</button>
-      </li>
-    </ul>
-    <div class="row g-3 align-items-start">
-      <!-- Форма додавання -->
-      <div class="col-md-5">
-        <div class="attr-form shadow-sm rounded-3 p-3 mb-3 bg-light">
-          <input v-model="form.name" type="text" class="form-control mb-2" :placeholder="lang === 'uk' ? 'Характеристика' : 'Характеристика (рус)'" />
-          <input v-model="form.value" type="text" class="form-control mb-3" :placeholder="lang === 'uk' ? 'Значення' : 'Значение'" />
-          <button
-            v-if="editIndex === null"
-            class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
-            @click="addAttr"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-            Додати характеристику
+  <div class="card p-4 mb-4  attrs-simple">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <h5 class="fw-bold mb-0">Характеристики товару</h5>
+      <ul class="nav nav-tabs small">
+        <li class="nav-item">
+          <button class="nav-link" :class="{active: lang==='uk'}" @click="switchLang('uk')">
+            Українська <span class="badge bg-secondary-subtle text-secondary ms-1">{{ attributes.uk.length }}</span>
           </button>
-          <button
-            v-else
-            class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
-            @click="saveEdit"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-            Зберегти зміни
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" :class="{active: lang==='ru'}" @click="switchLang('ru')">
+            Російська <span class="badge bg-secondary-subtle text-secondary ms-1">{{ attributes.ru.length }}</span>
           </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="row g-4">
+      <!-- LEFT: форма -->
+      <div class="col-lg-5">
+        <div class="panel p-3 rounded-4 shadow-sm">
+          <label class="form-label fw-semibold">{{ lang==='uk' ? 'Характеристика' : 'Характеристика (рус)' }}</label>
+          <input
+            v-model.trim="form.name"
+            type="text"
+            class="form-control form-accent mb-3"
+            :placeholder="lang==='uk' ? 'Напр.: Матеріал' : 'Напр.: Материал'"
+            :class="{'is-invalid': errors.name}"
+            @input="errors.name=false"
+          />
+          <div class="invalid-feedback">Вкажіть назву.</div>
+
+          <label class="form-label fw-semibold">{{ lang==='uk' ? 'Значення' : 'Значение' }}</label>
+          <input
+            v-model.trim="form.value"
+            type="text"
+            class="form-control mb-3"
+            :placeholder="lang==='uk' ? 'Напр.: Шкіра' : 'Напр.: Кожа'"
+            :class="{'is-invalid': errors.value}"
+            @input="errors.value=false"
+          />
+          <div class="invalid-feedback">Вкажіть значення.</div>
+
+          <div class="d-grid gap-2">
+            <button
+              type="button"
+              class="btn btn-accent w-100 d-flex align-items-center justify-content-center gap-2"
+              :disabled="!canSubmit"
+              @click="editIndex===null ? addAttr() : saveEdit()"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path v-if="editIndex===null" d="M12 5v14m-7-7h14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <path v-else d="M5 13l4 4L19 7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span v-if="editIndex===null">{{ lang==='uk' ? 'Додати' : 'Добавить' }}</span>
+              <span v-else>{{ lang==='uk' ? 'Зберегти' : 'Сохранить' }}</span>
+            </button>
+
+            <button type="button" class="btn btn-light" @click="cancelEdit" :disabled="editIndex===null">
+              {{ lang==='uk' ? 'Скасувати' : 'Отменить' }}
+            </button>
+          </div>
         </div>
       </div>
-      <!-- Список характеристик (sortable) -->
-      <div class="col-md-7">
-        <div class="attr-list shadow-sm rounded-3 p-3 mb-3 bg-light">
+
+      <!-- RIGHT: список -->
+      <div class="col-lg-7">
+        <div class="attr-list shadow-sm rounded-4 p-2 bg-light">
           <draggable
             v-model="attributes[lang]"
             item-key="_id"
             handle=".drag-handle"
-            :animation="180"
-            class="d-flex flex-column gap-2 mb-0"
+            :animation="150"
+            class="d-flex flex-column gap-2"
+            @end="emitAttrs"
           >
             <template #item="{ element, index }">
-              <div
-                class="attr-card shadow-sm rounded-4 px-3 py-2 bg-white d-flex align-items-center position-relative"
-              >
-                <span class="drag-handle me-3" title="Перетягнути" style="cursor:grab;">
-                  <svg width="18" height="18" fill="#b0b0b0" viewBox="0 0 24 24"><circle cx="7" cy="7" r="2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-                </span>
-                <div class="w-100 d-flex flex-row flex-wrap align-items-center">
-                  <div class="attr-label fw-bold">{{ element.name }}</div>
-                  <div class="attr-sep mx-2">:</div>
-                  <div class="attr-value flex-fill">{{ element.value }}</div>
-                </div>
-                <div class="attr-actions position-absolute top-0 end-0 mt-2 me-2 d-flex gap-1">
-                  <button class="btn-action btn-edit" @click="startEdit(index)">
-                    <svg width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M15.232 5.232a2.828 2.828 0 1 1 4 4L7.5 21H3v-4.5l12.232-12.268z"/></svg>
-                  </button>
-                  <button class="btn-action btn-remove" @click="removeAttr(index)">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
-                      viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6"/></svg>
-                  </button>
+              <div class="attr-card rounded-4 bg-white shadow-sm">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="drag-handle" title="Перетягнути">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#b0b0b0">
+                      <circle cx="7" cy="7" r="2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="7" r="2"/><circle cx="17" cy="17" r="2"/>
+                    </svg>
+                  </span>
+
+                  <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                    <span class="k">{{ element.name }}</span><span class="sep">:</span><span class="v">{{ element.value }}</span>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-1 ms-auto">
+                    <button class="btn-icon edit" @click="startEdit(index)" title="Редагувати">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15.2 5.2a2.8 2.8 0 0 1 4 4L7.5 21H3v-4.5L15.2 5.2z" stroke="#3864ff" stroke-width="2"/></svg>
+                    </button>
+                    <button class="btn-icon remove" @click="removeAttr(index)" title="Видалити">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </template>
           </draggable>
-          <div v-if="!attributes[lang].length" class="text-muted mt-4 ms-2">Ще не додано жодної характеристики</div>
+
+          <div v-if="!attributes[lang].length" class="text-muted text-center py-4">
+            {{ lang==='uk' ? 'Ще не додано жодної характеристики' : 'Пока что нет характеристик' }}
+          </div>
         </div>
       </div>
     </div>
@@ -76,145 +111,135 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, defineProps, defineEmits } from 'vue'
+import { reactive, ref, watch, defineProps, defineEmits, computed } from 'vue'
 import draggable from 'vuedraggable'
 
-// v-model support
 const props = defineProps({
-  modelValue: {
-    type: Object,
-    default: () => ({ uk: [], ru: [] })
-  }
+  modelValue: { type: Object, default: () => ({ uk: [], ru: [] }) }
 })
-const emits = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue'])
 
 const lang = ref('uk')
+function switchLang(l){ cancelEdit(); lang.value = l }
 
-// 1. Стан для обох мов
-const attributes = reactive({
-  uk: [],
-  ru: [],
-})
-
+const attributes = reactive({ uk: [], ru: [] })
 const form = reactive({ name: '', value: '' })
+const errors = reactive({ name: false, value: false })
 const editIndex = ref(null)
-let attrId = 0
+let seq = 0
 
-// 2. При ініціалізації та зміні пропса — синхронізуємо
-watch(
-  () => props.modelValue,
-  (val) => {
-    // старий масив — залишаємо все для поточної мови
-    if (Array.isArray(val)) {
-      attributes.uk = val.map((v, i) => ({ ...v, _id: v._id || Date.now() + i }))
-      attributes.ru = []
-    } else if (val && typeof val === 'object') {
-      attributes.uk = Array.isArray(val.uk) ? val.uk.map((v, i) => ({ ...v, _id: v._id || Date.now() + i })) : []
-      attributes.ru = Array.isArray(val.ru) ? val.ru.map((v, i) => ({ ...v, _id: v._id || Date.now() + i })) : []
-    }
-    // Задаємо атрибутний лічильник (ID)
-    attrId = Math.max(
-      ...attributes.uk.map(a => a._id || 0),
-      ...attributes.ru.map(a => a._id || 0),
-      0
-    )
-  },
-  { deep: true, immediate: true }
-)
+// sync in
+watch(() => props.modelValue, (val) => {
+  const toList = (arr) => Array.isArray(arr) ? arr.map((a, i) => ({ ...a, _id: a._id || `${Date.now()}-${i}-${Math.random().toString(36).slice(2)}` })) : []
+  if (val && typeof val === 'object') {
+    attributes.uk = toList(val.uk)
+    attributes.ru = toList(val.ru)
+  } else {
+    attributes.uk = toList(val || [])
+    attributes.ru = []
+  }
+  seq = Date.now()
+}, { deep:true, immediate:true })
 
-function emitAttrs() {
-  emits('update:modelValue', {
+// sync out
+function emitAttrs(){
+  emit('update:modelValue', {
     uk: attributes.uk.map(({ _id, ...rest }) => rest),
-    ru: attributes.ru.map(({ _id, ...rest }) => rest),
+    ru: attributes.ru.map(({ _id, ...rest }) => rest)
   })
 }
 
-function addAttr() {
-  if (!form.name || !form.value) {
-    alert('Заповніть обидва поля!')
-    return
-  }
-  attributes[lang.value].push({
-    _id: ++attrId,
-    name: form.name,
-    value: form.value
-  })
+const canSubmit = computed(() => !!form.name && !!form.value)
+
+function addAttr(){
+  if (!validate()) return
+  attributes[lang.value].push({ _id: `${++seq}-${Math.random().toString(36).slice(2)}`, name: form.name, value: form.value })
   emitAttrs()
   resetForm()
 }
-function startEdit(idx) {
-  editIndex.value = idx
-  const a = attributes[lang.value][idx]
+
+function startEdit(i){
+  editIndex.value = i
+  const a = attributes[lang.value][i]
   form.name = a.name
   form.value = a.value
 }
-function saveEdit() {
-  if (editIndex.value === null) return
-  attributes[lang.value][editIndex.value] = {
-    ...attributes[lang.value][editIndex.value],
-    name: form.name,
-    value: form.value
-  }
+
+function saveEdit(){
+  if (editIndex.value === null || !validate()) return
+  const i = editIndex.value
+  attributes[lang.value][i] = { ...attributes[lang.value][i], name: form.name, value: form.value }
   emitAttrs()
-  editIndex.value = null
-  resetForm()
+  cancelEdit()
 }
-function removeAttr(idx) {
-  attributes[lang.value].splice(idx, 1)
+
+function removeAttr(i){
+  if (!confirm(lang.value==='uk' ? 'Видалити характеристику?' : 'Удалить характеристику?')) return
+  attributes[lang.value].splice(i, 1)
   emitAttrs()
-  if (editIndex.value === idx) {
-    editIndex.value = null
-    resetForm()
-  }
+  if (editIndex.value === i) cancelEdit()
 }
-function resetForm() {
-  form.name = ''
-  form.value = ''
+
+function cancelEdit(){ editIndex.value = null; resetForm(); errors.name=false; errors.value=false }
+function resetForm(){ form.name=''; form.value='' }
+
+function validate(){
+  errors.name = !form.name
+  errors.value = !form.value
+  // перевірка дубля (назва+значення)
+  const n = (form.name||'').trim().toLowerCase()
+  const v = (form.value||'').trim().toLowerCase()
+  const dup = attributes[lang.value].some((a, idx) =>
+    (editIndex.value === null || idx !== editIndex.value) &&
+    (a.name||'').trim().toLowerCase() === n &&
+    (a.value||'').trim().toLowerCase() === v
+  )
+  if (dup) { alert(lang.value==='uk' ? 'Така пара вже існує.' : 'Такая пара уже существует.'); return false }
+  return !(errors.name || errors.value)
 }
 </script>
 
-
-
 <style scoped>
-/* ... стилі залишаються ті самі ... */
-.attr-form, .attr-list {
-  min-width: 220px;
+.attrs-simple{ border:1px solid #eef1f5; border-radius:1rem; }
+.panel{ background:#f4f5f8; border:1px solid #eceef3; }
+
+/* фіолетова кнопка Додати/Добавить */
+.btn-accent{
+  background:#7b70f2; /* насичений фіолетовий */
+  color:#fff;
+  border:none;
 }
-.btn-action {
-  border: none;
-  background: #f3f3f3;
-  border-radius: 50%;
-  width: 32px; height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .2s, color .2s;
-  z-index: 2;
-  margin-left: 4px;
-  margin-right: 2px;
+.btn-accent:hover{ filter:brightness(.96); }
+.btn-accent:disabled{ opacity:.6; }
+
+/* акцент фокуса */
+.form-accent:focus{
+  border-color:#7b70f2 !important;
+  box-shadow:0 0 0 .2rem rgba(123,112,242,.25) !important;
 }
-.btn-edit:hover { background: #e0ebff; }
-.btn-remove:hover { background: #ffeaea; color: #dc2626; }
-.attr-label {
-  min-width: 100px;
-  font-weight: 600;
-  font-size: 1.06rem;
+
+/* список */
+.attr-list{ border:1px solid #eef1f5; }
+.attr-card{
+  padding:.55rem .7rem;
+  border:1px solid #e7e8ee;
 }
-.attr-sep {
-  color: #b1b1b1;
+.drag-handle{ cursor:grab; user-select:none; opacity:.75; display:inline-flex; }
+.k{ font-weight:600; color:#2b2f3c; }
+.sep{ color:#b1b1b1; }
+.v{ color:#374151; }
+
+/* кнопки дій */
+.btn-icon{
+  width:32px; height:32px; border-radius:50%;
+  background:#f3f4f7; color:#111; border:none;
+  display:inline-flex; align-items:center; justify-content:center;
+  transition: background .15s ease, transform .05s;
 }
-.attr-value {
-  font-size: 1.08rem;
-}
-.attr-card {
-  min-height: 44px;
-}
-.drag-handle {
-  user-select: none;
-  opacity: .7;
-  transition: opacity .18s;
-}
-.drag-handle:active {
-  opacity: 1;
-}
+.btn-icon.edit:hover{ background:#e7e9fd; }
+.btn-icon.remove:hover{ background:#ffeaea; color:#dc2626; }
+.btn-icon:active{ transform: translateY(1px); }
+
+/* трохи щільніші вкладки */
+.small .nav-link{ padding:.4rem .75rem; }
 </style>
