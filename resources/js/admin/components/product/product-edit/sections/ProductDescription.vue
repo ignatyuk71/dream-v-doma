@@ -1,5 +1,5 @@
 <template>
-  <div class="card p-4 desc-simple">
+  <div class="card p-4 mb-4 desc-simple">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
       <div class="d-flex align-items-center gap-3">
