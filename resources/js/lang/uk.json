@@ -182,8 +182,10 @@
   "review.stars": "{{count}} зірок{{suffix}}",
   "review.review_unavailable": "Опис недоступний",
 
-  "product.code": "Код товару",
   "product.available": "В наявності",
+  "product.out_of_stock": "Немає в наявності",
+
+  "product.code": "Код товару",
   "product.review_singular": "відгук",
   "product.review_few": "відгуки",
   "product.review_many": "відгуків",

@@ -156,9 +156,11 @@
   "review.stars": "{{count}} звёзд{{suffix}}",
   "review.review_unavailable": "Описание недоступно",
 
+  "product.available": "В наличии",
+  "product.out_of_stock": "Нет в наличии",
+
 
   "product.code": "Код товара",
-  "product.available": "В наличии",
   "product.review_singular": "отзыв",
   "product.review_few": "отзыва",
   "product.review_many": "отзывов",
