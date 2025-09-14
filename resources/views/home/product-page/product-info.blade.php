@@ -10,7 +10,7 @@
       <div class="d-flex gap-1 fs-sm">
         @php $rating = $product->average_rating ?? 0; @endphp
         @for ($i = 1; $i <= 5; $i++)
-          <i class="ci-star{{ $i <= floor($rating) ? '-filled text-warning' : ($i - $rating < 1 ? '' : ' text-body-terтіary opacity-75') }}"></i>
+          <i class="ci-star{{ $i <= floor($rating) ? '-filled text-warning' : ($i - $rating < 1 ? '' : ' text-body-tertiary opacity-75') }}"></i>
         @endfor
       </div>
       <span class="text-body-tertiary fs-sm">
@@ -39,7 +39,7 @@
       <del id="product-old-price" class="old-price d-none"></del>
     </div>
 
-    <!-- 🔄 Статус наявності (SSR + JS оновлення) -->
+    <!-- Статус наявності (SSR + JS оновлення) -->
     <div id="stock-status" class="d-flex align-items-center fs-sm ms-auto {{ $inStockSSR ? 'text-success' : 'text-danger' }}">
       <i class="fs-base me-2 {{ $inStockSSR ? 'ci-check-circle' : 'ci-close-circle' }}"></i>
       <span class="stock-text">
@@ -99,8 +99,8 @@
         'old_price'      => $v->old_price ?? null,
         'variant_sku'    => $v->variant_sku,
         'quantity'       => (int)($v->quantity ?? 0),
-      '])->values(),
-      'stock_total' => (int) $stockTotal, // ← додано
+      ])->values(),   // ← виправлено: без зайвої лапки
+      'stock_total' => (int) $stockTotal, // для fallback без варіантів
     ];
   @endphp
 
@@ -109,17 +109,18 @@
     // Дані
     window.productVariants = @json($payload['variants']);
     window.basePrice = {{ $payload['price'] }};
-    window.productStockTotal = {{ (int) $payload['stock_total'] }};
+    window.productStockTotal = @json($payload['stock_total']);
 
     document.addEventListener('DOMContentLoaded', function () {
-      const variants   = Array.isArray(window.productVariants) ? window.productVariants : [];
-      const basePrice  = parseFloat(window.basePrice);
-      const priceEl    = document.getElementById('product-price');
-      const oldPriceEl = document.getElementById('product-old-price');
+      const variants    = Array.isArray(window.productVariants) ? window.productVariants : [];
+      const basePrice   = parseFloat(window.basePrice);
+      const priceEl     = document.getElementById('product-price');
+      const oldPriceEl  = document.getElementById('product-old-price');
       const sizeSelect  = document.querySelector('select[name="size"]');
       const colorSelect = document.querySelector('select[name="color"]'); // якщо є
-      const stockEl    = document.getElementById('stock-status');
-      const stockText  = stockEl ? stockEl.querySelector('.stock-text') : null;
+      const stockEl     = document.getElementById('stock-status');
+      const stockText   = stockEl ? stockEl.querySelector('.stock-text') : null;
+
       const labels = {
         available: @json(__('product.available')),
         out_of_stock: @json(__('product.out_of_stock')),
@@ -137,20 +138,16 @@
         const s = sizeSelect ? sizeSelect.value : null;
         const c = colorSelect ? colorSelect.value : null;
         if (!variants.length) return null;
-        // Спочатку пробуємо повний збіг size+color (якщо обрані)
-        let match = variants.find(v =>
+        const match = variants.find(v =>
           (s ? v.size === s : true) &&
           (c ? (v.color ?? null) === c : true)
         );
-        // Якщо не знайшли, повертаємо null (тоді братимемо суму/базу)
         return match || null;
       };
 
       const updatePrice = () => {
         const match = findMatchingVariant();
-        const newPrice = (match && match.price_override != null)
-          ? match.price_override
-          : basePrice;
+        const newPrice = (match && match.price_override != null) ? match.price_override : basePrice;
         priceEl.textContent = formatPrice(newPrice);
 
         const oldPrice = Number.parseFloat(match?.old_price ?? 0);
@@ -171,10 +168,8 @@
         if (match && typeof match.quantity === 'number') {
           qty = match.quantity;
         } else if (variants.length) {
-          // Сума по всіх варіантах (якщо розмір/колір не обрані)
           qty = variants.reduce((acc, v) => acc + (parseInt(v.quantity) || 0), 0);
         } else {
-          // Без варіантів — беремо загальний склад
           qty = parseInt(window.productStockTotal) || 0;
         }
 
@@ -190,23 +185,21 @@
         }
         stockText.textContent = inStock ? labels.available : labels.out_of_stock;
 
-        // (Необов'язково) зробити кнопку "У кошик" неактивною, якщо немає
+        // (опціонально) заблокувати кнопку "У кошик"
         const cartBtn = document.querySelector('#add-to-cart button');
         if (cartBtn) cartBtn.disabled = !inStock;
       };
 
-      // Події
       if (sizeSelect)  sizeSelect.addEventListener('change', () => { updatePrice(); updateStock(); });
       if (colorSelect) colorSelect.addEventListener('change', () => { updatePrice(); updateStock(); });
 
-      // Стартова ініціалізація
       updatePrice();
       updateStock();
     });
   </script>
   @endpush
 
-  {{-- 🔎 попереджувальний банер, якщо не знайшли categorySlug --}}
+  {{-- Попереджувальний банер, якщо не знайшли categorySlug --}}
   @if (empty($categorySlug))
     <div class="alert alert-warning my-2">
       ⚠️ Для цього товару не знайдено <code>categorySlug</code>. Використано резервний шлях <code>/{{ $currentLocale }}/product/{{ $productSlug }}</code>.
