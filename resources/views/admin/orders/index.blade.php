@@ -50,10 +50,7 @@ foreach ($statusLabels as $val => $label) {
     <!-- ===== Toolbar / KPIs ===== -->
     <div class="toolbar">
       <div class="t-chip">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="18" height="18" rx="3" stroke="#16a34a"></rect>
-          <path d="M7 12l3 3 7-7" stroke="#16a34a"></path>
-        </svg>
+        <i class="bi bi-clipboard-check picon text-success"></i>
         Сума на сторінці: <b>{{ number_format($pageSum, 0, '.', ' ') }} {{ $currency }}</b>
       </div>
 
@@ -199,13 +196,13 @@ foreach ($statusLabels as $val => $label) {
     <div class="small muted">{{ $o->created_at?->format('d.m.Y, H:i') }}</div>
 
     <div class="payline small">
-      <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+      <i class="bi bi-credit-card-2-front picon text-secondary"></i>
       {{ $o->payment_method ?? 'Спосіб оплати не вказано' }}
     </div>
 
     @if($o->delivery?->np_ref)
       <div class="payline small">
-        <svg class="picon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M15 9l-6 6"></path></svg>
+        <i class="bi bi-receipt picon text-danger"></i>
         <b>ТТН:</b>
       </div>
     @endif
@@ -233,7 +230,7 @@ foreach ($statusLabels as $val => $label) {
                 class="btn p-0 border-0 bg-transparent js-copy"
                 title="Копіювати"
                 data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone) }}">
-          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+          <i class="bi bi-clipboard picon"></i>
         </button>
       </div>
     @endif
@@ -322,15 +319,15 @@ foreach ($statusLabels as $val => $label) {
                             <div class="d-flex justify-content-between align-items-center">
                               <div class="text-muted small d-flex align-items-center gap-2">
                                 Отримувач
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M12 5v3"></path><path d="M12 16v3"></path><path d="M19 12h-3"></path><path d="M8 12H5"></path></svg>
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3Z"></path><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7Z"></path></svg>
+                                <i class="bi bi-info-circle picon"></i>
+                                <i class="bi bi-box-arrow-up-right picon"></i>
                               </div>
                               <div class="d-flex align-items-center gap-2">
                                 <a class="text-body text-decoration-none" href="tel:{{ $o->customer->phone ?? '' }}">
                                   {{ $o->customer->phone ?? '—' }}
                                 </a>
                                 <button type="button" class="btn p-0 border-0 bg-transparent js-copy" title="Копіювати телефон" data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone ?? '') }}">
-                                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+                                  <i class="bi bi-clipboard picon"></i>
                                 </button>
                               </div>
                             </div>
@@ -346,7 +343,7 @@ foreach ($statusLabels as $val => $label) {
                                   {{ $o->customer->phone ?? '—' }}
                                 </a>
                                 <button type="button" class="btn p-0 border-0 bg-transparent js-copy" title="Копіювати телефон" data-copy="{{ preg_replace('/\s+/', '', $o->customer->phone ?? '') }}">
-                                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+                                  <i class="bi bi-clipboard picon"></i>
                                 </button>
                               </div>
                             </div>
@@ -356,7 +353,7 @@ foreach ($statusLabels as $val => $label) {
                           <!-- Кількість покупок -->
                           <div class="py-3">
                             <div class="d-flex align-items-center gap-2">
-                              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"></path><path d="M17 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"></path><path d="M6.2 4l-.3-2H1v2h3l2.4 12.2A2 2 0 0 0 8.4 18h8.9a2 2 0 0 0 2-1.6L21 8H6.6L6.2 4Z"></path><path d="M18.8 10l-1.2 6H8.4L7.3 10h11.5Z"></path></svg>
+                              <i class="bi bi-bag-check picon"></i>
                               <span>Кількість покупок: {{ $o->customer?->orders_count ?? 1 }}</span>
                             </div>
                           </div>
@@ -377,13 +374,13 @@ foreach ($statusLabels as $val => $label) {
                             <div class="text-muted small">Служба</div>
                             <div class="mt-1 fw-semibold d-flex align-items-center gap-2">
                               @if(($o->delivery->delivery_type ?? '') === 'courier')
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8h-3V4H3v10h1a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h1v-4l-2-2Z"></path><path d="M17 14H10a3 3 0 0 0-5.83 0H5V6h10v3h3l2 2v3h-.17A3 3 0 0 0 17 14Z"></path></svg>
+                                <i class="bi bi-truck picon"></i>
                                 <span>курєр</span>
                               @elseif(($o->delivery->delivery_type ?? '') === 'branch')
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3V5Z"></path><path d="M5 7v2l7 4 7-4V7H5Z"></path></svg>
+                                <i class="bi bi-building picon"></i>
                                 <span>на пошту</span>
                               @elseif(($o->delivery->delivery_type ?? '') === 'postomat')
-                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3V4Z"></path><path d="M5 6v12h14V6H5Z"></path><path d="M7 8h4v3H7V8Z"></path><path d="M12 8h5v3h-5V8Z"></path><path d="M7 12h4v3H7v-3Z"></path><path d="M12 12h5v3h-5v-3Z"></path></svg>
+                                <i class="bi bi-grid-3x3-gap picon"></i>
                                 <span>поштомат</span>
                               @else
                                 <span>{{ $o->delivery->delivery_type ?? '—' }}</span>
@@ -409,7 +406,7 @@ foreach ($statusLabels as $val => $label) {
                               <div class="mt-1 fw-semibold d-flex align-items-center gap-2">
                                 <span>{{ $o->delivery->np_ref }}</span>
                                 <button type="button" class="btn p-0 border-0 bg-transparent js-copy" title="Копіювати ТТН" data-copy="{{ $o->delivery->np_ref }}">
-                                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+                                  <i class="bi bi-clipboard picon"></i>
                                 </button>
                               </div>
                             </div>
@@ -417,7 +414,7 @@ foreach ($statusLabels as $val => $label) {
 
                           <div class="pt-3">
                             <div class="d-flex align-items-center gap-2">
-                              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7H3v8a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7Z"></path><path d="M17 14H7v-2h10v2Z"></path><path d="M17 10H7V8h10v2Z"></path></svg>
+                              <i class="bi bi-cash-coin picon"></i>
                               <span>Зворотна доставка коштів: {{ ($o->delivery->cod ?? false) ? 'увімкнено' : 'вимкнено' }}</span>
                             </div>
                           </div>
@@ -465,9 +462,7 @@ foreach ($statusLabels as $val => $label) {
                             <div class="py-2">
                               <div class="text-muted small d-flex align-items-center gap-1">
                                 Вартість доставки для покупця
-                                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-                                  <circle cx="12" cy="12" r="2"></circle><path d="M12 5v3"></path><path d="M12 16v3"></path><path d="M19 12h-3"></path><path d="M8 12H5"></path>
-                                </svg>
+                                <i class="bi bi-info-circle picon"></i>
                               </div>
                               <div class="fw-medium">
                                 @if(($o->total_price ?? 0) >= 1000)
@@ -622,7 +617,7 @@ foreach ($statusLabels as $val => $label) {
   .toggle-row[aria-expanded="true"] .chev{ transform: rotate(90deg) }
 
   .payline{display:flex;align-items:center;gap:8px;margin-top:8px;color:#475569}
-  .picon{width:16px;height:16px}
+  .picon{font-size:16px;line-height:1;vertical-align:-1px}
   .thumb{width:74px;height:74px;border-radius:10px;background:#eceff5;border:1px solid var(--border)}
   .buyer-name{font-weight:600}
   .right{text-align:right}
@@ -682,40 +677,34 @@ foreach ($statusLabels as $val => $label) {
   .status-chip-select .dropdown-menu { max-width: 100%; }
   /* ——— компактний мультивибір статусів ——— */
 .status-chip-select button.form-control{
-  padding: .35rem .5rem;         /* менший внутрішній відступ */
-  min-height: 40px;               /* нижча "висота" поля у закритому стані */
+  padding: .35rem .5rem;
+  min-height: 40px;
 }
 
-/* чипи трохи менші */
 .status-chip-select .chips .badge{
   font-size: .8rem;
   padding: .35rem .45rem;
   border-radius: .6rem;
 }
 
-/* саме меню робимо не на всю ширину та з меншим скролом */
-/* робимо випадаюче меню статусів меншим */
 .status-chip-select .dropdown-menu {
-  width: 320px !important;    /* фіксована ширина */
-  max-width: 90vw;            /* щоб на малих екранах не вилазило */
-  padding: .5rem .75rem;      /* компактні паддінги */
-  border-radius: .5rem;       /* плавні краї */
+  width: 320px !important;
+  max-width: 90vw;
+  padding: .5rem .75rem;
+  border-radius: .5rem;
 }
 
-/* список опцій нижчий */
 .status-chip-select .status-list{
-  max-height: 160px;              /* було ~220 — зменшили */
+  max-height: 160px;
   overflow: auto;
 }
 
-/* рядки опцій компактніші */
 .status-chip-select .dropdown-item{
-  padding: .25rem .5rem;          /* менший вертикальний паддінг */
+  padding: .25rem .5rem;
   font-size: .95rem;
   line-height: 1.2;
 }
 
-/* чекбокси менші й вирівняні по центру */
 .status-chip-select .dropdown-item .form-check-input{
   width: 1rem;
   height: 1rem;
