@@ -159,6 +159,8 @@
   "product.available": "В наличии",
   "product.out_of_stock": "Нет в наличии",
 
+  "select_size": "Оберіть розмір",
+  "added_short": "Додано!",
 
   "product.code": "Код товара",
   "product.review_singular": "отзыв",

@@ -6,11 +6,11 @@
         type="button"
         class="btn btn-icon btn-lg"
         data-decrement
-        :disabled="quantity <= 1 || isOutOfStock"
+        :disabled="quantity <= 1 || isOutOfStock || isAdding"
         aria-label="Decrement quantity"
-        @click="(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity > 1 && !isOutOfStock) decrement() }"
-        @keydown.enter.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity > 1 && !isOutOfStock) decrement() }"
-        @keydown.space.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity > 1 && !isOutOfStock) decrement() }"
+        @click="(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity > 1 && !isOutOfStock && !isAdding) decrement() }"
+        @keydown.enter.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity > 1 && !isOutOfStock && !isAdding) decrement() }"
+        @keydown.space.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity > 1 && !isOutOfStock && !isAdding) decrement() }"
       >
         <i class="ci-minus"></i>
       </button>
@@ -30,23 +30,23 @@
         type="button"
         class="btn btn-icon btn-lg"
         data-increment
-        :disabled="quantity >= maxAllowedQty || isOutOfStock"
+        :disabled="quantity >= maxAllowedQty || isOutOfStock || isAdding"
         aria-label="Increment quantity"
-        @click="(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity < maxAllowedQty && !isOutOfStock) increment() }"
-        @keydown.enter.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity < maxAllowedQty && !isOutOfStock) increment() }"
-        @keydown.space.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity < maxAllowedQty && !isOutOfStock) increment() }"
+        @click="(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity < maxAllowedQty && !isOutOfStock && !isAdding) increment() }"
+        @keydown.enter.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity < maxAllowedQty && !isOutOfStock && !isAdding) increment() }"
+        @keydown.space.prevent.stop="(e)=>{ e.stopImmediatePropagation && e.stopImmediatePropagation(); if (quantity < maxAllowedQty && !isOutOfStock && !isAdding) increment() }"
       >
         <i class="ci-plus"></i>
       </button>
     </div>
 
     <!-- В обране -->
-    <button type="button" class="btn btn-icon btn-lg btn-secondary animate-pulse" title="До обраного">
+    <button type="button" class="btn btn-icon btn-lg btn-secondary animate-pulse" title="До обраного" :disabled="isAdding">
       <i class="ci-heart fs-base animate-target"></i>
     </button>
 
     <!-- Порівняти -->
-    <button type="button" class="btn btn-icon btn-lg btn-secondary animate-rotate" title="Порівняти">
+    <button type="button" class="btn btn-icon btn-lg btn-secondary animate-rotate" title="Порівняти" :disabled="isAdding">
       <i class="ci-refresh-cw fs-base animate-target"></i>
     </button>
 
@@ -54,12 +54,22 @@
     <div class="flex-grow-1">
       <button
         type="button"
-        :class="['btn','btn-lg','w-100','animate-slide-end', isOutOfStock ? 'btn-secondary' : 'btn-primary']"
-        :disabled="isOutOfStock"
-        @click="addToCart"
+        :class="['btn','btn-lg','w-100','animate-slide-end', ctaClass]"
+        :disabled="ctaDisabled"
+        :aria-disabled="ctaDisabled ? 'true' : 'false'"
+        :title="ctaTitle"
+        @click="onCtaClick"
       >
-        <i class="ci-shopping-cart fs-base animate-target me-2"></i>
-        {{ $t('add_to_cart') }}
+        <!-- спінер під час додавання -->
+        <span v-if="isAdding" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+
+        <!-- іконки для станів (без спінера) -->
+        <i v-else-if="justAdded" class="ci-check-circle fs-base animate-target me-2"></i>
+        <i v-else-if="isOutOfStock" class="ci-close-circle fs-base animate-target me-2"></i>
+        <i v-else-if="needsSize" class="ci-alert-circle fs-base animate-target me-2"></i>
+        <i v-else class="ci-shopping-cart fs-base animate-target me-2"></i>
+
+        {{ ctaText }}
       </button>
     </div>
   </div>
@@ -67,11 +77,12 @@
 
 <script setup>
 /**
- * ✅ Що змінено:
- * - Додаємо реактивний стан наявності (isOutOfStock) за обраним розміром або загальним залишком.
- * - Кнопка "У кошик" стає сірою (btn-secondary) і disabled, якщо кількість = 0.
- * - Плюс/мінус теж блокуються при відсутності стоку; max для лічильника = фактичний залишок (але не більше 10).
- * - При зміні розміру автоматично перераховується доступна кількість; quantity підрізається до доступної.
+ * Кнопка "У кошик" зі станами:
+ *  - ready:        "Додати в кошик" (primary)
+ *  - needsSize:    "Оберіть розмір" (primary, клік підсвічує <select>)
+ *  - outOfStock:   "Немає в наявності" (secondary, disabled)
+ *  - isAdding:     спінер, заблоковано
+ *  - justAdded:    "Додано!" (success ~1.2s)
  */
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -85,59 +96,67 @@ const { locale, t } = useI18n()
 const cart = useCartStore()
 
 /* ---- локальний стан ---- */
-const quantity = ref(1)
+const quantity   = ref(1)
+const isAdding   = ref(false)   // true під час додавання
+const justAdded  = ref(false)   // true коротко після успіху
 
-// Розмір із зовнішнього <select name="size"> (реактивно підписуємось)
+// Розмір із зовнішнього <select name="size">
 const selectedSize = ref('')
 let sizeEl = null
 
-/* ---- джерело варіантів:
- * 1) якщо у пропсах прийшли variants — беремо їх;
- * 2) інакше спробуємо window.productVariants (фолбек із Blade).
- */
+/* ---- джерело варіантів ---- */
 const variants = computed(() => {
   if (Array.isArray(props.product?.variants)) return props.product.variants
-  if (Array.isArray(window.productVariants)) return window.productVariants
+  if (Array.isArray(window.productVariants))  return window.productVariants
   return []
 })
 
-/* ---- агрегована кількість по всіх варіантах ---- */
+/* ---- агрегована кількість ---- */
 const variantsTotal = computed(() =>
   variants.value.reduce((acc, v) => acc + (parseInt(v?.quantity ?? 0) || 0), 0)
 )
 
-/* ---- отримати вибраний розмір із DOM ---- */
+/* ---- синхронізація з DOM ---- */
 const readSelectedSize = () => {
   const el = document.querySelector('select[name="size"]')
   sizeEl = el
   selectedSize.value = el?.value?.toString() ?? ''
 }
 
-/* ---- найти варіант за вибраним розміром ---- */
+onMounted(() => {
+  readSelectedSize()
+  if (sizeEl) sizeEl.addEventListener('change', readSelectedSize, { passive: true })
+})
+onBeforeUnmount(() => { if (sizeEl) sizeEl.removeEventListener('change', readSelectedSize) })
+
+/* ---- варіант, доступність ---- */
 const matchedVariant = computed(() => {
   const sz = selectedSize.value
   if (!sz) return null
   return variants.value.find(v => (v?.size ?? '') === sz) || null
 })
 
-/* ---- скільки доступно зараз (пріоритет: конкретний варіант → сума варіантів → stock_total) ---- */
 const availableQty = computed(() => {
   if (variants.value.length) {
     if (matchedVariant.value) return parseInt(matchedVariant.value.quantity ?? 0) || 0
-    // якщо розмір не обрано — показуємо доступність за сумою, аби заблокувати кнопку коли все по нулях
     return variantsTotal.value
   }
   return parseInt(props.product?.stock_total ?? props.product?.quantity_in_stock ?? 0) || 0
 })
 
-/* ---- прапор: немає в наявності ---- */
 const isOutOfStock = computed(() => (availableQty.value || 0) <= 0)
+const needsSize    = computed(() => variants.value.length > 0 && !matchedVariant.value)
 
-/* ---- максимально дозволена кількість для лічильника ---- */
+/* ---- обмеження лічильника ---- */
 const maxAllowedQty = computed(() => {
-  // якщо є залишок — обмежуємось мін(10, залишок), інакше 10 (але кнопка буде disabled)
   const cap = availableQty.value > 0 ? availableQty.value : 10
   return Math.min(10, cap)
+})
+const increment = () => { if (!isOutOfStock.value && !isAdding.value && quantity.value < maxAllowedQty.value) quantity.value++ }
+const decrement = () => { if (!isOutOfStock.value && !isAdding.value && quantity.value > 1) quantity.value-- }
+watch(availableQty, (qty) => {
+  if (qty <= 0) { quantity.value = 1 }
+  else if (quantity.value > qty) { quantity.value = Math.max(1, qty) }
 })
 
 /* ---- утиліти ---- */
@@ -147,112 +166,122 @@ const toNum = (v) => {
   return Number.isFinite(n) ? Number(n.toFixed(2)) : 0
 }
 
-// Керування кількістю
-const increment = () => { if (!isOutOfStock.value && quantity.value < maxAllowedQty.value) quantity.value++ }
-const decrement = () => { if (!isOutOfStock.value && quantity.value > 1) quantity.value-- }
-
-/* ---- синхронізуємо selectedSize з DOM ---- */
-onMounted(() => {
-  readSelectedSize()
-  if (sizeEl) sizeEl.addEventListener('change', readSelectedSize, { passive: true })
-})
-onBeforeUnmount(() => {
-  if (sizeEl) sizeEl.removeEventListener('change', readSelectedSize)
-})
-
-/* ---- якщо доступний залишок зменшився — підрізаємо quantity ---- */
-watch(availableQty, (qty) => {
-  if (qty <= 0) {
-    quantity.value = 1
-  } else if (quantity.value > qty) {
-    quantity.value = Math.max(1, qty)
-  }
-})
-
-/* ---- допоміжні ф-ції ---- */
-const getMatchedVariant = (size) => {
-  if (!size) return null
-  return variants.value.find(v => (v?.size ?? '') === size) || null
+/* ========= CTA (кнопка) — текст / класи / доступність ========= */
+const i18n = {
+  add_to_cart:      t('add_to_cart') || 'Додати в кошик',
+  select_size:      t('select_size') || 'Оберіть розмір',
+  out_of_stock:     t('product.out_of_stock') || 'Немає в наявності',
+  added_short:      t('added_short') || 'Додано!',
 }
 
-/* ---- головна дія: додати до кошика + трекінг ---- */
-const addToCart = async () => {
-  // 0) якщо взагалі немає залишків — просто попереджаємо
-  if (isOutOfStock.value) {
-    window.showGlobalToast?.(t('product.out_of_stock') || 'Немає в наявності', 'warning')
-    return
-  }
+const ctaText = computed(() => {
+  if (isAdding.value)   return i18n.add_to_cart
+  if (justAdded.value)  return i18n.added_short
+  if (isOutOfStock.value) return i18n.out_of_stock
+  if (needsSize.value)  return i18n.select_size
+  return i18n.add_to_cart
+})
 
-  // 1) Переконаймось, що обрано розмір (коли є варіанти)
-  const selected = selectedSize.value
-  if (variants.value.length && !selected) {
-    window.showGlobalToast?.('Будь ласка, виберіть розмір!', 'warning')
+const ctaClass = computed(() => {
+  if (justAdded.value)     return 'btn-success'
+  if (isOutOfStock.value)  return 'btn-secondary'
+  // loading і needsSize залишаються primary
+  return 'btn-primary'
+})
+
+const ctaDisabled = computed(() => isOutOfStock.value || isAdding.value)
+
+const ctaTitle = computed(() => {
+  if (isOutOfStock.value) return i18n.out_of_stock
+  if (needsSize.value)    return i18n.select_size
+  return i18n.add_to_cart
+})
+
+/* ---- клік по кнопці ---- */
+const onCtaClick = () => {
+  if (isOutOfStock.value || isAdding.value) return
+
+  // Якщо треба вибрати розмір — підсвітимо select і дамо тост, але не блокуємо кнопку назавжди
+  if (needsSize.value) {
+    window.showGlobalToast?.(i18n.select_size, 'warning')
     sizeEl?.classList.add('is-invalid'); sizeEl?.focus()
     return
   }
   sizeEl?.classList.remove('is-invalid')
 
-  // 2) Знайти відповідний варіант
-  const variant = getMatchedVariant(selected) ?? (variants.value.length ? null : {})
-  if (variants.value.length && !variant) {
-    window.showGlobalToast?.('Обраний розмір недоступний', 'danger')
-    return
-  }
+  // Інакше — додаємо
+  void addToCart()
+}
 
-  // 2.1) Перевірити склад і підрізати quantity, якщо треба
-  const stock = parseInt(variant?.quantity ?? availableQty.value ?? 0) || 0
-  if (stock > 0 && quantity.value > stock) {
-    quantity.value = stock
-    window.showGlobalToast?.(`На складі лише ${stock} шт.`, 'warning')
-  }
+/* ---- додати до кошика + трекінг ---- */
+const addToCart = async () => {
+  try {
+    isAdding.value = true
 
-  // 3) Зібрати дані позиції (ціна: override або базова ціна продукту)
-  const rawPrice   = (variant && 'price_override' in variant) ? variant.price_override : props.product.price
-  const finalPrice = toNum(rawPrice)
+    // Якщо є варіанти — matchedVariant обов’язковий
+    const variant = matchedVariant.value ?? (variants.value.length ? null : {})
+    if (variants.value.length && !variant) {
+      window.showGlobalToast?.('Обраний розмір недоступний', 'danger')
+      return
+    }
 
-  // Локалізована назва товару
-  const productName =
-    props.product?.translations?.find(ti => ti.locale === locale.value)?.name ||
-    props.product?.translations?.find(ti => ti.locale === 'uk')?.name ||
-    props.product?.translations?.[0]?.name ||
-    props.product?.name || ''
+    // Перевірити склад і підрізати quantity, якщо треба
+    const stock = parseInt(variant?.quantity ?? availableQty.value ?? 0) || 0
+    if (stock > 0 && quantity.value > stock) {
+      quantity.value = stock
+      window.showGlobalToast?.(`На складі лише ${stock} шт.`, 'warning')
+    }
 
-  const currency = window.metaPixelCurrency || 'UAH'
+    // Ціна
+    const rawPrice   = (variant && 'price_override' in variant) ? variant.price_override : props.product.price
+    const finalPrice = toNum(rawPrice)
 
-  // 4) Додати у кошик (Pinia store)
-  await cart.addToCart({
-    id: variant?.id ?? props.product.id,          // якщо без варіантів — fallback id продукту
-    product_id: props.product.id,
-    variant_sku: variant?.variant_sku ?? null,    // збережемо для відображення та трекінгу
-    name: productName,
-    price: finalPrice,
-    image: props.product.images?.[0]?.full_url || props.product.images?.[0]?.url || '',
-    quantity: quantity.value,
-    link: props.product.url,
-    size: variant?.size ?? '',
-    color: variant?.color ?? '',
-  })
+    // Назва
+    const productName =
+      props.product?.translations?.find(ti => ti.locale === locale.value)?.name ||
+      props.product?.translations?.find(ti => ti.locale === 'uk')?.name ||
+      props.product?.translations?.[0]?.name ||
+      props.product?.name || ''
 
-  // 5) UI
-  emit('added', productName)
-  window.showGlobalToast?.('🛒  Товар додано в кошик', 'info')
-  const cartEl = document.getElementById('shoppingCart')
-  if (cartEl && window.bootstrap?.Offcanvas) new bootstrap.Offcanvas(cartEl).show()
+    const currency = window.metaPixelCurrency || 'UAH'
 
-  // 6) Трекінг AddToCart: відправляємо ЧИСТО variant_sku як content_id (якщо є)
-  const vSku = (variant?.variant_sku ?? '').toString().trim()
-  if (!vSku) {
-    // Якщо без варіантів або sku відсутній — пропускаємо трек AddToCart
-    return
-  }
-  if (typeof window.mpTrackATC === 'function') {
-    window.mpTrackATC({
-      variant_sku: vSku,
-      price: finalPrice,
-      quantity: quantity.value,
+    // Додати у кошик (Pinia)
+    await cart.addToCart({
+      id: variant?.id ?? props.product.id,
+      product_id: props.product.id,
+      variant_sku: variant?.variant_sku ?? null,
       name: productName,
-      currency
+      price: finalPrice,
+      image: props.product.images?.[0]?.full_url || props.product.images?.[0]?.url || '',
+      quantity: quantity.value,
+      link: props.product.url,
+      size: variant?.size ?? '',
+      color: variant?.color ?? '',
     })
+
+    // UI
+    emit('added', productName)
+    window.showGlobalToast?.('🛒  Товар додано в кошик', 'info')
+    const cartEl = document.getElementById('shoppingCart')
+    if (cartEl && window.bootstrap?.Offcanvas) new bootstrap.Offcanvas(cartEl).show()
+
+    // Трекінг: тільки variant_sku
+    const vSku = (variant?.variant_sku ?? '').toString().trim()
+    if (vSku && typeof window.mpTrackATC === 'function') {
+      window.mpTrackATC({
+        variant_sku: vSku,
+        price: finalPrice,
+        quantity: quantity.value,
+        name: productName,
+        currency
+      })
+    }
+
+    // Стан "Додано!" на короткий час
+    justAdded.value = true
+    setTimeout(() => { justAdded.value = false }, 1200)
+  } finally {
+    isAdding.value = false
   }
 }
 </script>

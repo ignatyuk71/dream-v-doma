@@ -192,6 +192,9 @@
   "product.no_size_guide": "Размерная сетка отсутствует.",
   "product.length_cm": "Длина (см)",
 
+  "select_size": "Оберіть розмір",
+  "added_short": "Додано!",
+
   "category.view_all": "Смотреть все позиции",
   "pagination.previous": "Назад",
   "pagination.next": "Вперёд",

@@ -188,8 +188,10 @@
   "product.top_rated": "Найкраще оцінені",
 
   "product.no_size_guide": "Розмірна сітка відсутня.",
-
   "product.length_cm": "Довжина (см)",
+
+  "select_size": "Оберіть розмір",
+  "added_short": "Додано!",
 
   "category.view_all": "Переглянути всі позиції",
   "pagination.previous": "Попередня",
