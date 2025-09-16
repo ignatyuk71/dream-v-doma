@@ -351,31 +351,31 @@ class ProductController extends Controller
     }
 
 
-    protected function updateAttributes(Product $product, array $attributesData)
+    protected function updateAttributes(\App\Models\Product $product, array $attributesData)
     {
-        // Зібрати по атрибуту (slug) з назвами і значеннями на мовах
+        // Збираємо по атрибуту (slug) з назвами і значеннями на мовах
         $byAttr = [];
         foreach (['uk', 'ru'] as $locale) {
-            foreach ($attributesData[$locale] ?? [] as $row) {
+            foreach (($attributesData[$locale] ?? []) as $row) {
                 $attrName = trim($row['name'] ?? '');
                 $valText  = trim($row['value'] ?? '');
                 if ($attrName === '' || $valText === '') continue;
-
+    
                 $attrSlug = \Str::slug($attrName);
                 $byAttr[$attrSlug]['attr_names'][$locale] = $attrName;
                 $byAttr[$attrSlug]['values'][$locale]     = $valText;
             }
         }
-
-        $selected = []; // attribute_id => value_id (щоб був 1 value на атрибут)
-
+    
+        $selected = []; // product_attribute_id => product_attribute_value_id (по одному value на атрибут)
+    
         foreach ($byAttr as $attrSlug => $data) {
             // 1) Атрибут
             $attribute = \App\Models\ProductAttribute::firstOrCreate(
                 ['slug' => $attrSlug],
                 ['type' => 'text', 'is_filterable' => false, 'position' => 0]
             );
-
+    
             // Переклади атрибуту
             foreach (($data['attr_names'] ?? []) as $loc => $name) {
                 \App\Models\ProductAttributeTranslation::updateOrCreate(
@@ -383,25 +383,28 @@ class ProductController extends Controller
                     ['name' => $name]
                 );
             }
-
+    
             // 2) Бажане значення (канонічно беремо uk, якщо є; інакше ru)
-            $labelUk = $data['values']['uk'] ?? null;
-            $labelRu = $data['values']['ru'] ?? null;
+            $labelUk       = $data['values']['uk'] ?? null;
+            $labelRu       = $data['values']['ru'] ?? null;
             $canonicalText = $labelUk ?? $labelRu;
             if (!$canonicalText) continue;
-
+    
             $canonicalSlug = \Str::slug($canonicalText);
-
+    
             // 3) Пошук існуючого value за (attribute_id + translations.slug)
             $value = \App\Models\ProductAttributeValue::where('product_attribute_id', $attribute->id)
-                ->whereHas('translations', fn($q) => $q->where('slug', $canonicalSlug))
+                ->whereHas('translations', function ($q) use ($canonicalSlug) {
+                    $q->where('slug', $canonicalSlug);
+                })
                 ->first();
-
+    
             if (!$value) {
-                // Нема — створюємо нове value + переклади з форми
+                // Нема — створюємо нове значення + переклади з форми
                 $value = \App\Models\ProductAttributeValue::create([
                     'product_attribute_id' => $attribute->id,
                 ]);
+    
                 foreach (['uk', 'ru'] as $loc) {
                     $lbl = $data['values'][$loc] ?? null;
                     if ($lbl) {
@@ -412,7 +415,7 @@ class ProductController extends Controller
                     }
                 }
             } else {
-                // Є — перевіримо, чи відрізняються тексти, які надійшли
+                // Є — перевіримо, чи відрізняються тексти, що прийшли
                 $value->loadMissing('translations');
                 $differs = false;
                 foreach (['uk', 'ru'] as $loc) {
@@ -422,14 +425,14 @@ class ProductController extends Controller
                     $t    = $value->translations->firstWhere('locale', $loc);
                     if (!$t || $t->value !== $lbl || $t->slug !== $slug) { $differs = true; break; }
                 }
-
+    
                 if ($differs) {
                     // Чи використовують це value інші товари?
                     $usedByOther = \DB::table('product_attribute_product')
                         ->where('product_attribute_value_id', $value->id)
                         ->where('product_id', '!=', $product->id)
                         ->exists();
-
+    
                     if ($usedByOther) {
                         // Клонуємо значення лише для цього продукту
                         $clone = \App\Models\ProductAttributeValue::create([
@@ -446,10 +449,11 @@ class ProductController extends Controller
                         }
                         $value = $clone;
                     } else {
-                        // Безпечно оновлюємо тексти існуючого value (воно ніким більш не юзається)
+                        // Безпечно оновлюємо тексти існуючого value (воно ніким більше не юзається)
                         foreach (['uk', 'ru'] as $loc) {
                             $lbl = $data['values'][$loc] ?? null;
                             if (!$lbl) continue;
+    
                             \App\Models\ProductAttributeValueTranslation::updateOrCreate(
                                 ['product_attribute_value_id' => $value->id, 'locale' => $loc],
                                 ['value' => $lbl, 'slug' => \Str::slug($lbl)]
@@ -458,14 +462,52 @@ class ProductController extends Controller
                     }
                 }
             }
-
+    
             // 4) Запам’ятати 1 value на атрибут
             $selected[$attribute->id] = $value->id;
         }
-
+    
         // 5) Синхронізація pivot: тільки обрані значення (по одному на атрибут)
-        $product->attributeValues()->sync(array_values($selected));
+        $changes = $product->attributeValues()->sync(array_values($selected));
+    
+        // 6) Прибираємо «сироти»: value/переклади/порожні атрибути
+        $detached = $changes['detached'] ?? [];
+        if (!empty($detached)) {
+            // які з відʼєднаних все ще використовуються іншими товарами
+            $stillUsed = \DB::table('product_attribute_product')
+                ->whereIn('product_attribute_value_id', $detached)
+                ->pluck('product_attribute_value_id')
+                ->unique()
+                ->all();
+    
+            $orphans = array_values(array_diff($detached, $stillUsed));
+            if (!empty($orphans)) {
+                // зберемо їх product_attribute_id перед видаленням
+                $attrIds = \App\Models\ProductAttributeValue::whereIn('id', $orphans)
+                    ->pluck('product_attribute_id')
+                    ->unique()
+                    ->all();
+    
+                // 6.1) Видалити переклади value, потім самі value
+                \App\Models\ProductAttributeValueTranslation::whereIn('product_attribute_value_id', $orphans)->delete();
+                \App\Models\ProductAttributeValue::whereIn('id', $orphans)->delete();
+    
+                // 6.2) Знести порожні атрибути (у яких не лишилось жодного value)
+                if (!empty($attrIds)) {
+                    $stillHasValues = \App\Models\ProductAttributeValue::whereIn('product_attribute_id', $attrIds)
+                        ->pluck('product_attribute_id')
+                        ->all();
+    
+                    $emptyAttrIds = array_values(array_diff($attrIds, $stillHasValues));
+                    if (!empty($emptyAttrIds)) {
+                        \App\Models\ProductAttributeTranslation::whereIn('product_attribute_id', $emptyAttrIds)->delete();
+                        \App\Models\ProductAttribute::whereIn('id', $emptyAttrIds)->delete();
+                    }
+                }
+            }
+        }
     }
+    
 
 
 
