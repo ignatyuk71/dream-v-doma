@@ -49,8 +49,6 @@
   <!-- ICONS (Cartzilla) — ПОВЕРНУЛИ -->
   <link rel="preload" href="/assets/icons/cartzilla-icons.min.css" as="style">
   <link rel="stylesheet" href="/assets/icons/cartzilla-icons.min.css">
-  {{-- (Необов’язково) Якщо знаєш точний шлях до woff2, розкоментуй preload нижче --}}
-  {{-- <link rel="preload" as="font" href="/assets/icons/cartzilla-icons.woff2" type="font/woff2" crossorigin> --}}
 
   <!-- Vendor CSS -->
   <link rel="preload" href="/assets/vendor/swiper/swiper-bundle.min.css" as="style">
