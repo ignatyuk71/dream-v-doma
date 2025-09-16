@@ -349,85 +349,124 @@ class ProductController extends Controller
             $product->variants()->whereIn('id', $toDelete)->delete();
         }
     }
+
+
     protected function updateAttributes(Product $product, array $attributesData)
     {
-        // Очікуємо $attributesData = ['uk' => [...], 'ru' => [...]]
-        // Кожен елемент: ['name' => '...', 'value' => '...']
-
-        $attributeMap = []; // slug атрибута => модель ProductAttribute
-        $valueMap = []; // key: attribute_id + value_slug => ProductAttributeValue
-
-        $attributeValuesToAttach = [];
-
+        // Зібрати по атрибуту (slug) з назвами і значеннями на мовах
+        $byAttr = [];
         foreach (['uk', 'ru'] as $locale) {
-            if (!isset($attributesData[$locale])) continue;
+            foreach ($attributesData[$locale] ?? [] as $row) {
+                $attrName = trim($row['name'] ?? '');
+                $valText  = trim($row['value'] ?? '');
+                if ($attrName === '' || $valText === '') continue;
 
-            foreach ($attributesData[$locale] as $item) {
-                $attrName = $item['name'];
                 $attrSlug = \Str::slug($attrName);
-                $attrValue = $item['value'];
-                $valueSlug = \Str::slug($attrValue);
-
-                // --- Обробка атрибута ---
-                if (!isset($attributeMap[$attrSlug])) {
-                    $attribute = \App\Models\ProductAttribute::firstOrCreate(['slug' => $attrSlug], [
-                        'type' => 'text', // можна додати логіку визначення типу
-                        'is_filterable' => false,
-                        'position' => 0,
-                    ]);
-                    $attributeMap[$attrSlug] = $attribute;
-                } else {
-                    $attribute = $attributeMap[$attrSlug];
-                }
-
-                // Оновлення перекладів атрибута
-                $attrTranslation = $attribute->translations()->where('locale', $locale)->first();
-                if ($attrTranslation) {
-                    if ($attrTranslation->name !== $attrName) {
-                        $attrTranslation->update(['name' => $attrName]);
-                    }
-                } else {
-                    $attribute->translations()->create([
-                        'locale' => $locale,
-                        'name' => $attrName
-                    ]);
-                }
-
-                // --- Обробка значення атрибута ---
-                $valueKey = $attribute->id . '_' . $valueSlug;
-                if (!isset($valueMap[$valueKey])) {
-                    $attributeValue = \App\Models\ProductAttributeValue::firstOrCreate([
-                        'product_attribute_id' => $attribute->id,
-                    ]);
-                    $valueMap[$valueKey] = $attributeValue;
-                } else {
-                    $attributeValue = $valueMap[$valueKey];
-                }
-
-                // Оновлення перекладів значення атрибута
-                $valueTranslation = $attributeValue->translations()->where('locale', $locale)->first();
-                if ($valueTranslation) {
-                    if ($valueTranslation->value !== $attrValue || $valueTranslation->slug !== $valueSlug) {
-                        $valueTranslation->update([
-                            'value' => $attrValue,
-                            'slug' => $valueSlug
-                        ]);
-                    }
-                } else {
-                    $attributeValue->translations()->create([
-                        'locale' => $locale,
-                        'value' => $attrValue,
-                        'slug' => $valueSlug
-                    ]);
-                }
-
-                $attributeValuesToAttach[] = $attributeValue->id;
+                $byAttr[$attrSlug]['attr_names'][$locale] = $attrName;
+                $byAttr[$attrSlug]['values'][$locale]     = $valText;
             }
         }
 
-        // Синхронізуємо звʼязок product_attribute_product
-        $product->attributeValues()->sync(array_unique($attributeValuesToAttach));
+        $selected = []; // attribute_id => value_id (щоб був 1 value на атрибут)
+
+        foreach ($byAttr as $attrSlug => $data) {
+            // 1) Атрибут
+            $attribute = \App\Models\ProductAttribute::firstOrCreate(
+                ['slug' => $attrSlug],
+                ['type' => 'text', 'is_filterable' => false, 'position' => 0]
+            );
+
+            // Переклади атрибуту
+            foreach (($data['attr_names'] ?? []) as $loc => $name) {
+                \App\Models\ProductAttributeTranslation::updateOrCreate(
+                    ['product_attribute_id' => $attribute->id, 'locale' => $loc],
+                    ['name' => $name]
+                );
+            }
+
+            // 2) Бажане значення (канонічно беремо uk, якщо є; інакше ru)
+            $labelUk = $data['values']['uk'] ?? null;
+            $labelRu = $data['values']['ru'] ?? null;
+            $canonicalText = $labelUk ?? $labelRu;
+            if (!$canonicalText) continue;
+
+            $canonicalSlug = \Str::slug($canonicalText);
+
+            // 3) Пошук існуючого value за (attribute_id + translations.slug)
+            $value = \App\Models\ProductAttributeValue::where('product_attribute_id', $attribute->id)
+                ->whereHas('translations', fn($q) => $q->where('slug', $canonicalSlug))
+                ->first();
+
+            if (!$value) {
+                // Нема — створюємо нове value + переклади з форми
+                $value = \App\Models\ProductAttributeValue::create([
+                    'product_attribute_id' => $attribute->id,
+                ]);
+                foreach (['uk', 'ru'] as $loc) {
+                    $lbl = $data['values'][$loc] ?? null;
+                    if ($lbl) {
+                        \App\Models\ProductAttributeValueTranslation::updateOrCreate(
+                            ['product_attribute_value_id' => $value->id, 'locale' => $loc],
+                            ['value' => $lbl, 'slug' => \Str::slug($lbl)]
+                        );
+                    }
+                }
+            } else {
+                // Є — перевіримо, чи відрізняються тексти, які надійшли
+                $value->loadMissing('translations');
+                $differs = false;
+                foreach (['uk', 'ru'] as $loc) {
+                    if (!isset($data['values'][$loc])) continue;
+                    $lbl  = $data['values'][$loc];
+                    $slug = \Str::slug($lbl);
+                    $t    = $value->translations->firstWhere('locale', $loc);
+                    if (!$t || $t->value !== $lbl || $t->slug !== $slug) { $differs = true; break; }
+                }
+
+                if ($differs) {
+                    // Чи використовують це value інші товари?
+                    $usedByOther = \DB::table('product_attribute_product')
+                        ->where('product_attribute_value_id', $value->id)
+                        ->where('product_id', '!=', $product->id)
+                        ->exists();
+
+                    if ($usedByOther) {
+                        // Клонуємо значення лише для цього продукту
+                        $clone = \App\Models\ProductAttributeValue::create([
+                            'product_attribute_id' => $attribute->id,
+                        ]);
+                        foreach (['uk', 'ru'] as $loc) {
+                            $lbl = $data['values'][$loc] ?? null;
+                            if ($lbl) {
+                                \App\Models\ProductAttributeValueTranslation::updateOrCreate(
+                                    ['product_attribute_value_id' => $clone->id, 'locale' => $loc],
+                                    ['value' => $lbl, 'slug' => \Str::slug($lbl)]
+                                );
+                            }
+                        }
+                        $value = $clone;
+                    } else {
+                        // Безпечно оновлюємо тексти існуючого value (воно ніким більш не юзається)
+                        foreach (['uk', 'ru'] as $loc) {
+                            $lbl = $data['values'][$loc] ?? null;
+                            if (!$lbl) continue;
+                            \App\Models\ProductAttributeValueTranslation::updateOrCreate(
+                                ['product_attribute_value_id' => $value->id, 'locale' => $loc],
+                                ['value' => $lbl, 'slug' => \Str::slug($lbl)]
+                            );
+                        }
+                    }
+                }
+            }
+
+            // 4) Запам’ятати 1 value на атрибут
+            $selected[$attribute->id] = $value->id;
+        }
+
+        // 5) Синхронізація pivot: тільки обрані значення (по одному на атрибут)
+        $product->attributeValues()->sync(array_values($selected));
     }
+
 
 
     protected function updateColors(Product $product, array $colorsData)
@@ -874,76 +913,89 @@ class ProductController extends Controller
      */
     public function saveProductAttributes($productId, array $attributes)
     {
-        $locales = ['uk', 'ru'];
-        $pairs = [];
-
-        foreach ($locales as $locale) {
-            foreach ($attributes[$locale] ?? [] as $attr) {
-                $attrName = trim($attr['name']);
-                $attrValue = trim($attr['value']);
-                if (!$attrName || !$attrValue) continue;
+        $product = \App\Models\Product::findOrFail($productId);
+    
+        // Зібрати по атрибуту (slug)
+        $byAttr = [];
+        foreach (['uk', 'ru'] as $locale) {
+            foreach ($attributes[$locale] ?? [] as $row) {
+                $attrName = trim($row['name'] ?? '');
+                $valText  = trim($row['value'] ?? '');
+                if ($attrName === '' || $valText === '') continue;
+    
                 $attrSlug = \Str::slug($attrName);
-                $valueSlug = \Str::slug($attrValue);
-
-                // Атрибут (характеристика)
-                if (!isset($pairs[$attrSlug])) {
-                    $pairs[$attrSlug] = [
-                        'translations' => [],
-                        'values' => [],
-                    ];
-                }
-                $pairs[$attrSlug]['translations'][$locale] = $attrName;
-
-                // Значення
-                if (!isset($pairs[$attrSlug]['values'][$valueSlug])) {
-                    $pairs[$attrSlug]['values'][$valueSlug] = [
-                        'translations' => [],
-                    ];
-                }
-                $pairs[$attrSlug]['values'][$valueSlug]['translations'][$locale] = $attrValue;
+                $byAttr[$attrSlug]['attr_names'][$locale] = $attrName;
+                $byAttr[$attrSlug]['values'][$locale]     = $valText;
             }
         }
-
-        $attributeIds = [];
-        $attributeValueIds = [];
-
-        foreach ($pairs as $attrSlug => $attrData) {
-            // 1. Атрибут (характеристика)
+    
+        $selected = []; // attribute_id => value_id
+    
+        foreach ($byAttr as $attrSlug => $data) {
+            // 1) Атрибут
             $attribute = \App\Models\ProductAttribute::firstOrCreate(
                 ['slug' => $attrSlug],
                 ['type' => 'text', 'is_filterable' => true, 'position' => 0]
             );
-            $attributeIds[$attrSlug] = $attribute->id;
-
-            // Переклади атрибута
-            foreach ($attrData['translations'] as $locale => $name) {
+    
+            foreach (($data['attr_names'] ?? []) as $loc => $name) {
                 \App\Models\ProductAttributeTranslation::updateOrCreate(
-                    ['product_attribute_id' => $attribute->id, 'locale' => $locale],
+                    ['product_attribute_id' => $attribute->id, 'locale' => $loc],
                     ['name' => $name]
                 );
             }
-
-            // 2. Значення (value)
-            foreach ($attrData['values'] as $valueSlug => $valData) {
-                $attrValue = \App\Models\ProductAttributeValue::firstOrCreate([
-                    'product_attribute_id' => $attribute->id
+    
+            // 2) Бажане значення (канонічно uk → ru)
+            $labelUk = $data['values']['uk'] ?? null;
+            $labelRu = $data['values']['ru'] ?? null;
+            $canonicalText = $labelUk ?? $labelRu;
+            if (!$canonicalText) continue;
+    
+            $canonicalSlug = \Str::slug($canonicalText);
+    
+            // 3) Пошук існуючого value за (attribute_id + translations.slug)
+            $value = \App\Models\ProductAttributeValue::where('product_attribute_id', $attribute->id)
+                ->whereHas('translations', fn($q) => $q->where('slug', $canonicalSlug))
+                ->first();
+    
+            if (!$value) {
+                // Нема — створюємо нове value + переклади з форми
+                $value = \App\Models\ProductAttributeValue::create([
+                    'product_attribute_id' => $attribute->id,
                 ]);
-                $attributeValueIds[$attrSlug][$valueSlug] = $attrValue->id;
-
-                // Переклади значення
-                foreach ($valData['translations'] as $locale => $value) {
-                    \App\Models\ProductAttributeValueTranslation::updateOrCreate(
-                        ['product_attribute_value_id' => $attrValue->id, 'locale' => $locale],
-                        ['value' => $value, 'slug' => $valueSlug]
-                    );
+                foreach (['uk', 'ru'] as $loc) {
+                    $lbl = $data['values'][$loc] ?? null;
+                    if ($lbl) {
+                        \App\Models\ProductAttributeValueTranslation::updateOrCreate(
+                            ['product_attribute_value_id' => $value->id, 'locale' => $loc],
+                            ['value' => $lbl, 'slug' => \Str::slug($lbl)]
+                        );
+                    }
                 }
-
-                // 3. Прив'язка до продукту (pivot)
-                \App\Models\ProductAttributeProduct::firstOrCreate([
-                    'product_id' => $productId,
-                    'product_attribute_value_id' => $attrValue->id,
-                ]);
+            } else {
+                // На етапі створення товара НЕ перезаписуємо глобальні переклади,
+                // щоб не зламати інші продукти; лише додаємо відсутні локалі.
+                $value->loadMissing('translations');
+                foreach (['uk', 'ru'] as $loc) {
+                    $lbl = $data['values'][$loc] ?? null;
+                    if (!$lbl) continue;
+    
+                    $t = $value->translations->firstWhere('locale', $loc);
+                    if (!$t) {
+                        \App\Models\ProductAttributeValueTranslation::updateOrCreate(
+                            ['product_attribute_value_id' => $value->id, 'locale' => $loc],
+                            ['value' => $lbl, 'slug' => \Str::slug($lbl)]
+                        );
+                    }
+                    // Якщо переклад існує, залишаємо як є — це спільний словник.
+                }
             }
+    
+            $selected[$attribute->id] = $value->id;
         }
+    
+        // Прив’язати тільки обрані значення
+        $product->attributeValues()->sync(array_values($selected));
     }
+    
 }
