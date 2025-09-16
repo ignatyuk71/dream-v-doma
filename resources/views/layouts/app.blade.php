@@ -48,8 +48,12 @@
 
   <!-- ICONS (Cartzilla) — ПОВЕРНУЛИ -->
   <link rel="stylesheet" href="/assets/icons/cartzilla-icons.min.css">
-
-
+  
+  <!-- Vendor CSS -->
+  <link rel="preload" href="/assets/vendor/swiper/swiper-bundle.min.css" as="style">
+  <link rel="preload" href="/assets/vendor/simplebar/dist/simplebar.min.css" as="style">
+  <link rel="stylesheet" href="/assets/vendor/swiper/swiper-bundle.min.css">
+  <link rel="stylesheet" href="/assets/vendor/simplebar/dist/simplebar.min.css">
 
   <!-- Theme CSS -->
   <link rel="preload" as="style" href="/assets/css/theme.min.css">
