@@ -47,8 +47,7 @@
   </noscript>
 
   <!-- ICONS (Cartzilla) — ПОВЕРНУЛИ -->
-  <link rel="preload" href="/assets/icons/cartzilla-icons.min.css" as="style">
-  <link rel="stylesheet" href="/assets/icons/cartzilla-icons.min.css">
+
 
   <!-- Vendor CSS -->
   <link rel="preload" href="/assets/vendor/swiper/swiper-bundle.min.css" as="style">
