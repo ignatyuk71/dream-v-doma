@@ -44,7 +44,7 @@ foreach ($statusLabels as $val => $label) {
 }
 @endphp
 
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="container-fluid flex-grow-1 container-p-y">
   <div id="tpl-orders">
 
     <!-- ===== Toolbar / KPIs ===== -->
