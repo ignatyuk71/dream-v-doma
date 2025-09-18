@@ -71,7 +71,7 @@ foreach ($statusLabels as $val => $label) {
         <div class="row g-2 align-items-end">
 
           {{-- Пошук --}}
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-5">
             <label class="form-label mb-1">Пошук</label>
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
