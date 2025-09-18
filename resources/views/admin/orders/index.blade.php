@@ -71,7 +71,7 @@ foreach ($statusLabels as $val => $label) {
         <div class="row g-2 align-items-end">
 
           {{-- Пошук --}}
-          <div class="col-12 col-md-5">
+          <div class="col-12 col-md-4">
             <label class="form-label mb-1">Пошук</label>
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -85,7 +85,7 @@ foreach ($statusLabels as $val => $label) {
             $selectedStatuses = collect((array)request('status'))
               ->map(fn($v)=> (string)$v)->unique()->values()->all();
           @endphp
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label mb-1 d-block">Статуси</label>
 
             <div class="status-chip-select" data-name="status[]">
@@ -129,13 +129,13 @@ foreach ($statusLabels as $val => $label) {
           </div>
 
           {{-- Дата від --}}
-          <div class="col-6 col-md-1">
+          <div class="col-6 col-md-2">
             <label class="form-label mb-1">З дати</label>
             <input type="date" name="from" value="{{ request('from') }}" class="form-control">
           </div>
 
           {{-- Дата до --}}
-          <div class="col-6 col-md-1">
+          <div class="col-6 col-md-2">
             <label class="form-label mb-1">По дату</label>
             <input type="date" name="to" value="{{ request('to') }}" class="form-control">
           </div>
