@@ -45,4 +45,10 @@ return [
         'default_currency' => env('META_PIXEL_DEFAULT_CURRENCY', 'UAH'),
     ],
 
+    // ✅ Google Analytics 4
+    'ga' => [
+        'enabled'        => env('GA_ENABLED', false),
+        'measurement_id' => env('GA_MEASUREMENT_ID'),
+    ],
+
 ];

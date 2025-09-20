@@ -12,6 +12,9 @@
   <meta name="keywords" content="тапки, домашній одяг, вʼєтнамки, шльопанці, покупки онлайн, магазин">
   <meta name="author" content="Dream V Doma">
 
+  {{-- Google Analytics 4 --}}
+  @include('partials.ga-script')
+
   {{-- Meta Pixel --}}
   @include('partials.meta-pixel-script')
   @include('partials.meta-pixel-add-to-cart')
@@ -34,6 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
+  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
 
   <!-- Google Fonts (async) -->
   <link rel="preload" as="style"
@@ -59,7 +63,7 @@
   <link rel="preload" as="style" href="/assets/css/theme.min.css">
   <link rel="stylesheet" href="/assets/css/theme.min.css" id="theme-styles">
 
-  <!-- LCP image preload (підстав свій шлях) -->
+  <!-- LCP image preload (optional) -->
   {{-- 
   <link rel="preload" as="image"
         href="/storage/hero-1200.webp"
@@ -73,7 +77,7 @@
 </head>
 
 <body>
-  {{-- NOSCRIPT — одразу після <body> --}}
+  {{-- NOSCRIPT Pixel — одразу після <body> --}}
   @include('partials.meta-pixel-noscript')
 
   @yield('content')
