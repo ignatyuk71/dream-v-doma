@@ -18,7 +18,7 @@
     @include('home.featured-products')
 
       {{-- Special Offers --}}
-    @include('home.special-offers')
+      {{-- @include('home.special-offers') --}}
    
 
     {{-- Product Carousel --}}
