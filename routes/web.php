@@ -17,7 +17,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 
 
 // 🔁 Редірект з кореня на дефолтну мову
-Route::redirect('/', '/uk');
+Route::redirect('/', '/uk/');
 
 // 🔌 API без локалі
 Route::get('/api/products', [\App\Http\Controllers\ProductController::class, 'home']);
