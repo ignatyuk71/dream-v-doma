@@ -12,7 +12,7 @@ use Illuminate\Foundation\Configuration\Middleware;
  */
 $host = strtolower($_SERVER['HTTP_HOST'] ?? '');
 $envFile = $_SERVER['APP_ENV_FILE']
-    ?? (str_contains($host, 'dream-v-doma.com.ua') ? '.env.comua' : '.env.site');
+    ?? (str_contains($host, 'dream-v-doma.com.ua/uk/') ? '.env.comua' : '.env.site');
 
 return Application::configure(basePath: dirname(__DIR__))
     ->loadEnvironmentFrom($envFile) // <— важливо
