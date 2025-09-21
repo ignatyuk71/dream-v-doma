@@ -40,27 +40,29 @@
       return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
     }
 
-    // Зчитування cookie за ім'ям
+    // Зчитування cookie за ім'ям (нічого не створюємо)
     function getCookie(n){
-      return document.cookie.split('; ')
-        .find(function(r){ return r.indexOf(n + '=') === 0 })?.split('=')[1] || null;
+      var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
+      return m ? decodeURIComponent(m[1]) : null;
     }
 
     // Безпечний decodeURIComponent
     function safeDecode(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } }
 
-    // Переконатися, що є _fbp (для CAPI)
-    function ensureFbp(){
-      var fbp = getCookie('_fbp') || localStorage.getItem('fbp_generated');
-      if (!fbp) {
-        fbp = 'fb.1.' + Math.floor(Date.now()/1000) + '.' + Math.floor(Math.random()*1e10);
-        localStorage.setItem('fbp_generated', fbp);
-      }
-      return fbp;
+    // Читання параметра з URL
+    function getParam(name){
+      var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
+      return m ? m[1] : null;
+    }
+
+    // ❗️Лише FB-трафік (кукі або fbclid). НІЧОГО не генеруємо.
+    function isFacebookTraffic(){
+      return !!(getCookie('_fbc') || getCookie('_fbp') || getParam('fbclid'));
     }
 
     // Випадковий event_id (ідентичний для Pixel і CAPI)
     function genEventId(name){
+      if (typeof window._mpGenEventId === 'function') return window._mpGenEventId(name);
       try {
         var a = new Uint8Array(6);
         (window.crypto || window.msCrypto).getRandomValues(a);
@@ -69,19 +71,6 @@
       } catch (_e) {
         return name + '-' + Math.random().toString(16).slice(2) + '-' + Math.floor(Date.now()/1000);
       }
-    }
-
-    // Нормалізація валюти до ISO 4217 (3 великі літери)
-    function normalizeCurrency(raw) {
-      if (!raw) return 'UAH';
-      var c = String(raw).trim().toUpperCase();
-      var map = {
-        'ГРН': 'UAH', 'ГРИВНЯ': 'UAH', '₴': 'UAH',
-        'ЗЛ': 'PLN', 'ZŁ': 'PLN'
-      };
-      if (map[c]) c = map[c];
-      var allowed = new Set(['UAH','PLN','USD','EUR','GBP','CZK','HUF','RON','TRY','GEL','RUB']);
-      return allowed.has(c) ? c : 'UAH';
     }
 
     // Будуємо contents[] ТІЛЬКИ з variant_sku як id
@@ -111,6 +100,9 @@
       try{
         if (!opts || !Array.isArray(opts.items) || !opts.items.length) return;
 
+        // ❗️ШЛЕМО ТІЛЬКИ ДЛЯ FB-ТРАФІКУ
+        if (!isFacebookTraffic()) return;
+
         var contents = buildContents(opts.items);
         if (!contents.length) return;
 
@@ -119,7 +111,7 @@
         var subtotal = contents.reduce(function(s,c){ return s + num(c.item_price) * (Number(c.quantity)||0) }, 0);
 
         // ⬇️ Валюта ТІЛЬКИ з БД (або явно передана) + нормалізація
-        var currency = normalizeCurrency(opts.currency || window.metaPixelCurrency);
+        var currency = (opts.currency || window.metaPixelCurrency || 'UAH').toString().trim().toUpperCase();
         var shipping = num(opts.shipping || 0);
         var tax      = num(opts.tax || 0);
         var value    = num(opts.value != null ? opts.value : (subtotal + shipping + tax));
@@ -134,7 +126,7 @@
           localStorage.setItem(guardKey, '1');
         }
 
-        /* ===== 1) Pixel (браузер) ===== */
+        /* ===== 1) Pixel (браузер) — ЛИШЕ FB-трафік ===== */
         (function sendPixel(attempt){
           attempt = attempt || 0;
           if (typeof window.fbq !== 'function') {
@@ -142,9 +134,6 @@
             return setTimeout(function(){ sendPixel(attempt+1) }, 80);
           }
           try {
-            // тимчасовий лог для дебага (можеш прибрати)
-            // console.log('[FBQ Purchase]', { value, currency, ids, contents });
-
             window.fbq('track', 'Purchase', {
               content_ids: ids,
               content_type: 'product',
@@ -156,9 +145,9 @@
           } catch (_) {}
         })();
 
-        /* ===== 2) CAPI (сервер) ===== */
-        var fbp = safeDecode(getCookie('_fbp')) || ensureFbp();
-        var fbc = safeDecode(getCookie('_fbc')) || null;
+        /* ===== 2) CAPI (сервер) — ЛИШЕ FB-трафік ===== */
+        var fbp = safeDecode(getCookie('_fbp')) || null; // ЛИШЕ читаємо; не генеруємо
+        var fbc = safeDecode(getCookie('_fbc')) || null; // ЛИШЕ читаємо; не генеруємо
 
         var capiBody = {
           event_id: eventId,
@@ -175,16 +164,19 @@
           tax: tax,
           order_number: orderNo,
 
-          // PII піде на бек і там буде захешовано
+          // PII піде на бек і там буде захешовано (якщо передаси в opts)
           email: opts.email || null,
           phone: opts.phone || null,
           first_name: opts.first_name || null,
           last_name: opts.last_name || null,
           external_id: opts.external_id || null,
+
           fbp: fbp,
           fbc: fbc
         };
-        if (opts.test_event_code) capiBody.test_event_code = String(opts.test_event_code);
+        if (opts.test_event_code || window._mpTestCode) {
+          capiBody.test_event_code = String(opts.test_event_code || window._mpTestCode);
+        }
 
         var body = JSON.stringify(capiBody);
 
