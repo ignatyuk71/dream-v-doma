@@ -32,14 +32,25 @@
     return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
   }
 
-  // Зчитування cookie за ім'ям
+  // Зчитування cookie за ім'ям (нічого не створюємо)
   function getCookie(n){
-    return document.cookie.split('; ')
-      .find(function(r){ return r.indexOf(n + '=') === 0 })?.split('=')[1] || null;
+    var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
+    return m ? decodeURIComponent(m[1]) : null;
   }
 
   // Безпечний decodeURIComponent
   function safeDecode(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } }
+
+  // Читання параметра з URL
+  function getParam(name){
+    var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
+    return m ? m[1] : null;
+  }
+
+  // ❗️Визначаємо FB-трафік (нічого не генеруємо)
+  function isFacebookTraffic(){
+    return !!(getCookie('_fbc') || getCookie('_fbp') || getParam('fbclid'));
+  }
 
   // Генератор event_id (спільний для Pixel і CAPI — для дедуплікації на стороні Meta)
   // Формат: <name>-<12hex>-<unix>
@@ -80,6 +91,9 @@
         console.warn('[IC] no items passed');
         return;
       }
+
+      // ❗️ШЛЕМО ТІЛЬКИ ДЛЯ FB-ТРАФІКУ
+      if (!isFacebookTraffic()) return;
 
       // Будуємо contents[] і content_ids[] ТІЛЬКИ з variant_sku
       var contents = [];
@@ -124,14 +138,16 @@
           if (attempt > 120) return; // ~10 сек @ ~80мс
           return setTimeout(function(){ sendPixel(attempt+1) }, 80);
         }
-        fbq('track', 'InitiateCheckout', {
-          content_ids: content_ids,
-          content_type: 'product',
-          contents: contents,
-          num_items: contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0),
-          value: value,
-          currency: currency
-        }, { eventID: icId });
+        try {
+          fbq('track', 'InitiateCheckout', {
+            content_ids: content_ids,
+            content_type: 'product',
+            contents: contents,
+            num_items: contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0),
+            value: value,
+            currency: currency
+          }, { eventID: icId });
+        } catch (_) {}
       })();
 
       /* ========================= 2) SERVER CAPI =========================
@@ -140,8 +156,8 @@
            - додаються user_data (IP, UA; за наявності PII — хешується SHA-256);
            - використовується той самий event_id для дедупу з Pixel.
       =================================================================== */
-      var fbp = safeDecode(getCookie('_fbp'));
-      var fbc = safeDecode(getCookie('_fbc'));
+      var fbp = safeDecode(getCookie('_fbp')); // ЛИШЕ читаємо; не генеруємо
+      var fbc = safeDecode(getCookie('_fbc')); // ЛИШЕ читаємо; не генеруємо
 
       var bodyObj = {
         event_id: icId,
@@ -157,8 +173,8 @@
         currency: currency,
 
         // маркери для CAPI (можуть бути відсутні — бек це врахує)
-        fbp: fbp,
-        fbc: fbc
+        fbp: fbp || null,
+        fbc: fbc || null
       };
       if (window._mpTestCode) bodyObj.test_event_code = window._mpTestCode;
 

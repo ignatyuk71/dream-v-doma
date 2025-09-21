@@ -23,7 +23,7 @@
   // Додатковий фронтовий прапорець: якщо _mpFlags.atc === false → взагалі не оголошуємо
   if (!window._mpFlags || window._mpFlags.atc === false) return;
 
-  /* ========================== УТИЛІТИ ========================== */
+  /* ========================== УТИЛІТИ (READ-ONLY) ========================== */
 
   // Приведення до числа з двома знаками після коми
   function num(v){
@@ -32,17 +32,27 @@
     return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
   }
 
-  // Зчитування cookie за ім'ям
+  // Зчитування cookie за ім'ям (нічого не створюємо)
   function getCookie(n){
-    return document.cookie.split('; ')
-      .find(function(r){ return r.indexOf(n + '=') === 0 })?.split('=')[1] || null;
+    var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
+    return m ? decodeURIComponent(m[1]) : null;
   }
 
   // Безпечний decodeURIComponent
   function safeDecode(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } }
 
+  // Читання параметра з URL
+  function getParam(name){
+    var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
+    return m ? m[1] : null;
+  }
+
+  // ❗️Визначаємо FB-трафік (нічого не генеруємо)
+  function isFacebookTraffic(){
+    return !!(getCookie('_fbc') || getCookie('_fbp') || getParam('fbclid'));
+  }
+
   // Генератор event_id (спільний для Pixel і CAPI — для дедуплікації на стороні Meta)
-  // Формат: <name>-<12hex>-<unix>
   // Якщо на сайті є глобальний window._mpGenEventId — використовуємо його
   function genEventId(name){
     if (typeof window._mpGenEventId === 'function') return window._mpGenEventId(name);
@@ -69,6 +79,9 @@
   window.mpTrackATC = function(opts){
     try{
       if (!opts) return;
+
+      // ❗️ШЛЕМО ТІЛЬКИ ДЛЯ FB-ТРАФІКУ
+      if (!isFacebookTraffic()) return;
 
       /* --- Валідація: маємо відправляти тільки variant_sku як content_id --- */
       var pidRaw = (opts.variant_sku ?? '').toString().trim();
@@ -104,14 +117,16 @@
           if (attempt > 120) return; // ~10 секунд @ ~80мс
           return setTimeout(function(){ sendPixel(attempt+1) }, 80);
         }
-        fbq('track', 'AddToCart', {
-          content_ids: [pid],
-          content_type: 'product',
-          contents: contents,
-          content_name: name,
-          value: value,
-          currency: currency
-        }, { eventID: atcId });
+        try {
+          fbq('track', 'AddToCart', {
+            content_ids: [pid],
+            content_type: 'product',
+            contents: contents,
+            content_name: name,
+            value: value,
+            currency: currency
+          }, { eventID: atcId });
+        } catch (_) {}
       })();
 
       /* ========================= 2) SERVER CAPI =========================
@@ -120,8 +135,8 @@
            - додаються user_data (IP, UA; PII якщо є — хешується SHA-256);
            - використовується той самий event_id для дедупу з Pixel.
       =================================================================== */
-      var fbp = safeDecode(getCookie('_fbp'));
-      var fbc = safeDecode(getCookie('_fbc'));
+      var fbp = safeDecode(getCookie('_fbp')); // ЛИШЕ читаємо; не генеруємо
+      var fbc = safeDecode(getCookie('_fbc')); // ЛИШЕ читаємо; не генеруємо
 
       // Тіло, яке піде в бек-ендпоінт (бек збере user_data + custom_data)
       var bodyObj = {
@@ -129,7 +144,7 @@
         event_time: Math.floor(Date.now()/1000),
         event_source_url: window.location.href,
 
-        // custom_data
+        // custom_data (синхронізовано з Pixel)
         content_type: 'product',
         content_ids: [pid],
         contents: contents,
@@ -138,8 +153,8 @@
         currency: currency,
 
         // маркери для CAPI (можуть бути відсутні — бек це врахує)
-        fbp: fbp,
-        fbc: fbc
+        fbp: fbp || null,
+        fbc: fbc || null
       };
 
       // Тестовий код для Events Manager (якщо десь задаєш глобально)
@@ -152,7 +167,6 @@
       var isiOS = /iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && 'ontouchend' in document);
 
       if (isiOS) {
-        // iOS Safari іноді ігнорує sendBeacon, тому відправляємо fetch'ем з keepalive
         fetch('/api/track/atc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,7 +174,6 @@
           keepalive: true,
           body
         }).catch(function(){
-          // одноразовий повтор на випадок моментального переходу зі сторінки
           setTimeout(function(){
             fetch('/api/track/atc', {
               method: 'POST',
@@ -172,10 +185,8 @@
           }, 250);
         });
       } else if (navigator.sendBeacon) {
-        // Найбезпечніший спосіб відправити дані під час навігації
         navigator.sendBeacon('/api/track/atc', new Blob([body], {type:'application/json'}));
       } else {
-        // Фолбек — звичайний fetch
         fetch('/api/track/atc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -185,9 +196,7 @@
         });
       }
 
-      // Примітка: тут навмисно НЕ робимо guard від дублю:
-      // ATC може відправлятися багаторазово в реальних сценаріях (клік по тому самому товару).
-      // Якщо потрібен guard — додай локальний ключ у localStorage з тайм-аутом.
+      // Примітка: guard від дублю навмисно відсутній — ATC може бути багаторазовим.
     } catch(e){
       // Failsafe: не ламаємо сторінку, лише попереджаємо в консолі
       console.warn('[ATC] mpTrackATC exception', e);
