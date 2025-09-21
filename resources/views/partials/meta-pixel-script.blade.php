@@ -4,7 +4,7 @@
   // Читаємо налаштування трекінгу (може бути null)
   $t = DB::table('tracking_settings')->first();
 
-  // Базові параметри (без фаталів, завдяки ?->)
+  // Базові параметри
   $pixelId  = $t?->pixel_id ?? null;
   $currency = $t?->default_currency ?? 'UAH';
 
@@ -14,7 +14,7 @@
     && !empty($pixelId)
     && !((int)($t?->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
-  // Прапорці подій (за замовчуванням true, окрім lead)
+  // Прапорці подій
   $flags = [
     'pv'   => (bool)($t?->send_page_view          ?? true),
     'vc'   => (bool)($t?->send_view_content       ?? true),
@@ -23,18 +23,15 @@
     'pur'  => (bool)($t?->send_purchase           ?? true),
     'lead' => (bool)($t?->send_lead               ?? false),
   ];
-
-  // Якщо Pixel глобально вимкнено — глушимо всі події
   if (!$enabled) {
     $flags = ['pv'=>false,'vc'=>false,'atc'=>false,'ic'=>false,'pur'=>false,'lead'=>false];
   }
 
-  // Тест-код із Events Manager (необов'язковий)
   $testCode = $t?->capi_test_code ?? null;
 @endphp
 
 <script>
-  // Глобальні прапорці та налаштування (видимі на фронті)
+  // Глобальні прапорці/налаштування (видимі на фронті)
   window._mpFlags          = @json($flags, JSON_UNESCAPED_UNICODE);
   window.metaPixelCurrency = @json($currency);
   window._mpEnabled        = @json($enabled);
@@ -53,59 +50,66 @@
     }
   };
 
-  // Хелпер читання cookie
+  // Хелпери
   window._mpGetCookie = function(n){
-    return document.cookie.split('; ').find(function(r){ return r.indexOf(n+'=')===0 })?.split('=')[1] || null;
+    var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+  window._mpGetParam = function(name){
+    var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
+    return m ? m[1] : null;
+  };
+  window._mpIsFbTraffic = function(){
+    // НІЧОГО НЕ СТВОРЮЄМО: лише читаємо кукі або fbclid з URL
+    return !!(_mpGetCookie('_fbc') || _mpGetCookie('_fbp') || _mpGetParam('fbclid'));
   };
 </script>
 
 @if ($enabled)
-  <!-- Meta Pixel (браузерний) -->
+  <!-- Meta Pixel (браузерний) — ІНІЦІАЛІЗУЄМО ТА ШЛЕМО ЛИШЕ ДЛЯ FB-ТРАФІКУ -->
   <script>
-  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-
-  fbq('init', '{{ $pixelId }}');
-
-  // Browser PageView із спільним event_id (для дедупу з CAPI)
   (function(){
-    if (window._mpFlags && window._mpFlags.pv === false) return;
+    if (!window._mpFlags || window._mpFlags.pv === false) return;
+    if (!window._mpIsFbTraffic()) return; // ← ключова умова
+
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+
+    fbq('init', '{{ $pixelId }}');
+
     var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
     fbq('track', 'PageView', {}, { eventID: pvId });
   })();
   </script>
 @endif
 
-{{-- CAPI PageView (той самий event_id, що й у Pixel) --}}
+<!-- CAPI PageView — ВІДПРАВЛЯЄМО ЛИШЕ ДЛЯ FB-ТРАФІКУ -->
 <script>
 (function(){
   if (!window._mpFlags || window._mpFlags.pv === false) return;
+  if (!window._mpIsFbTraffic()) return; // ← ключова умова
 
   var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-  // Акуратне декодування cookie (fbp/fbc можуть бути URL-encoded)
   var safeDecode = function(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } };
-  var fbp = safeDecode(window._mpGetCookie('_fbp'));
-  var fbc = safeDecode(window._mpGetCookie('_fbc'));
+  var fbp = safeDecode(window._mpGetCookie('_fbp')); // тільки читаємо
+  var fbc = safeDecode(window._mpGetCookie('_fbc')); // тільки читаємо
 
   var payload = {
     event_id: pvId,
     event_time: Math.floor(Date.now()/1000),
     event_source_url: window.location.href,
-    // user_data додається на бекенді (IP/UA + хешовані поля за наявності)
-    fbp: fbp,
-    fbc: fbc
+    fbp: fbp || null,
+    fbc: fbc || null
+    // user_data (IP/UA/PII hashes) додасться на бекенді — як було
   };
-
-  // Додаємо test_event_code, якщо задано в БД
   if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
 
   try {
     var body = JSON.stringify(payload);
-    // Надійна відправка перед навігацією: sendBeacon або keepalive fetch
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/track/pv', new Blob([body], {type:'application/json'}));
     } else {
