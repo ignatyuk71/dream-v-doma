@@ -314,13 +314,13 @@ class TrackController extends Controller
     
         // Глобальне вимкнення CAPI
         if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
-            \Log::warning('CAPI_SKIP', ['event' => $name, 'reason' => 'capi_disabled']);
+            \Log::info('CAPI_SKIP', ['event' => $name, 'reason' => 'capi_disabled']);
             return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
         }
     
         // Перевірка прапорця конкретної події
         if (!$this->flagEnabled($s, $flag)) {
-            \Log::warning('CAPI_SKIP', ['event' => $name, 'reason' => "flag_{$flag}_disabled"]);
+            \Log::info('CAPI_SKIP', ['event' => $name, 'reason' => "flag_{$flag}_disabled"]);
             return response()->json(['ok' => true, 'skipped' => "flag_{$flag}_disabled"], 202);
         }
     
@@ -328,7 +328,7 @@ class TrackController extends Controller
         if ((int)($s->exclude_admin ?? 1) === 1) {
             $url = $this->eventSourceUrl($req);
             if ($this->looksLikeAdmin($url) || $req->is('admin*')) {
-                \Log::warning('CAPI_SKIP', ['event' => $name, 'reason' => 'admin_excluded', 'url' => $url]);
+                \Log::info('CAPI_SKIP', ['event' => $name, 'reason' => 'admin_excluded', 'url' => $url]);
                 return response()->json(['ok' => true, 'skipped' => 'admin_excluded'], 202);
             }
         }
@@ -337,7 +337,7 @@ class TrackController extends Controller
         $pixelId = (string)($s->pixel_id ?? '');
         $token   = (string)($s->capi_token ?? '');
         if ($pixelId === '' || $token === '') {
-            \Log::warning('CAPI_SKIP', ['event' => $name, 'error' => 'missing_pixel_or_token']);
+            \Log::info('CAPI_SKIP', ['event' => $name, 'error' => 'missing_pixel_or_token']);
             return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
         }
     
@@ -362,7 +362,7 @@ class TrackController extends Controller
     
         // 🔎 ЛОГ: що саме відправляємо
         $ud = $event['user_data'] ?? [];
-        \Log::warning('CAPI_SKIP', [
+        \Log::info('CAPI_SKIP', [
             'pixel_id'        => $pixelId,
             'api_version'     => (string)($s->capi_api_version ?? 'v20.0'),
             'test_event_code' => $testCode,
@@ -391,7 +391,7 @@ class TrackController extends Controller
             $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
             $resp = $capi->send([$event], $testCode);
         } catch (\Throwable $e) {
-            \Log::warning('CAPI_EXCEPTION', [
+            \Log::info('CAPI_EXCEPTION', [
                 'event' => $name,
                 'event_id' => $event['event_id'],
                 'ex' => $e->getMessage(),
@@ -406,7 +406,7 @@ class TrackController extends Controller
         $body = $resp->json();
     
         // 🔎 ЛОГ: відповідь Meta
-        \Log::warning('CAPI_RESPONSE', [
+        \Log::info('CAPI_RESPONSE', [
             'event'  => $name,
             'event_id' => $event['event_id'],
             'status' => $resp->status(),
