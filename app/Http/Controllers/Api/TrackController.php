@@ -16,7 +16,8 @@ use App\Services\MetaCapi;
 class TrackController extends Controller
 {
     /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
-    private ?object $settingsCache = null;
+    /** @var object|null */
+private $settingsCache = null;
 
     /* ===================== PUBLIC ENDPOINTS ===================== */
 
