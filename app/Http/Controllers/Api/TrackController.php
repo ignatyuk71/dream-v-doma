@@ -27,10 +27,138 @@ class TrackController extends Controller
      */
     public function pv(Request $request)
     {
-        return $this->handleEvent('PageView', $request, function () {
-            return []; // PV без custom_data
-        }, flag: 'send_page_view'); // якщо прапорця немає у БД — вважаємо увімкненим
+        // 0) Налаштування
+        $s = DB::table('tracking_settings')->first();
+    
+        if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
+            Log::info('CAPI_PV_SKIP', ['reason' => 'capi_disabled']);
+            return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
+        }
+    
+        $flagPv = property_exists($s, 'send_page_view') ? (int)$s->send_page_view === 1 : true;
+        if (!$flagPv) {
+            Log::info('CAPI_PV_SKIP', ['reason' => 'flag_send_page_view_disabled']);
+            return response()->json(['ok' => true, 'skipped' => 'flag_send_page_view_disabled'], 202);
+        }
+    
+        // URL події
+        $url = $request->input('event_source_url')
+            ?? $request->input('url')
+            ?? (string)$request->headers->get('referer', '')
+            ?: url()->current();
+    
+        // Відсікти адмінку
+        if ((int)($s->exclude_admin ?? 1) === 1) {
+            $looksAdmin = (is_string($url) && (str_contains($url, '/admin') || str_contains($url, '/dashboard')))
+                          || $request->is('admin*');
+            if ($looksAdmin) {
+                Log::info('CAPI_PV_SKIP', ['reason' => 'admin_excluded', 'url' => $url]);
+                return response()->json(['ok' => true, 'skipped' => 'admin_excluded'], 202);
+            }
+        }
+    
+        // Перевірка Pixel/Token
+        $pixelId = (string)($s->pixel_id ?? '');
+        $token   = (string)($s->capi_token ?? '');
+        if ($pixelId === '' || $token === '') {
+            Log::warning('CAPI_PV_SKIP', ['error' => 'missing_pixel_or_token']);
+            return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
+        }
+    
+        // 1) user_data (без порожніх значень)
+        $userData = [
+            'client_ip_address' => $request->ip(),
+            'client_user_agent' => (string)$request->userAgent(),
+        ];
+    
+        // ⚠️ Переконайся, що в EncryptCookies.php є:
+        // protected $except = ['_fbp', '_fbc'];
+        $fbc = $request->cookie('_fbc');
+        if (is_string($fbc) && trim($fbc) !== '') {
+            $userData['fbc'] = trim($fbc);
+        }
+        $fbp = $request->cookie('_fbp');
+        if (is_string($fbp) && trim($fbp) !== '') {
+            $userData['fbp'] = trim($fbp);
+        }
+    
+        // 2) Подія
+        $eventId = (string)($request->input('event_id') ?: ('pv-'.bin2hex(random_bytes(6)).'-'.time()));
+        $event = [
+            'event_name'       => 'PageView',
+            'event_time'       => (int)($request->input('event_time') ?: time()),
+            'action_source'    => 'website',
+            'event_source_url' => $url,
+            'event_id'         => $eventId,
+            'user_data'        => $userData,
+        ];
+    
+        $testCode = $request->input('test_event_code', $s->capi_test_code ?? null);
+    
+        // 🔎 ЛОГ: що саме відправляємо (повні fbc/fbp за твоїм запитом)
+        Log::info('CAPI_PV_REQUEST', [
+            'pixel_id'        => $pixelId,
+            'test_event_code' => $testCode,
+            'event_id'        => $eventId,
+            'event_source_url'=> $url,
+            'ip'              => $userData['client_ip_address'],
+            'ua'              => $userData['client_user_agent'],
+            'fbc'             => $userData['fbc'] ?? null,
+            'fbp'             => $userData['fbp'] ?? null,
+            'fbc_len'         => isset($userData['fbc']) ? strlen($userData['fbc']) : null,
+            'fbp_len'         => isset($userData['fbp']) ? strlen($userData['fbp']) : null,
+        ]);
+    
+        // 3) Відправка
+        try {
+            $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
+            $resp = $capi->send([$event], $testCode);
+        } catch (\Throwable $e) {
+            Log::warning('CAPI_PV_EXCEPTION', ['ex' => $e->getMessage()]);
+            return response()->json([
+                'ok'    => false,
+                'error' => 'capi_exception',
+                'msg'   => $e->getMessage(),
+            ], 502);
+        }
+    
+        $body = $resp->json();
+    
+        // 🔎 ЛОГ: відповідь Meta
+        Log::info('CAPI_PV_RESPONSE', [
+            'status' => $resp->status(),
+            'body'   => $body,
+        ]);
+    
+        // 4) Перевірка відповіді
+        if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
+            return response()->json([
+                'ok'     => false,
+                'error'  => 'capi_request_failed',
+                'status' => $resp->status(),
+                'body'   => $body,
+            ], 502);
+        }
+    
+        if (is_array($body) && array_key_exists('events_received', $body) && (int)$body['events_received'] < 1) {
+            return response()->json([
+                'ok'     => false,
+                'error'  => 'events_not_received',
+                'status' => $resp->status(),
+                'body'   => $body,
+            ], 502);
+        }
+    
+        // 5) OK
+        return response()->json([
+            'ok'              => true,
+            'event'           => 'PageView',
+            'event_id'        => $eventId,
+            'events_received' => is_array($body) ? ($body['events_received'] ?? null) : null,
+            'fbtrace_id'      => is_array($body) ? ($body['fbtrace_id'] ?? null) : null,
+        ], 200);
     }
+    
 
     /**
      * ViewContent — подія перегляду товару/контенту.
@@ -530,7 +658,7 @@ class TrackController extends Controller
                             'fbc_len' => $fbc ? strlen($fbc) : null,
                             'fbp_len' => $fbp ? strlen($fbp) : null,
                         ]);
-                        
+
 
         // PII (якщо передані)
         $email = $req->input('email');
