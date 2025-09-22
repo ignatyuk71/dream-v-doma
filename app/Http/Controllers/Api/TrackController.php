@@ -27,26 +27,36 @@ class TrackController extends Controller
      */
     public function pv(Request $request)
     {
-        // Лог у файл
-        \Log::info('PV endpoint called', [
-            'url' => $request->fullUrl(),
-            'ip'  => $request->ip(),
-            'ua'  => $request->userAgent(),
-            '_fbc' => $request->cookie('_fbc'),
-            '_fbp' => $request->cookie('_fbp'),
-        ]);
+        $userData = [
+            'client_ip_address' => $request->ip(),
+            'client_user_agent' => (string)$request->userAgent(),
+        ];
     
-        // Повертаємо у відповідь, щоб одразу на екрані побачити
-        return response()->json([
-            'ok' => true,
-            'msg' => 'pv function called',
-            'url' => $request->fullUrl(),
-            'cookies' => [
-                '_fbc' => $request->cookie('_fbc'),
-                '_fbp' => $request->cookie('_fbp'),
-            ],
-        ]);
+        $fbc = $request->cookie('_fbc');
+        if (is_string($fbc) && trim($fbc) !== '') {
+            $userData['fbc'] = trim($fbc);
+        }
+    
+        $fbp = $request->cookie('_fbp');
+        if (is_string($fbp) && trim($fbp) !== '') {
+            $userData['fbp'] = trim($fbp);
+        }
+    
+        $eventId = 'pv-'.bin2hex(random_bytes(6)).'-'.time();
+    
+        $event = [
+            'event_name'       => 'PageView',
+            'event_time'       => time(),
+            'action_source'    => 'website',
+            'event_source_url' => $request->fullUrl(),
+            'event_id'         => $eventId,
+            'user_data'        => $userData,
+        ];
+    
+        // ❌ не шлемо, просто дивимось що відправляємо
+        dd($event);
     }
+    
     
 
     /**
