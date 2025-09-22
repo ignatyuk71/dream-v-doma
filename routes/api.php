@@ -52,7 +52,7 @@ Route::middleware('api')->group(function () {
         ->middleware('throttle:120,1')
         ->group(function () {
             // PageView — опційно (зробимо пізніше або вимкнемо)
-            Route::post('/pv',   [TrackController::class, 'pv'])->name('track.pv');
+            Route::match(['get','post'], '/pv', [TrackController::class, 'pv'])->name('track.pv');
 
             // ViewContent (перегляд товару)
             Route::post('/vc',   [TrackController::class, 'vc'])->name('track.vc');
@@ -69,4 +69,4 @@ Route::middleware('api')->group(function () {
             Route::post('/purchase', [TrackController::class, 'purchase'])->name('track.purchase');
 
         });
-});
+    });
