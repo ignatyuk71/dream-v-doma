@@ -561,44 +561,34 @@ class TrackController extends Controller
             'client_ip_address' => $req->ip(),
             'client_user_agent' => (string) $req->userAgent(),
         ];
-
-             // Cookies з Meta Pixel (жодних трансформацій)
-        if ($fbc = $req->cookie('_fbc')) $data['fbc'] = $fbc;
-        if ($fbp = $req->cookie('_fbp')) $data['fbp'] = $fbp;
-
-                        // 🚨 тимчасово логнемо повні значення (не маскуємо)
-                        \Log::info('CAPI raw cookies', [
-                            'fbc' => $fbc,
-                            'fbp' => $fbp,
-                            'fbc_len' => $fbc ? strlen($fbc) : null,
-                            'fbp_len' => $fbp ? strlen($fbp) : null,
-                        ]);
-                        
-
-        // PII (якщо передані)
-        $email = $req->input('email');
-        $phone = $req->input('phone');
-        $fn    = $req->input('first_name') ?? $req->input('fn');
-        $ln    = $req->input('last_name')  ?? $req->input('ln');
-
-        if ($h = $this->sha256($email))                  $data['em'] = $h;
-        if ($phone && ($norm = $this->normPhone($phone))) $data['ph'] = $this->sha256($norm);
-        if ($h = $this->sha256($fn))                     $data['fn'] = $h;
-        if ($h = $this->sha256($ln))                     $data['ln'] = $h;
-
-        // Cookies з Meta Pixel (жодних трансформацій)
-        if ($fbc = $req->cookie('_fbc')) $data['fbc'] = $fbc;
-        if ($fbp = $req->cookie('_fbp')) $data['fbp'] = $fbp;
-
-        // Опціонально external_id
-        if ($req->filled('external_id')) {
-            $data['external_id'] = $this->sha256((string) $req->input('external_id'));
+    
+        // 1) читаємо з cookies (як і було)
+        $fbc = $req->cookie('_fbc');
+        $fbp = $req->cookie('_fbp');
+        if (is_string($fbc) && trim($fbc) !== '') $data['fbc'] = trim($fbc);
+        if (is_string($fbp) && trim($fbp) !== '') $data['fbp'] = trim($fbp);
+    
+        // 2) ФОЛБЕК: якщо _fbc ще немає, але в URL є fbclid → сформуй fbc
+        if (!isset($data['fbc'])) {
+            $srcUrl = $this->eventSourceUrl($req);              // ми вже його формуємо в handleEvent()
+            if ($fbclid = $this->parseFbclid($srcUrl)) {
+                $ts = (int)($req->input('event_time') ?: time()); // або можна взяти поточний time()
+                $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid;     // версію 1/2 Meta приймає, 2 теж ок
+            }
         }
-
-
-
+    
+        // PII — як було (додаємо тільки якщо є)
+        if ($h = $this->sha256($req->input('email'))) $data['em'] = $h;
+        if ($req->filled('phone')) {
+            if ($norm = $this->normPhone($req->input('phone')))  $data['ph'] = $this->sha256($norm);
+        }
+        if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) $data['fn'] = $h;
+        if ($h = $this->sha256($req->input('last_name')  ?? $req->input('ln'))) $data['ln'] = $h;
+        if ($req->filled('external_id')) $data['external_id'] = $this->sha256((string) $req->input('external_id'));
+    
         return $data;
     }
+    
     
 
     /**
