@@ -27,12 +27,6 @@ class TrackController extends Controller
      */
     public function pv(Request $request)
     {
-            // ✦ Простий тестовий лог
-    Log::info('Тестовий лог працює!', [
-        'time' => now()->toDateTimeString(),
-        'ip'   => $request->ip(),
-    ]);
-    
         return $this->handleEvent('PageView', $request, function () {
             return []; // PV без custom_data
         }, flag: 'send_page_view'); // якщо прапорця немає у БД — вважаємо увімкненим
@@ -525,6 +519,19 @@ class TrackController extends Controller
             'client_user_agent' => (string) $req->userAgent(),
         ];
 
+             // Cookies з Meta Pixel (жодних трансформацій)
+        if ($fbc = $req->cookie('_fbc')) $data['fbc'] = $fbc;
+        if ($fbp = $req->cookie('_fbp')) $data['fbp'] = $fbp;
+
+                        // 🚨 тимчасово логнемо повні значення (не маскуємо)
+                        \Log::info('CAPI raw cookies', [
+                            'fbc' => $fbc,
+                            'fbp' => $fbp,
+                            'fbc_len' => $fbc ? strlen($fbc) : null,
+                            'fbp_len' => $fbp ? strlen($fbp) : null,
+                        ]);
+                        
+
         // PII (якщо передані)
         $email = $req->input('email');
         $phone = $req->input('phone');
@@ -545,13 +552,7 @@ class TrackController extends Controller
             $data['external_id'] = $this->sha256((string) $req->input('external_id'));
         }
 
-                // 🚨 тимчасово логнемо повні значення (не маскуємо)
-                \Log::info('CAPI raw cookies', [
-                    'fbc' => $fbc,
-                    'fbp' => $fbp,
-                    'fbc_len' => $fbc ? strlen($fbc) : null,
-                    'fbp_len' => $fbp ? strlen($fbp) : null,
-                ]);
+
 
         return $data;
     }

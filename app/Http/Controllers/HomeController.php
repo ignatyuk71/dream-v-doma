@@ -12,6 +12,8 @@ class HomeController extends Controller
 {
     public function index()
     {
+
+
         $locale  = app()->getLocale();          // 'uk' або 'ru'
         $locales = ['uk', 'ru'];                // тягнемо обидві мови для характеристик
 
