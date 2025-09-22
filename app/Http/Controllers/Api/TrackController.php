@@ -33,40 +33,51 @@ class TrackController extends Controller
     }
 
     /**
-     * ViewContent — перегляд товару/контенту.
-     * Підтримує новий формат contents[] і фолбек id/price/quantity.
+     * ViewContent — подія перегляду товару/контенту.
+     *
+     * 🔹 Використовується для відслідковування відвідування сторінки товару.
+     * 🔹 Meta рекомендує надсилати масив contents[] у форматі:
+     *     [{ "id": "SKU123", "quantity": 1, "item_price": 399.00 }]
+     * 🔹 Якщо contents[] не передане — використовуємо "фолбек" з id/sku/price/quantity.
+     * 🔹 Значення value = сума (ціна * кількість).
+     * 🔹 Валюта береться з запиту або з налаштувань (default = UAH).
      */
     public function vc(Request $request)
     {
         return $this->handleEvent('ViewContent', $request, function () use ($request) {
-            // Новий формат: contents[] = [{id,quantity,item_price}]
+
+            // --- 1) Новий формат: contents[] = [{id, quantity, item_price}]
             $contents = $this->contentsFromRequest($request);
 
             if (!empty($contents)) {
                 $value = $this->calcValue($contents);
+
                 return [
                     'content_type' => 'product',
-                    'content_ids'  => array_map(fn($c) => (string)$c['id'], $contents),
-                    'contents'     => $contents,
-                    'value'        => $value,
-                    'currency'     => $request->input('currency', $this->currency()),
-                    'content_name' => $request->input('name') ?: $request->input('content_name'),
+                    'content_ids'  => array_map(fn($c) => (string)$c['id'], $contents), // масив ID
+                    'contents'     => $contents,                                       // деталі товарів
+                    'value'        => $value,                                          // сума
+                    'currency'     => $request->input('currency', $this->currency()),  // валюта
+                    'content_name' => $request->input('name') ?: $request->input('content_name'), // назва (опціонально)
                 ];
             }
 
-            // Фолбек: окремі поля
+            // --- 2) Фолбек: окремі поля (id/sku + price + quantity)
             $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
-            $price    = $this->num($request->input('price', $request->input('item_price', $request->input('value', 0))));
+            $price    = $this->num(
+                $request->input('price', $request->input('item_price', $request->input('value', 0)))
+            );
             $qty      = (int)$request->input('quantity', 1);
             $currency = $request->input('currency', $this->currency());
 
             $data = [
                 'content_type' => 'product',
-                'content_ids'  => $pid ? [$pid] : [],
-                'value'        => $this->num($price * max(1, $qty)),
+                'content_ids'  => $pid ? [$pid] : [],                // ID товару
+                'value'        => $this->num($price * max(1, $qty)), // вартість = ціна * кількість
                 'currency'     => $currency,
             ];
 
+            // додаємо contents[], якщо є ID
             if ($pid) {
                 $data['contents'] = [[
                     'id'         => $pid,
@@ -74,6 +85,8 @@ class TrackController extends Controller
                     'item_price' => $price,
                 ]];
             }
+
+            // додаємо назву, якщо передана
             if ($request->filled('name')) {
                 $data['content_name'] = $request->input('name');
             }
@@ -82,30 +95,40 @@ class TrackController extends Controller
         }, flag: 'send_view_content');
     }
 
+
     /**
-     * AddToCart — додавання товару в кошик.
-     * Підтримка contents[] або фолбек id/price/quantity.
+     * AddToCart — подія додавання товару в кошик.
+     *
+     * 🔹 Використовується для відслідковування натиску кнопки «Додати в кошик».
+     * 🔹 Meta рекомендує надсилати масив contents[] у форматі:
+     *     [{ "id": "SKU123", "quantity": 2, "item_price": 799.00 }]
+     * 🔹 Якщо contents[] немає — використовуємо "фолбек" з id/sku/price/quantity.
+     * 🔹 Значення value = або передане явно, або обчислене як ціна * кількість.
+     * 🔹 Валюта береться з запиту або з налаштувань (default = UAH).
      */
     public function atc(Request $request)
     {
         return $this->handleEvent('AddToCart', $request, function () use ($request) {
+
+            // --- 1) Новий формат: contents[] = [{id, quantity, item_price}]
             $contents = $this->contentsFromRequest($request);
 
             if (!empty($contents)) {
+                // Якщо є value у запиті — беремо його, інакше рахуємо самі
                 $value = $request->filled('value')
                     ? $this->num($request->input('value'))
                     : $this->calcValue($contents);
 
                 return [
                     'content_type' => 'product',
-                    'content_ids'  => array_map(fn($c) => (string)$c['id'], $contents),
-                    'contents'     => $contents,
-                    'value'        => $value,
-                    'currency'     => $request->input('currency', $this->currency()),
+                    'content_ids'  => array_map(fn($c) => (string)$c['id'], $contents), // масив ID
+                    'contents'     => $contents,                                       // товари з qty і цінами
+                    'value'        => $value,                                          // сума
+                    'currency'     => $request->input('currency', $this->currency()),  // валюта
                 ];
             }
 
-            // Фолбек
+            // --- 2) Фолбек: окремі поля (id/sku + price + quantity)
             $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
             $qty      = (int)$request->input('quantity', 1);
             $price    = $this->num($request->input('price', $request->input('item_price', 0)));
@@ -114,8 +137,8 @@ class TrackController extends Controller
 
             return [
                 'content_type' => 'product',
-                'content_ids'  => $pid ? [$pid] : [],
-                'contents'     => $pid ? [[
+                'content_ids'  => $pid ? [$pid] : [], // масив із одним ID (або пустий)
+                'contents'     => $pid ? [[           // contents з одним елементом
                     'id'         => $pid,
                     'quantity'   => $qty,
                     'item_price' => $price,
@@ -126,20 +149,29 @@ class TrackController extends Controller
         }, flag: 'send_add_to_cart');
     }
 
+
     /**
      * InitiateCheckout — початок оформлення замовлення.
-     * Підтримка contents[] або старого items[] (який нормалізуємо до contents[]).
+     *
+     * 🔹 Основний формат: contents[] = [{ id, quantity, item_price }]
+     * 🔹 Fallback: items[]/старі поля → нормалізуємо у contents[]
+     * 🔹 value = передане явно або сума (qty * item_price)
+     * 🔹 Додаємо content_ids[] для сумісності з рекомендаціями Meta
+     * 🔹 (опц.) content_name — якщо передано
      */
     public function ic(Request $request)
     {
         return $this->handleEvent('InitiateCheckout', $request, function () use ($request) {
+
+            // --- 1) Основний шлях: contents[] з тіла
             $contents = $this->contentsFromRequest($request);
 
+            // --- 2) Fallback: items[] → приводимо до contents[]
             if (empty($contents)) {
-                // Старий формат items[] → приводимо до contents[]
                 $items = (array)$request->input('items', []);
                 foreach ($items as $i) {
-                    $id  = (string)($i['sku'] ?? $i['id'] ?? '');
+                    // приймаємо variant_sku | sku | id
+                    $id = (string)($i['variant_sku'] ?? $i['sku'] ?? $i['id'] ?? '');
                     if ($id === '') continue;
                     $qty = (int)($i['quantity'] ?? 1);
                     $pr  = $this->num($i['price'] ?? $i['item_price'] ?? 0);
@@ -147,19 +179,34 @@ class TrackController extends Controller
                 }
             }
 
-            $value = $request->filled('value')
+            // --- 3) Підсумки
+            $value    = $request->filled('value')
                 ? $this->num($request->input('value'))
                 : $this->calcValue($contents);
 
-            return [
+            $currency = $request->input('currency', $this->currency());
+            $numItems = array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0);
+            $ids      = array_map(fn($c) => (string)$c['id'], $contents);
+
+            // --- 4) custom_data
+            $data = [
                 'content_type' => 'product',
-                'contents'     => $contents,
-                'num_items'    => array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0),
+                'content_ids'  => $ids,         // масив ID (рекомендовано Meta)
+                'contents'     => $contents,    // деталі позицій
+                'num_items'    => $numItems,
                 'value'        => $value,
-                'currency'     => $request->input('currency', $this->currency()),
+                'currency'     => $currency,
             ];
+
+            // опціонально: назва (якщо прийшла з фронта)
+            if ($request->filled('content_name') || $request->filled('name')) {
+                $data['content_name'] = (string)($request->input('content_name') ?? $request->input('name'));
+            }
+
+            return $data;
         }, flag: 'send_initiate_checkout');
     }
+
 
     /**
      * Lead — надсилання лід-події з довільними полями content_name/status/value.
@@ -179,7 +226,12 @@ class TrackController extends Controller
 
     /**
      * Purchase — підтвердження покупки.
-     * Підтримує новий формат contents[] та фолбек items[] (variant_sku → id).
+     *
+     * 🔹 Основний формат: contents[] = [{ id, quantity, item_price }]
+     * 🔹 Fallback: items[] (variant_sku|sku|id, quantity, price|item_price) → нормалізуємо до contents[]
+     * 🔹 value = передане явно або (сума позицiй + shipping + tax)
+     * 🔹 Додаємо content_ids[], num_items, currency (UPPERCASE)
+     * 🔹 (опц.) content_name / order_number — якщо передані
      */
     public function purchase(Request $request)
     {
@@ -187,9 +239,9 @@ class TrackController extends Controller
             // 1) Основний шлях: contents[] = [{ id, quantity, item_price }]
             $contents = $this->contentsFromRequest($request);
 
-            // 2) Фолбек: items[] = [{ variant_sku|sku|id, quantity, price|item_price }]
+            // 2) Фолбек: items[] → приводимо до contents[]
             if (empty($contents)) {
-                $items = (array) $request->input('items', []);
+                $items = (array)$request->input('items', []);
                 foreach ($items as $i) {
                     $id = (string)($i['variant_sku'] ?? $i['sku'] ?? $i['id'] ?? '');
                     if ($id === '') continue;
@@ -203,12 +255,15 @@ class TrackController extends Controller
             $shipping = $this->num($request->input('shipping', 0));
             $tax      = $this->num($request->input('tax', 0));
 
+            $calc = $this->calcValue($contents) + $shipping + $tax;
             $value = $request->filled('value')
                 ? $this->num($request->input('value'))
-                : $this->calcValue($contents) + $shipping + $tax;
+                : $this->num($calc);
 
-            $currency  = $request->input('currency', $this->currency());
-            $numItems  = array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0);
+            if ($value < 0) $value = 0.00; // на всяк випадок від від’ємних
+
+            $currency   = strtoupper((string)$request->input('currency', $this->currency()));
+            $numItems   = array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0);
             $contentIds = array_map(fn($c) => (string)$c['id'], $contents);
 
             // 4) custom_data для Meta
@@ -225,14 +280,17 @@ class TrackController extends Controller
             if ($shipping > 0) $data['shipping'] = $shipping;
             if ($tax > 0)      $data['tax']      = $tax;
 
-            // для власної діагностики (Meta проігнорує, але не завадить)
             if ($request->filled('order_number')) {
-                $data['order_number'] = (string)$request->input('order_number');
+                $data['order_number'] = (string) $request->input('order_number');
+            }
+            if ($request->filled('content_name') || $request->filled('name')) {
+                $data['content_name'] = (string) ($request->input('content_name') ?? $request->input('name'));
             }
 
             return $data;
         }, flag: 'send_purchase');
     }
+
 
 
 
@@ -311,6 +369,27 @@ class TrackController extends Controller
         }
 
         $body = $resp->json();
+
+        // у handleEvent(), одразу перед $capi->send([$event], $testCode);
+if (config('app.debug')) {
+    $ud = $event['user_data'] ?? [];
+    $mask = function($v){ return is_string($v) && strlen($v) > 12 ? substr($v,0,6).'…'.substr($v,-6) : $v; };
+    \Log::info('CAPI debug', [
+        'event'      => $name,
+        'event_id'   => $event['event_id'] ?? null,
+        'source_url' => $event['event_source_url'] ?? null,
+        'has'        => [
+            'fbc' => isset($ud['fbc']),
+            'fbp' => isset($ud['fbp']),
+            'em'  => isset($ud['em']),
+            'ph'  => isset($ud['ph']),
+        ],
+        'fbc'        => isset($ud['fbc']) ? $mask($ud['fbc']) : null,
+        'fbp'        => isset($ud['fbp']) ? $mask($ud['fbp']) : null,
+        // не логуй em/ph хеші, якщо не потрібно
+        'custom_keys'=> array_keys($event['custom_data'] ?? []),
+    ]);
+}
 
         // Невдала HTTP-відповідь або помилка у тілі
         if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
@@ -446,43 +525,43 @@ class TrackController extends Controller
     }
 
     /**
-     * Побудувати секцію user_data для Meta CAPI:
-     * - IP і User-Agent обов’язково;
-     * - hashed em/ph/fn/ln за наявності;
-     * - fbp/fbc з тіла або з cookie; формуємо fbc із fbclid за потреби;
-     * - external_id (hashed) за наявності.
+     * Формує user_data для Meta CAPI.
+     *
+     * - IP / User-Agent завжди
+     * - PII (email, phone, fn, ln) → SHA256 (нижній регістр + trim)
+     * - _fbc та _fbp беремо тільки з cookies (ніяких input / генерації)
+     * - external_id → SHA256 за наявності
      */
     private function userData(Request $req): array
     {
+        $data = [
+            'client_ip_address' => $req->ip(),
+            'client_user_agent' => (string) $req->userAgent(),
+        ];
+
+        // PII (якщо передані)
         $email = $req->input('email');
         $phone = $req->input('phone');
         $fn    = $req->input('first_name') ?? $req->input('fn');
         $ln    = $req->input('last_name')  ?? $req->input('ln');
 
-        $fbp = $req->input('fbp') ?? $req->cookie('_fbp');
-        $fbc = $req->input('fbc') ?? $req->cookie('_fbc');
+        if ($h = $this->sha256($email))                  $data['em'] = $h;
+        if ($phone && ($norm = $this->normPhone($phone))) $data['ph'] = $this->sha256($norm);
+        if ($h = $this->sha256($fn))                     $data['fn'] = $h;
+        if ($h = $this->sha256($ln))                     $data['ln'] = $h;
 
-        // Сформувати _fbc, якщо є fbclid у URL
-        if (!$fbc) {
-            $fbclid = $this->parseFbclid($this->eventSourceUrl($req));
-            if ($fbclid) $fbc = 'fb.1.' . time() . '.' . $fbclid;
+        // Cookies з Meta Pixel (жодних трансформацій)
+        if ($fbc = $req->cookie('_fbc')) $data['fbc'] = $fbc;
+        if ($fbp = $req->cookie('_fbp')) $data['fbp'] = $fbp;
+
+        // Опціонально external_id
+        if ($req->filled('external_id')) {
+            $data['external_id'] = $this->sha256((string) $req->input('external_id'));
         }
-
-        $data = [
-            'client_ip_address' => $req->ip(),
-            'client_user_agent' => (string)$req->userAgent(),
-        ];
-
-        if ($this->sha256($email))          $data['em']  = $this->sha256($email);
-        if ($this->normPhone($phone))       $data['ph']  = $this->sha256($this->normPhone($phone));
-        if ($this->sha256($fn))             $data['fn']  = $this->sha256($fn);
-        if ($this->sha256($ln))             $data['ln']  = $this->sha256($ln);
-        if ($fbc)                           $data['fbc'] = $fbc;
-        if ($fbp)                           $data['fbp'] = $fbp;
-        if ($req->filled('external_id'))    $data['external_id'] = $this->sha256((string)$req->input('external_id'));
 
         return $data;
     }
+    
 
     /**
      * Згенерувати event_id, який сумісний із фронтом (для дедуплікації).

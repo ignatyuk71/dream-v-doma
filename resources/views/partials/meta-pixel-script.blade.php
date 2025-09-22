@@ -59,9 +59,11 @@
     var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
     return m ? m[1] : null;
   };
+
+  // Визначення FB/IG-трафіку:
+  // перевіряємо fbclid у URL або _fbc у cookie
   window._mpIsFbTraffic = function(){
-    // НІЧОГО НЕ СТВОРЮЄМО: лише читаємо кукі або fbclid з URL
-    return !!(_mpGetCookie('_fbc') || _mpGetCookie('_fbp') || _mpGetParam('fbclid'));
+    return !!(_mpGetCookie('_fbc') || _mpGetParam('fbclid'));
   };
 </script>
 
@@ -94,17 +96,11 @@
 
   var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-  var safeDecode = function(c){ try { return c ? decodeURIComponent(c) : null } catch(_) { return c } };
-  var fbp = safeDecode(window._mpGetCookie('_fbp')); // тільки читаємо
-  var fbc = safeDecode(window._mpGetCookie('_fbc')); // тільки читаємо
-
   var payload = {
     event_id: pvId,
     event_time: Math.floor(Date.now()/1000),
-    event_source_url: window.location.href,
-    fbp: fbp || null,
-    fbc: fbc || null
-    // user_data (IP/UA/PII hashes) додасться на бекенді — як було
+    event_source_url: window.location.href
+    // fbc/fbp НЕ передаємо з фронта — бекенд сам прочитає їх з cookie
   };
   if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
 

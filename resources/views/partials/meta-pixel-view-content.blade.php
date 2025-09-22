@@ -82,7 +82,7 @@
   (function sendPixel(attempt){
     attempt = attempt || 0;
     if (typeof window.fbq !== 'function') {
-      if (attempt > 120) return; // ~10 секунд
+      if (attempt > 60) return; // ~5 секунд
       return setTimeout(function(){ sendPixel(attempt+1) }, 80);
     }
     try {
@@ -99,8 +99,6 @@
 
   /* ==================== 2) СЕРВЕРНИЙ CAPI (ЛИШЕ FB-трафік) ==================== */
   try {
-    var fbp = getCookie('_fbp') || null; // лише читаємо
-    var fbc = getCookie('_fbc') || null; // лише читаємо
 
     var bodyObj = {
       event_id: vcId,
@@ -113,9 +111,6 @@
       contents: contents,
       value: price,
       currency: currency,
-
-      fbp: fbp,   // як є або null
-      fbc: fbc    // як є або null
       // PII (email/phone ...) хешується на бекенді, як у тебе
     };
     if (window._mpTestCode) bodyObj.test_event_code = window._mpTestCode;
