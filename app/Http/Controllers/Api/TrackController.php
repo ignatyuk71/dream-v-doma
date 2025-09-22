@@ -27,6 +27,12 @@ class TrackController extends Controller
      */
     public function pv(Request $request)
     {
+            // ✦ Простий тестовий лог
+    Log::info('Тестовий лог працює!', [
+        'time' => now()->toDateTimeString(),
+        'ip'   => $request->ip(),
+    ]);
+    
         return $this->handleEvent('PageView', $request, function () {
             return []; // PV без custom_data
         }, flag: 'send_page_view'); // якщо прапорця немає у БД — вважаємо увімкненим
