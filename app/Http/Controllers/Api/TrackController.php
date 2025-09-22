@@ -54,6 +54,7 @@ class TrackController extends Controller
             'event_name'       => 'PageView',
             'event_time'       => (int) ($request->input('event_time') ?: time()),
             'action_source'    => 'website',
+            'action_source11'    => 'ячсмячсм',
             'event_source_url' => $url,
             'event_id'         => (string) ($request->input('event_id') ?: ('pv-'.bin2hex(random_bytes(6)).'-'.time())),
             'user_data'        => $userData,
