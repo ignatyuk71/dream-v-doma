@@ -27,9 +27,10 @@ class TrackController extends Controller
      */
     public function pv(Request $request)
     {
+        // 1) Підготуємо user_data (IP, UA, куки якщо є — без порожніх)
         $userData = [
             'client_ip_address' => $request->ip(),
-            'client_user_agent' => (string)$request->userAgent(),
+            'client_user_agent' => (string) $request->userAgent(),
         ];
     
         $fbc = $request->cookie('_fbc');
@@ -42,21 +43,26 @@ class TrackController extends Controller
             $userData['fbp'] = trim($fbp);
         }
     
-        $eventId = 'pv-'.bin2hex(random_bytes(6)).'-'.time();
+        // 2) Джерело події — беремо з фронта, інакше реферер/поточний URL
+        $url = $request->input('event_source_url')
+            ?? $request->input('url')
+            ?? (string) $request->headers->get('referer', '')
+            ?: url()->current();
     
+        // 3) Збираємо подію
         $event = [
             'event_name'       => 'PageView',
-            'event_time'       => time(),
+            'event_time'       => (int) ($request->input('event_time') ?: time()),
             'action_source'    => 'website',
-            'event_source_url' => $request->fullUrl(),
-            'event_id'         => $eventId,
+            'event_source_url' => $url,
+            'event_id'         => (string) ($request->input('event_id') ?: ('pv-'.bin2hex(random_bytes(6)).'-'.time())),
             'user_data'        => $userData,
+            // 'custom_data'    => [] // для PV не потрібно
         ];
     
-        // ❌ не шлемо, просто дивимось що відправляємо
+        // 4) Просто показуємо, що саме відправляли б
         dd($event);
     }
-    
     
 
     /**
