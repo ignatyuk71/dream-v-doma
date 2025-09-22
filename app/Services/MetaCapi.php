@@ -27,6 +27,12 @@ class MetaCapi
         ];
         if ($testCode) $payload['test_event_code'] = $testCode;
 
+            // 🔎 Лог для дебагу — весь payload
+    \Log::channel('daily')->info('MetaCapi SEND', [
+        'endpoint' => $endpoint,
+        'payload'  => $payload,
+    ]);
+    
         return Http::timeout(8)
             ->connectTimeout(4)
             ->retry(2, 250)

@@ -27,43 +27,108 @@ class TrackController extends Controller
      */
     public function pv(Request $request)
     {
-        // 1) Підготуємо user_data (IP, UA, куки якщо є — без порожніх)
+        // 0) Налаштування з БД
+        $s = DB::table('tracking_settings')->first();
+        $pixelId = (string)($s->pixel_id ?? '');
+        $token   = (string)($s->capi_token ?? '');
+        $apiVer  = (string)($s->capi_api_version ?? 'v20.0');
+        $testCode = $request->input('test_event_code', $s->capi_test_code ?? null);
+    
+        if ($pixelId === '' || $token === '') {
+            Log::warning('CAPI_PV_SKIP', ['error' => 'missing_pixel_or_token']);
+            return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
+        }
+    
+        // 1) user_data (IP, UA, куки якщо є — без порожніх)
         $userData = [
             'client_ip_address' => $request->ip(),
             'client_user_agent' => (string) $request->userAgent(),
         ];
-    
-        $fbc = $request->cookie('_fbc');
-        if (is_string($fbc) && trim($fbc) !== '') {
-            $userData['fbc'] = trim($fbc);
+        if (is_string($request->cookie('_fbc')) && trim($request->cookie('_fbc')) !== '') {
+            $userData['fbc'] = trim($request->cookie('_fbc'));
+        }
+        if (is_string($request->cookie('_fbp')) && trim($request->cookie('_fbp')) !== '') {
+            $userData['fbp'] = trim($request->cookie('_fbp'));
         }
     
-        $fbp = $request->cookie('_fbp');
-        if (is_string($fbp) && trim($fbp) !== '') {
-            $userData['fbp'] = trim($fbp);
-        }
-    
-        // 2) Джерело події — беремо з фронта, інакше реферер/поточний URL
+        // 2) Джерело події — з фронта або реферер/поточний URL
         $url = $request->input('event_source_url')
             ?? $request->input('url')
             ?? (string) $request->headers->get('referer', '')
             ?: url()->current();
     
-        // 3) Збираємо подію
+        // 3) Подія
+        $eventId = (string) ($request->input('event_id') ?: ('pv-'.bin2hex(random_bytes(6)).'-'.time()));
         $event = [
             'event_name'       => 'PageView',
             'event_time'       => (int) ($request->input('event_time') ?: time()),
             'action_source'    => 'website',
-            'action_source11'    => 'ячсмячсм',
             'event_source_url' => $url,
-            'event_id'         => (string) ($request->input('event_id') ?: ('pv-'.bin2hex(random_bytes(6)).'-'.time())),
+            'event_id'         => $eventId,
             'user_data'        => $userData,
-            // 'custom_data'    => [] // для PV не потрібно
+            // PV без custom_data
         ];
     
-        // 4) Просто показуємо, що саме відправляли б
-        dd($event);
+        // 🔎 ЛОГ — що саме шлемо
+        Log::info('CAPI_PV_REQUEST', [
+            'pixel_id'        => $pixelId,
+            'api_version'     => $apiVer,
+            'test_event_code' => $testCode,
+            'event'           => $event,
+            'fbc_len'         => isset($userData['fbc']) ? strlen($userData['fbc']) : null,
+            'fbp_len'         => isset($userData['fbp']) ? strlen($userData['fbp']) : null,
+        ]);
+    
+        // 4) Відправка
+        try {
+            $capi = new MetaCapi($pixelId, $token, $apiVer);
+            $resp = $capi->send([$event], $testCode);
+        } catch (\Throwable $e) {
+            Log::warning('CAPI_PV_EXCEPTION', ['ex' => $e->getMessage()]);
+            return response()->json([
+                'ok'    => false,
+                'error' => 'capi_exception',
+                'msg'   => $e->getMessage(),
+            ], 502);
+        }
+    
+        $body = $resp->json();
+    
+        // 🔎 ЛОГ — відповідь Meta
+        Log::info('CAPI_PV_RESPONSE', [
+            'status' => $resp->status(),
+            'body'   => $body,
+        ]);
+    
+        // 5) Перевірка відповіді
+        if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
+            return response()->json([
+                'ok'     => false,
+                'error'  => 'capi_request_failed',
+                'status' => $resp->status(),
+                'body'   => $body,
+            ], 502);
+        }
+    
+        if (is_array($body) && array_key_exists('events_received', $body) && (int)$body['events_received'] < 1) {
+            return response()->json([
+                'ok'     => false,
+                'error'  => 'events_not_received',
+                'status' => $resp->status(),
+                'body'   => $body,
+            ], 502);
+        }
+    
+        // 6) ОК
+        return response()->json([
+            'ok'              => true,
+            'event'           => 'PageView',
+            'event_id'        => $eventId,
+            'events_received' => is_array($body) ? ($body['events_received'] ?? null) : null,
+            'fbtrace_id'      => is_array($body) ? ($body['fbtrace_id'] ?? null) : null,
+        ], 200);
     }
+    
     
 
     /**
