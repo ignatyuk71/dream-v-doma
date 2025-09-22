@@ -296,24 +296,17 @@ class TrackController extends Controller
 
     /* ===================== CORE HANDLER ===================== */
 
-    /**
-     * Спільний обробник для всіх подій.
-     * - читає налаштування/прапорці;
-     * - будує user_data/custom_data;
-     * - шле подію через MetaCapi;
-     * - повертає JSON-відповідь з мінімальною діагностикою.
-     *
-     * @param string   $name            Назва події (PageView, ViewContent, ...)
-     * @param Request  $req             HTTP-запит
-     * @param \Closure $buildCustomData Колбек, що повертає custom_data (масив) або []
-     * @param string   $flag            Назва прапорця у БД (send_view_content тощо)
-     */
 /**
  * Спільний обробник для всіх подій.
  * - читає налаштування/прапорці;
  * - будує user_data/custom_data;
  * - шле подію через MetaCapi;
- * - повертає JSON-відповідь і (тимчасово) логувати діагностику.
+ * - повертає JSON-відповідь і логування для діагностики.
+ *
+ * @param string   $name            Назва події (PageView, ViewContent, ...)
+ * @param Request  $req             HTTP-запит
+ * @param \Closure $buildCustomData Колбек, що повертає custom_data (масив) або []
+ * @param string   $flag            Назва прапорця у БД (send_view_content тощо)
  */
 private function handleEvent(string $name, Request $req, \Closure $buildCustomData, string $flag)
 {
@@ -337,20 +330,20 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
         }
     }
 
-    // 3) Піксель/Токен
+    // 3) Перевірка Pixel/Token
     $pixelId = (string)($s->pixel_id ?? '');
     $token   = (string)($s->capi_token ?? '');
     if ($pixelId === '' || $token === '') {
         return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
     }
 
-    // 4) custom_data формується лише там, де потрібно
+    // 4) custom_data тільки де потрібно
     $custom = $buildCustomData();
 
-    // 5) Конструюємо подію Meta
+    // 5) Формуємо подію Meta
     $event = [
         'event_name'       => $name,
-        'event_time'       => (int)($req->input('event_time') ?: time()),   // секунди (НЕ мс)
+        'event_time'       => (int)($req->input('event_time') ?: time()), // секунди
         'action_source'    => 'website',
         'event_source_url' => $this->eventSourceUrl($req),
         'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId($name)),
@@ -360,15 +353,13 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
         $event['custom_data'] = $custom;
     }
 
-    // 5.1) 🔎 Тимчасові діагностичні логи (fbc/fbp)
-    //    - повні значення логуються ТІЛЬКИ поза production або якщо виставити CAPI_LOG_RAW=true
+    // 5.1) Діагностика: безпечний лог + (опц.) сирі cookies
     try {
         $ud   = $event['user_data'] ?? [];
         $fbc  = $ud['fbc'] ?? null;
         $fbp  = $ud['fbp'] ?? null;
         $mask = function($v){ return is_string($v) && strlen($v) > 12 ? substr($v,0,6).'…'.substr($v,-6) : $v; };
 
-        // базовий (безпечний) лог
         \Log::info('CAPI debug', [
             'event'      => $name,
             'event_id'   => $event['event_id'] ?? null,
@@ -384,7 +375,7 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
             'custom_keys'=> array_keys($event['custom_data'] ?? []),
         ]);
 
-        // за потреби — “сирі” значення (користуйся обережно і прибери після дебагу)
+        // УВАГА: повні значення логуємо лише локально або якщо виставлено CAPI_LOG_RAW=true
         $logRaw = (bool) (config('app.capi_log_raw', env('CAPI_LOG_RAW', false)));
         if (app()->environment() !== 'production' || $logRaw) {
             \Log::info('CAPI raw cookies', [
@@ -395,7 +386,6 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
             ]);
         }
     } catch (\Throwable $e) {
-        // не валимо запит, якщо логування десь упало
         \Log::debug('CAPI debug log error', ['ex' => $e->getMessage()]);
     }
 
@@ -407,7 +397,6 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
         $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
         $resp = $capi->send([$event], $testCode);
     } catch (\Throwable $e) {
-        // Розширений лог винятків HTTP-клієнта (якщо там є відповідь тіла)
         $status = method_exists($e, 'response') && $e->response ? $e->response->status() : null;
         $body   = method_exists($e, 'response') && $e->response ? $e->response->body()   : null;
 
@@ -438,7 +427,7 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
 
     $body = $resp->json();
 
-    // 8) Невдала HTTP-відповідь або помилка у тілі
+    // 8) HTTP-помилка або помилка у тілі
     if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
         \Log::error('CAPI request failed', [
             'event'    => $name,
@@ -465,7 +454,7 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
         ], 502);
     }
 
-    // 9) Події не прийняті (validation warning тощо)
+    // 9) Події не прийняті
     if (is_array($body) && array_key_exists('events_received', $body) && (int)$body['events_received'] < 1) {
         \Log::warning('CAPI events_not_received', [
             'event'    => $name,
