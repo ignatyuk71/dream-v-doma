@@ -370,26 +370,11 @@ class TrackController extends Controller
 
         $body = $resp->json();
 
-        // у handleEvent(), одразу перед $capi->send([$event], $testCode);
-if (config('app.debug')) {
-    $ud = $event['user_data'] ?? [];
-    $mask = function($v){ return is_string($v) && strlen($v) > 12 ? substr($v,0,6).'…'.substr($v,-6) : $v; };
-    \Log::info('CAPI debug', [
-        'event'      => $name,
-        'event_id'   => $event['event_id'] ?? null,
-        'source_url' => $event['event_source_url'] ?? null,
-        'has'        => [
-            'fbc' => isset($ud['fbc']),
-            'fbp' => isset($ud['fbp']),
-            'em'  => isset($ud['em']),
-            'ph'  => isset($ud['ph']),
-        ],
-        'fbc'        => isset($ud['fbc']) ? $mask($ud['fbc']) : null,
-        'fbp'        => isset($ud['fbp']) ? $mask($ud['fbp']) : null,
-        // не логуй em/ph хеші, якщо не потрібно
-        'custom_keys'=> array_keys($event['custom_data'] ?? []),
-    ]);
-}
+        $ud = $event['user_data'] ?? [];
+\Log::info('CAPI debug len', [
+  'fbc_len' => isset($ud['fbc']) ? strlen($ud['fbc']) : null,
+  'fbp_len' => isset($ud['fbp']) ? strlen($ud['fbp']) : null,
+]);
 
         // Невдала HTTP-відповідь або помилка у тілі
         if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
