@@ -16,8 +16,7 @@ use App\Services\MetaCapi;
 class TrackController extends Controller
 {
     /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
-    /** @var object|null */
-private $settingsCache = null;
+    private ?object $settingsCache = null;
 
     /* ===================== PUBLIC ENDPOINTS ===================== */
 
@@ -297,190 +296,109 @@ private $settingsCache = null;
 
     /* ===================== CORE HANDLER ===================== */
 
-/**
- * Спільний обробник для всіх подій.
- * - читає налаштування/прапорці;
- * - будує user_data/custom_data;
- * - шле подію через MetaCapi;
- * - повертає JSON-відповідь і логування для діагностики.
- *
- * @param string   $name            Назва події (PageView, ViewContent, ...)
- * @param Request  $req             HTTP-запит
- * @param \Closure $buildCustomData Колбек, що повертає custom_data (масив) або []
- * @param string   $flag            Назва прапорця у БД (send_view_content тощо)
- */
-private function handleEvent(string $name, Request $req, \Closure $buildCustomData, string $flag)
-{
-    $s = $this->settings();
+    /**
+     * Спільний обробник для всіх подій.
+     * - читає налаштування/прапорці;
+     * - будує user_data/custom_data;
+     * - шле подію через MetaCapi;
+     * - повертає JSON-відповідь з мінімальною діагностикою.
+     *
+     * @param string   $name            Назва події (PageView, ViewContent, ...)
+     * @param Request  $req             HTTP-запит
+     * @param \Closure $buildCustomData Колбек, що повертає custom_data (масив) або []
+     * @param string   $flag            Назва прапорця у БД (send_view_content тощо)
+     */
+    private function handleEvent(string $name, Request $req, \Closure $buildCustomData, string $flag)
+    {
+        $s = $this->settings();
 
-    // 0) Глобальне вимкнення CAPI
-    if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
-        return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
-    }
-
-    // 1) Прапорець конкретної події
-    if (!$this->flagEnabled($s, $flag)) {
-        return response()->json(['ok' => true, 'skipped' => "flag_{$flag}_disabled"], 202);
-    }
-
-    // 2) Відсікти адмінські урли
-    if ((int)($s->exclude_admin ?? 1) === 1) {
-        $url = $this->eventSourceUrl($req);
-        if ($this->looksLikeAdmin($url) || $req->is('admin*')) {
-            return response()->json(['ok' => true, 'skipped' => 'admin_excluded'], 202);
+        // Глобальне вимкнення CAPI
+        if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
+            return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
         }
-    }
 
-    // 3) Перевірка Pixel/Token
-    $pixelId = (string)($s->pixel_id ?? '');
-    $token   = (string)($s->capi_token ?? '');
-    if ($pixelId === '' || $token === '') {
-        return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
-    }
-
-    // 4) custom_data тільки де потрібно
-    $custom = $buildCustomData();
-
-    // 5) Формуємо подію Meta
-    $event = [
-        'event_name'       => $name,
-        'event_time'       => (int)($req->input('event_time') ?: time()), // секунди
-        'action_source'    => 'website',
-        'event_source_url' => $this->eventSourceUrl($req),
-        'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId($name)),
-        'user_data'        => $this->userData($req),
-    ];
-    if (!empty($custom)) {
-        $event['custom_data'] = $custom;
-    }
-
-    // 5.1) Діагностика: безпечний лог + (опц.) сирі cookies
-    try {
-        $ud   = $event['user_data'] ?? [];
-        $fbc  = $ud['fbc'] ?? null;
-        $fbp  = $ud['fbp'] ?? null;
-        $mask = function($v){ return is_string($v) && strlen($v) > 12 ? substr($v,0,6).'…'.substr($v,-6) : $v; };
-
-        \Log::info('CAPI debug', [
-            'event'      => $name,
-            'event_id'   => $event['event_id'] ?? null,
-            'source_url' => $event['event_source_url'] ?? null,
-            'has'        => [
-                'fbc' => isset($ud['fbc']),
-                'fbp' => isset($ud['fbp']),
-                'em'  => isset($ud['em']),
-                'ph'  => isset($ud['ph']),
-            ],
-            'fbc'        => isset($ud['fbc']) ? $mask($ud['fbc']) : null,
-            'fbp'        => isset($ud['fbp']) ? $mask($ud['fbp']) : null,
-            'custom_keys'=> array_keys($event['custom_data'] ?? []),
-        ]);
-
-        // УВАГА: повні значення логуємо лише локально або якщо виставлено CAPI_LOG_RAW=true
-        $logRaw = (bool) (config('app.capi_log_raw', env('CAPI_LOG_RAW', false)));
-        if (app()->environment() !== 'production' || $logRaw) {
-            \Log::info('CAPI raw cookies', [
-                'fbc'     => $fbc,
-                'fbp'     => $fbp,
-                'fbc_len' => $fbc ? strlen($fbc) : null,
-                'fbp_len' => $fbp ? strlen($fbp) : null,
-            ]);
+        // Перевірка прапорця конкретної події
+        if (!$this->flagEnabled($s, $flag)) {
+            return response()->json(['ok' => true, 'skipped' => "flag_{$flag}_disabled"], 202);
         }
-    } catch (\Throwable $e) {
-        \Log::debug('CAPI debug log error', ['ex' => $e->getMessage()]);
-    }
 
-    // 6) test_event_code: override з тіла або з БД
-    $testCode = $req->input('test_event_code', $s->capi_test_code ?? null);
+        // Відсікти адмінські урли (і коли реферер/URL вказує на адмінку)
+        if ((int)($s->exclude_admin ?? 1) === 1) {
+            $url = $this->eventSourceUrl($req);
+            if ($this->looksLikeAdmin($url) || $req->is('admin*')) {
+                return response()->json(['ok' => true, 'skipped' => 'admin_excluded'], 202);
+            }
+        }
 
-    // 7) Відправка у Meta
-    try {
-        $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
-        $resp = $capi->send([$event], $testCode);
-    } catch (\Throwable $e) {
-        $status = method_exists($e, 'response') && $e->response ? $e->response->status() : null;
-        $body   = method_exists($e, 'response') && $e->response ? $e->response->body()   : null;
+        // Перевірка наявності Pixel ID і CAPI token
+        $pixelId = (string)($s->pixel_id ?? '');
+        $token   = (string)($s->capi_token ?? '');
+        if ($pixelId === '' || $token === '') {
+            return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
+        }
 
-        \Log::error('CAPI request failed (throw)', [
-            'event'    => $name,
-            'event_id' => $event['event_id'] ?? null,
-            'status'   => $status,
-            'body'     => $body,
-            'ex'       => $e->getMessage(),
-            'sent_meta'=> [
-                'event_name'       => $event['event_name'] ?? null,
-                'event_time'       => $event['event_time'] ?? null,
-                'event_source_url' => $event['event_source_url'] ?? null,
-                'has'              => [
-                    'fbc' => isset(($event['user_data'] ?? [])['fbc']),
-                    'fbp' => isset(($event['user_data'] ?? [])['fbp']),
-                ],
-                'custom_keys'      => array_keys($event['custom_data'] ?? []),
-            ],
-        ]);
+        // custom_data будуємо лише для подій, де він потрібен
+        $custom = $buildCustomData();
 
+        // Конструюємо подію Meta
+        $event = [
+            'event_name'       => $name,
+            'event_time'       => (int)($req->input('event_time') ?: time()),
+            'action_source'    => 'website',
+            'event_source_url' => $this->eventSourceUrl($req),
+            'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId($name)),
+            'user_data'        => $this->userData($req),
+        ];
+        if (!empty($custom)) {
+            $event['custom_data'] = $custom;
+        }
+
+        // test_event_code: дозволяємо override з тіла запиту, інакше — з БД
+        $testCode = $req->input('test_event_code', $s->capi_test_code ?? null);
+
+        try {
+            $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
+            $resp = $capi->send([$event], $testCode);
+        } catch (\Throwable $e) {
+            Log::warning('MetaCAPI exception', ['event' => $name, 'ex' => $e->getMessage()]);
+            return response()->json([
+                'ok'    => false,
+                'error' => 'capi_exception',
+                'msg'   => $e->getMessage(),
+            ], 502);
+        }
+
+        $body = $resp->json();
+
+
+        // Невдала HTTP-відповідь або помилка у тілі
+        if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
+            return response()->json([
+                'ok'     => false,
+                'error'  => 'capi_request_failed',
+                'status' => $resp->status(),
+                'body'   => $body,
+            ], 502);
+        }
+
+        // Події не прийняті (validation warning тощо)
+        if (is_array($body) && array_key_exists('events_received', $body) && (int)$body['events_received'] < 1) {
+            return response()->json([
+                'ok'     => false,
+                'error'  => 'events_not_received',
+                'status' => $resp->status(),
+                'body'   => $body,
+            ], 502);
+        }
+
+        // Успіх
         return response()->json([
-            'ok'    => false,
-            'error' => 'capi_exception',
-            'msg'   => $e->getMessage(),
-        ], 502);
+            'ok'              => true,
+            'event'           => $name,
+            'events_received' => is_array($body) ? ($body['events_received'] ?? null) : null,
+            'fbtrace_id'      => is_array($body) ? ($body['fbtrace_id'] ?? null) : null,
+        ], 200);
     }
-
-    $body = $resp->json();
-
-    // 8) HTTP-помилка або помилка у тілі
-    if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
-        \Log::error('CAPI request failed', [
-            'event'    => $name,
-            'event_id' => $event['event_id'] ?? null,
-            'status'   => $resp->status(),
-            'body'     => $resp->body(), // повний JSON від Meta
-            'sent_meta'=> [
-                'event_name'       => $event['event_name'] ?? null,
-                'event_time'       => $event['event_time'] ?? null,
-                'event_source_url' => $event['event_source_url'] ?? null,
-                'has'              => [
-                    'fbc' => isset(($event['user_data'] ?? [])['fbc']),
-                    'fbp' => isset(($event['user_data'] ?? [])['fbp']),
-                ],
-                'custom_keys'      => array_keys($event['custom_data'] ?? []),
-            ],
-        ]);
-
-        return response()->json([
-            'ok'     => false,
-            'error'  => 'capi_request_failed',
-            'status' => $resp->status(),
-            'body'   => $body,
-        ], 502);
-    }
-
-    // 9) Події не прийняті
-    if (is_array($body) && array_key_exists('events_received', $body) && (int)$body['events_received'] < 1) {
-        \Log::warning('CAPI events_not_received', [
-            'event'    => $name,
-            'event_id' => $event['event_id'] ?? null,
-            'status'   => $resp->status(),
-            'body'     => $resp->body(),
-        ]);
-
-        return response()->json([
-            'ok'     => false,
-            'error'  => 'events_not_received',
-            'status' => $resp->status(),
-            'body'   => $body,
-        ], 502);
-    }
-
-    // 10) Успіх
-    return response()->json([
-        'ok'              => true,
-        'event'           => $name,
-        'events_received' => is_array($body) ? ($body['events_received'] ?? null) : null,
-        'fbtrace_id'      => is_array($body) ? ($body['fbtrace_id'] ?? null) : null,
-    ], 200);
-}
-
 
     /* ===================== HELPERS ===================== */
 
@@ -620,6 +538,14 @@ private function handleEvent(string $name, Request $req, \Closure $buildCustomDa
         if ($req->filled('external_id')) {
             $data['external_id'] = $this->sha256((string) $req->input('external_id'));
         }
+
+                // 🚨 тимчасово логнемо повні значення (не маскуємо)
+                \Log::info('CAPI raw cookies', [
+                    'fbc' => $fbc,
+                    'fbp' => $fbp,
+                    'fbc_len' => $fbc ? strlen($fbc) : null,
+                    'fbp_len' => $fbp ? strlen($fbp) : null,
+                ]);
 
         return $data;
     }
