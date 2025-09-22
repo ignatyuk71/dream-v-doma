@@ -370,12 +370,13 @@ class TrackController extends Controller
 
         $body = $resp->json();
 
-        $ud = $event['user_data'] ?? [];
-\Log::info('CAPI debug len', [
-  'fbc_len' => isset($ud['fbc']) ? strlen($ud['fbc']) : null,
-  'fbp_len' => isset($ud['fbp']) ? strlen($ud['fbp']) : null,
+// 🚨 тимчасово логнемо повні значення (не маскуємо)
+\Log::info('CAPI raw cookies', [
+    'fbc' => $fbc,
+    'fbp' => $fbp,
+    'fbc_len' => $fbc ? strlen($fbc) : null,
+    'fbp_len' => $fbp ? strlen($fbp) : null,
 ]);
-
         // Невдала HTTP-відповідь або помилка у тілі
         if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
             return response()->json([
