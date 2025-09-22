@@ -362,7 +362,7 @@ class TrackController extends Controller
     
         // 🔎 ЛОГ: що саме відправляємо
         $ud = $event['user_data'] ?? [];
-        \Log::warning('CAPI_REQUEST', [
+        \Log::warning('CAPI_SKIP', [
             'pixel_id'        => $pixelId,
             'api_version'     => (string)($s->capi_api_version ?? 'v20.0'),
             'test_event_code' => $testCode,
@@ -377,8 +377,6 @@ class TrackController extends Controller
                 'client_user_agent' => $ud['client_user_agent'] ?? null,
                 'fbc'               => $ud['fbc'] ?? null,
                 'fbp'               => $ud['fbp'] ?? null,
-                'fbc_len'           => isset($ud['fbc']) ? strlen($ud['fbc']) : null,
-                'fbp_len'           => isset($ud['fbp']) ? strlen($ud['fbp']) : null,
                 'em_set'            => array_key_exists('em', $ud),
                 'ph_set'            => array_key_exists('ph', $ud),
                 'fn_set'            => array_key_exists('fn', $ud),
