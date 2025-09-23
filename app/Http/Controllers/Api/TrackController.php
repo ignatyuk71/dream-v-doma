@@ -440,12 +440,14 @@ class TrackController extends Controller
  * Використовуємо тільки те, що прийшло з фронта.
  * Фолбеки — тільки на випадок, якщо взагалі нічого не передали.
  */
-private function eventSourceUrl(Request $req): string
+private function eventSourceUrl(\Illuminate\Http\Request $req): string
 {
-    $u = (string) $req->input('event_source_url', '');
-    return $u !== '' ? $u : (config('app.url') ?: url('/'));
-}
+    $base = config('app.url', 'https://dream-v-doma.com.ua');
+    $p = parse_url($base);
 
+    // відновлюємо тільки scheme + host (без path/query)
+    return $p['scheme'].'://'.$p['host'].(isset($p['port'])?':'.$p['port']:'');
+}
     /**
      * Просте визначення “адмінського” URL для відсікання подій.
      */
