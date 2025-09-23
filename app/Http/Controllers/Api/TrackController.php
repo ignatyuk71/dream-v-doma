@@ -442,22 +442,9 @@ class TrackController extends Controller
  */
 private function eventSourceUrl(Request $req): string
 {
-    // 1) URL із тіла (frontend шле window.location.href)
-    $u = trim((string) $req->input('event_source_url', ''));
-
-    // 2) fallback — якщо клієнт нічого не прислав
-    if ($u === '') {
-        $u = (string) $req->input('url', '');
-    }
-
-    // 3) останній fallback — головна сторінка (НЕ current(), бо це /api/track)
-    if ($u === '') {
-        $u = config('app.url') ?: url('/');
-    }
-
-    return $u;
+    $u = (string) $req->input('event_source_url', '');
+    return $u !== '' ? $u : (config('app.url') ?: url('/'));
 }
-
 
     /**
      * Просте визначення “адмінського” URL для відсікання подій.
