@@ -436,18 +436,44 @@ class TrackController extends Controller
         return (int)($s->{$flag} ?? 0) === 1;
     }
 
-    /**
-     * Визначити URL джерела події:
-     * 1) event_source_url з тіла, 2) url з тіла, 3) Referer, 4) поточний URL.
-     */
-    private function eventSourceUrl(Request $req): string
-    {
-        if ($req->filled('event_source_url')) return (string)$req->input('event_source_url');
-        if ($req->filled('url'))              return (string)$req->input('url');
+/**
+ * Визначаємо event_source_url:
+ * 1) event_source_url з тіла (бажано window.location.href),
+ * 2) url з тіла,
+ * 3) Referer (для same-origin дає повний шлях),
+ * 4) головна сторінка сайту (а НЕ URL API).
+ */
+private function eventSourceUrl(Request $req): string
+{
+    // 1–2) з тіла
+    $u = trim((string)($req->input('event_source_url') ?: $req->input('url') ?: ''));
 
-        $ref = (string)$req->headers->get('referer', '');
-        return $ref !== '' ? $ref : url()->current();
+    // 3) Referer як фолбек
+    if ($u === '') {
+        $u = trim((string) $req->headers->get('referer', ''));
     }
+
+    // 4) останній фолбек — головна
+    if ($u === '') {
+        // важливо: не current(), бо це /api/track/...
+        $u = config('app.url') ?: url('/');
+    }
+
+    // Санітизація: приймаємо лише наш хост/схему
+    $p = parse_url($u);
+    $hostOk   = isset($p['host']) ? ($p['host'] === $req->getHost() || $p['host'] === '.'.$req->getHost()) : true;
+    $schemeOk = isset($p['scheme']) ? in_array($p['scheme'], ['https','http'], true) : true;
+
+    if (!$hostOk || !$schemeOk) {
+        $u = (config('app.url') ?: url('/'));
+    }
+
+    // Важливо: фрагмент (#hash) браузер НІКОЛИ не шле — і не треба його очікувати.
+    // Нічого не нормалізуємо, не ріжемо query — лишаємо як є.
+
+    return $u;
+}
+
 
     /**
      * Просте визначення “адмінського” URL для відсікання подій.
