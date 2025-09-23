@@ -82,6 +82,9 @@
     if (!ext) { ext = uuid(); _mpSetCookie('_extid', ext, 365*3); } // 3 роки
     window._extid = ext;
   })();
+
+  // --- зафіксувати URL один раз для Pixel і CAPI ---
+  window._mpPVUrl  = window.location.href;
 </script>
 
 @if ($enabled)
@@ -104,7 +107,7 @@
     // Спільний eventID для дедупу
     var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-    // PageView у Pixel + передаємо external_id в options (не обов’язково, але ок)
+    // PageView у Pixel
     fbq('track', 'PageView', {}, { eventID: pvId, external_id: window._extid });
   })();
   </script>
@@ -121,7 +124,8 @@
   var payload = {
     event_id: pvId,
     event_time: Math.floor(Date.now()/1000),
-    event_source_url: window.location.href
+    // ГОЛОВНЕ: використовуємо зафіксований URL
+    event_source_url: window._mpPVUrl
     // fbc/fbp/external_id бекенд дістане з cookies (_fbc/_fbp/_extid)
   };
   if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
