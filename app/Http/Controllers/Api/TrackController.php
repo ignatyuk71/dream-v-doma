@@ -356,65 +356,11 @@ class TrackController extends Controller
         // test_event_code
         $testCode = $req->input('test_event_code', $s->capi_test_code ?? null);
     
-        // ---------- ЛОГ ПЕРЕД ВІДПРАВКОЮ ----------
-        $raw = (bool) env('CAPI_LOG_RAW', false); // true = показати повні fbc/fbp
-        $mask = function (?string $v) use ($raw) {
-            if ($v === null) return null;
-            return $raw ? $v : (mb_substr($v, 0, 6) . '…' . mb_substr($v, -4));
-        };
-    
-        $ud = $event['user_data'] ?? [];
-        $logEvent              = $event;
-        $logEvent['user_data'] = [
-            'client_ip_address' => $ud['client_ip_address'] ?? null,
-            'client_user_agent' => $ud['client_user_agent'] ?? null,
-            'fbc'               => isset($ud['fbc']) ? $mask($ud['fbc']) : null,
-            'fbp'               => isset($ud['fbp']) ? $mask($ud['fbp']) : null,
-            'em_set'            => array_key_exists('em', $ud),
-            'ph_set'            => array_key_exists('ph', $ud),
-            'fn_set'            => array_key_exists('fn', $ud),
-            'ln_set'            => array_key_exists('ln', $ud),
-            'external_id_set'   => array_key_exists('external_id', $ud),
-        ];
-        // компактне резюме custom_data (щоб не засмічувати лог)
-        $customSummary = !empty($event['custom_data']) ? [
-            'value'     => $event['custom_data']['value']     ?? null,
-            'currency'  => $event['custom_data']['currency']  ?? null,
-            'num_items' => $event['custom_data']['num_items'] ?? null,
-            'ids_cnt'   => isset($event['custom_data']['content_ids']) ? count($event['custom_data']['content_ids']) : null,
-        ] : null;
-    
-        $endpoint = sprintf(
-            'https://graph.facebook.com/%s/%s/events',
-            (string)($s->capi_api_version ?? 'v20.0'),
-            $pixelId
-        );
-    
-        \Log::info('CAPI_REQUEST', [
-            'endpoint'        => $endpoint,
-            'pixel_id'        => $pixelId,
-            'api_version'     => (string)($s->capi_api_version ?? 'v20.0'),
-            'test_event_code' => $testCode,
-            'event_name'      => $event['event_name'],
-            'event_id'        => $event['event_id'],
-            'event_time'      => $event['event_time'],
-            'event_source_url'=> $event['event_source_url'],
-            'has_custom_data' => !empty($event['custom_data']),
-            'custom_data'     => $customSummary,
-            // payload рівно того формату, що відправляємо (з маскуванням fbc/fbp)
-            'payload'         => ['data' => [$logEvent]],
-        ]);
-    
-        // ---------- ВІДПРАВКА ----------
+        // ВІДПРАВКА
         try {
             $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
             $resp = $capi->send([$event], $testCode);
         } catch (\Throwable $e) {
-            \Log::warning('CAPI_EXCEPTION', [
-                'event' => $name,
-                'event_id' => $event['event_id'],
-                'msg' => $e->getMessage(),
-            ]);
             return response()->json([
                 'ok'    => false,
                 'error' => 'capi_exception',
@@ -423,17 +369,6 @@ class TrackController extends Controller
         }
     
         $body = $resp->json();
-    
-        // ---------- ЛОГ ВІДПОВІДІ ----------
-        \Log::info('CAPI_RESPONSE', [
-            'event'    => $name,
-            'event_id' => $event['event_id'],
-            'status'   => $resp->status(),
-            'body'     => $body,
-        ]);
-
-        // візуальний відступ у логах
-        \Log::info(str_repeat('─', 100));
     
         // Перевірка відповіді
         if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
@@ -462,6 +397,7 @@ class TrackController extends Controller
             'fbtrace_id'      => is_array($body) ? ($body['fbtrace_id'] ?? null) : null,
         ], 200);
     }
+    
     
     
 
