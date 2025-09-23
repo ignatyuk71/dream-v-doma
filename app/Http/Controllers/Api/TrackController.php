@@ -436,18 +436,19 @@ class TrackController extends Controller
         return (int)($s->{$flag} ?? 0) === 1;
     }
 
-/**
- * Використовуємо тільки те, що прийшло з фронта.
- * Фолбеки — тільки на випадок, якщо взагалі нічого не передали.
- */
-private function eventSourceUrl(\Illuminate\Http\Request $req): string
-{
-    $base = config('app.url', 'https://dream-v-doma.com.ua');
-    $p = parse_url($base);
+    /**
+     * Визначити URL джерела події:
+     * 1) event_source_url з тіла, 2) url з тіла, 3) Referer, 4) поточний URL.
+     */
+    private function eventSourceUrl(Request $req): string
+    {
+        if ($req->filled('event_source_url')) return (string)$req->input('event_source_url');
+        if ($req->filled('url'))              return (string)$req->input('url');
 
-    // відновлюємо тільки scheme + host (без path/query)
-    return $p['scheme'].'://'.$p['host'].(isset($p['port'])?':'.$p['port']:'');
-}
+        $ref = (string)$req->headers->get('referer', '');
+        return $ref !== '' ? $ref : url()->current();
+    }
+
     /**
      * Просте визначення “адмінського” URL для відсікання подій.
      */
@@ -518,7 +519,7 @@ private function eventSourceUrl(\Illuminate\Http\Request $req): string
             'client_ip_address' => (string) $req->ip(),
             'client_user_agent' => (string) $req->userAgent(),
         ];
-    
+
         // 1) _fbc / _fbp з cookie (без форматних перевірок/змін)
         $fbc = $req->cookie('_fbc');
         if (is_string($fbc) && ($v = trim($fbc)) !== '') {
@@ -528,7 +529,7 @@ private function eventSourceUrl(\Illuminate\Http\Request $req): string
         if (is_string($fbp) && ($v = trim($fbp)) !== '') {
             $data['fbp'] = $v;
         }
-    
+
         // 2) Fallback для _fbc: якщо cookie немає, але в URL є fbclid → згенерувати fbc
         if (!isset($data['fbc'])) {
             $srcUrl = $this->eventSourceUrl($req); // already resolves body→url→referer→current
@@ -538,7 +539,7 @@ private function eventSourceUrl(\Illuminate\Http\Request $req): string
                 $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid;
             }
         }
-    
+
         // 3) external_id — НЕ хешуємо (рекомендовано Meta), спершу cookie _extid, потім тіло
         $ext = $req->cookie('_extid');
         if (is_string($ext) && ($ext = trim($ext)) !== '') {
@@ -550,33 +551,33 @@ private function eventSourceUrl(\Illuminate\Http\Request $req): string
                 $data['external_id'] = mb_substr($extBody, 0, 128);
             }
         }
-    
+
         // 4) PII — тільки якщо є, і тільки у SHA-256
         $email = $req->input('email');
         if ($h = $this->sha256(is_string($email) ? $email : null)) {
             $data['em'] = $h;
         }
-    
+
         $phone = $req->input('phone');
         if (is_string($phone) && $phone !== '') {
             if ($norm = $this->normPhone($phone)) {
                 $data['ph'] = $this->sha256($norm);
             }
         }
-    
+
         $fn = $req->input('first_name') ?? $req->input('fn');
         if ($h = $this->sha256(is_string($fn) ? $fn : null)) {
             $data['fn'] = $h;
         }
-    
+
         $ln = $req->input('last_name') ?? $req->input('ln');
         if ($h = $this->sha256(is_string($ln) ? $ln : null)) {
             $data['ln'] = $h;
         }
-    
+
         return $data;
     }
-    
+
     
 
     /**
