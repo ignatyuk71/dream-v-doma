@@ -520,29 +520,46 @@ class TrackController extends Controller
             'client_user_agent' => (string) $req->userAgent(),
         ];
     
-        // 1) читаємо з cookies (як і було)
-        $fbc = $req->cookie('_fbc');
-        $fbp = $req->cookie('_fbp');
-        if (is_string($fbc) && trim($fbc) !== '') $data['fbc'] = trim($fbc);
-        if (is_string($fbp) && trim($fbp) !== '') $data['fbp'] = trim($fbp);
+        // 1) _fbc / _fbp з cookie (без форматних перевірок)
+        if (($fbc = $req->cookie('_fbc')) && trim($fbc) !== '') {
+            $data['fbc'] = trim($fbc);
+        }
+        if (($fbp = $req->cookie('_fbp')) && trim($fbp) !== '') {
+            $data['fbp'] = trim($fbp);
+        }
     
-        // 2) ФОЛБЕК: якщо _fbc ще немає, але в URL є fbclid → сформуй fbc
+        // 2) Fallback для _fbc: якщо cookie немає, але є fbclid у URL → згенеруємо fbc
         if (!isset($data['fbc'])) {
-            $srcUrl = $this->eventSourceUrl($req);              // ми вже його формуємо в handleEvent()
+            $srcUrl = $this->eventSourceUrl($req);
             if ($fbclid = $this->parseFbclid($srcUrl)) {
-                $ts = (int)($req->input('event_time') ?: time()); // або можна взяти поточний time()
-                $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid;     // версію 1/2 Meta приймає, 2 теж ок
+                $ts = (int) ($req->input('event_time') ?: time());
+                $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid; // Meta приймає такий формат
             }
         }
     
-        // PII — як було (додаємо тільки якщо є)
-        if ($h = $this->sha256($req->input('email'))) $data['em'] = $h;
-        if ($req->filled('phone')) {
-            if ($norm = $this->normPhone($req->input('phone')))  $data['ph'] = $this->sha256($norm);
+        // 3) external_id — НЕ хешуємо (рекомендовано Meta)
+        //    пріоритет: cookie _extid → body external_id
+        if (($ext = $req->cookie('_extid')) && trim($ext) !== '') {
+            $data['external_id'] = trim($ext);
+        } elseif ($req->filled('external_id')) {
+            $data['external_id'] = (string) $req->input('external_id');
         }
-        if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) $data['fn'] = $h;
-        if ($h = $this->sha256($req->input('last_name')  ?? $req->input('ln'))) $data['ln'] = $h;
-        if ($req->filled('external_id')) $data['external_id'] = $this->sha256((string) $req->input('external_id'));
+    
+        // 4) PII — лише якщо є, і ТІЛЬКИ в хеші SHA-256
+        if ($h = $this->sha256($req->input('email'))) {
+            $data['em'] = $h;
+        }
+        if ($req->filled('phone')) {
+            if ($norm = $this->normPhone($req->input('phone'))) {
+                $data['ph'] = $this->sha256($norm);
+            }
+        }
+        if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) {
+            $data['fn'] = $h;
+        }
+        if ($h = $this->sha256($req->input('last_name') ?? $req->input('ln'))) {
+            $data['ln'] = $h;
+        }
     
         return $data;
     }
