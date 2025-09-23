@@ -46,14 +46,23 @@
     }
   };
 
-  // Хелпери
+  // Хелпери cookie
   window._mpGetCookie = function(n){
     var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
     return m ? decodeURIComponent(m[1]) : null;
   };
   window._mpSetCookie = function(n, v, days){
-    var d = new Date(); d.setDate(d.getDate() + (days || 365));
-    document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;expires=' + d.toUTCString();
+    var d = new Date();
+    d.setDate(d.getDate() + (days || 365*3)); // за замовч. 3 роки
+    var parts = [
+      n + '=' + encodeURIComponent(v),
+      'Path=/',
+      'Expires=' + d.toUTCString(),
+      'Domain=.dream-v-doma.com.ua',
+      (location.protocol === 'https:' ? 'Secure' : ''),
+      'SameSite=Lax',
+    ].filter(Boolean);
+    document.cookie = parts.join('; ');
   };
   window._mpGetParam = function(name){
     var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
@@ -81,6 +90,7 @@
   (function(){
     if (!window._mpFlags || window._mpFlags.pv === false) return;
     if (!window._mpIsFbTraffic()) return;
+    if (!window._mpPixelId) return;
 
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -91,8 +101,10 @@
     // Advanced matching — відразу підхоплює external_id
     fbq('init', '{{ $pixelId }}', { external_id: window._extid });
 
+    // Спільний eventID для дедупу
     var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
-    // дублюємо external_id в options конкретної події
+
+    // PageView у Pixel + передаємо external_id в options (не обов’язково, але ок)
     fbq('track', 'PageView', {}, { eventID: pvId, external_id: window._extid });
   })();
   </script>

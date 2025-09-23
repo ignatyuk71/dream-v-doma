@@ -516,48 +516,62 @@ class TrackController extends Controller
     private function userData(Request $req): array
     {
         $data = [
-            'client_ip_address' => $req->ip(),
+            'client_ip_address' => (string) $req->ip(),
             'client_user_agent' => (string) $req->userAgent(),
         ];
     
-        // 1) _fbc / _fbp з cookie (без форматних перевірок)
-        if (($fbc = $req->cookie('_fbc')) && trim($fbc) !== '') {
-            $data['fbc'] = trim($fbc);
+        // 1) _fbc / _fbp з cookie (без форматних перевірок/змін)
+        $fbc = $req->cookie('_fbc');
+        if (is_string($fbc) && ($v = trim($fbc)) !== '') {
+            $data['fbc'] = $v;
         }
-        if (($fbp = $req->cookie('_fbp')) && trim($fbp) !== '') {
-            $data['fbp'] = trim($fbp);
+        $fbp = $req->cookie('_fbp');
+        if (is_string($fbp) && ($v = trim($fbp)) !== '') {
+            $data['fbp'] = $v;
         }
     
-        // 2) Fallback для _fbc: якщо cookie немає, але є fbclid у URL → згенеруємо fbc
+        // 2) Fallback для _fbc: якщо cookie немає, але в URL є fbclid → згенерувати fbc
         if (!isset($data['fbc'])) {
-            $srcUrl = $this->eventSourceUrl($req);
+            $srcUrl = $this->eventSourceUrl($req); // already resolves body→url→referer→current
             if ($fbclid = $this->parseFbclid($srcUrl)) {
                 $ts = (int) ($req->input('event_time') ?: time());
-                $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid; // Meta приймає такий формат
+                // формату fb.<version>.<timestamp>.<fbclid> достатньо; Meta приймає "1" і "2"
+                $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid;
             }
         }
     
-        // 3) external_id — НЕ хешуємо (рекомендовано Meta)
-        //    пріоритет: cookie _extid → body external_id
-        if (($ext = $req->cookie('_extid')) && trim($ext) !== '') {
-            $data['external_id'] = trim($ext);
+        // 3) external_id — НЕ хешуємо (рекомендовано Meta), спершу cookie _extid, потім тіло
+        $ext = $req->cookie('_extid');
+        if (is_string($ext) && ($ext = trim($ext)) !== '') {
+            $data['external_id'] = $ext;
         } elseif ($req->filled('external_id')) {
-            $data['external_id'] = (string) $req->input('external_id');
+            $extBody = (string) $req->input('external_id');
+            if (($extBody = trim($extBody)) !== '') {
+                // на всякий випадок обмежимо довжину, щоб не відхилилось за розміром
+                $data['external_id'] = mb_substr($extBody, 0, 128);
+            }
         }
     
-        // 4) PII — лише якщо є, і ТІЛЬКИ в хеші SHA-256
-        if ($h = $this->sha256($req->input('email'))) {
+        // 4) PII — тільки якщо є, і тільки у SHA-256
+        $email = $req->input('email');
+        if ($h = $this->sha256(is_string($email) ? $email : null)) {
             $data['em'] = $h;
         }
-        if ($req->filled('phone')) {
-            if ($norm = $this->normPhone($req->input('phone'))) {
+    
+        $phone = $req->input('phone');
+        if (is_string($phone) && $phone !== '') {
+            if ($norm = $this->normPhone($phone)) {
                 $data['ph'] = $this->sha256($norm);
             }
         }
-        if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) {
+    
+        $fn = $req->input('first_name') ?? $req->input('fn');
+        if ($h = $this->sha256(is_string($fn) ? $fn : null)) {
             $data['fn'] = $h;
         }
-        if ($h = $this->sha256($req->input('last_name') ?? $req->input('ln'))) {
+    
+        $ln = $req->input('last_name') ?? $req->input('ln');
+        if ($h = $this->sha256(is_string($ln) ? $ln : null)) {
             $data['ln'] = $h;
         }
     
