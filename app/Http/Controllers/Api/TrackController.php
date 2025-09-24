@@ -162,15 +162,14 @@ class TrackController extends Controller
     public function ic(Request $request)
     {
         return $this->handleEvent('InitiateCheckout', $request, function () use ($request) {
-
-            // --- 1) Основний шлях: contents[] з тіла
+    
+            // 1) Основний шлях: contents[] з тіла
             $contents = $this->contentsFromRequest($request);
-
-            // --- 2) Fallback: items[] → приводимо до contents[]
+    
+            // 2) Fallback: items[] → приводимо до contents[]
             if (empty($contents)) {
                 $items = (array)$request->input('items', []);
                 foreach ($items as $i) {
-                    // приймаємо variant_sku | sku | id
                     $id = (string)($i['variant_sku'] ?? $i['sku'] ?? $i['id'] ?? '');
                     if ($id === '') continue;
                     $qty = (int)($i['quantity'] ?? 1);
@@ -178,34 +177,38 @@ class TrackController extends Controller
                     $contents[] = ['id' => $id, 'quantity' => $qty, 'item_price' => $pr];
                 }
             }
-
-            // --- 3) Підсумки
+    
+            // 3) Підсумки: ТІЛЬКИ subtotal (без shipping/tax)
+            $subtotal = $this->calcValue($contents);
             $value    = $request->filled('value')
-                ? $this->num($request->input('value'))
-                : $this->calcValue($contents);
-
-            $currency = $request->input('currency', $this->currency());
+                ? $this->num($request->input('value'))   // якщо явно передали — беремо як є
+                : $this->num($subtotal);                 // інакше — сума позицій
+    
+            if ($value < 0) $value = 0.00;
+    
+            $currency = strtoupper(trim((string)$request->input('currency', $this->currency())));
             $numItems = array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0);
             $ids      = array_map(fn($c) => (string)$c['id'], $contents);
-
-            // --- 4) custom_data
+    
+            // 4) custom_data
             $data = [
                 'content_type' => 'product',
-                'content_ids'  => $ids,         // масив ID (рекомендовано Meta)
-                'contents'     => $contents,    // деталі позицій
+                'content_ids'  => $ids,
+                'contents'     => $contents,
                 'num_items'    => $numItems,
                 'value'        => $value,
                 'currency'     => $currency,
             ];
-
+    
             // опціонально: назва (якщо прийшла з фронта)
             if ($request->filled('content_name') || $request->filled('name')) {
                 $data['content_name'] = (string)($request->input('content_name') ?? $request->input('name'));
             }
-
+    
             return $data;
         }, flag: 'send_initiate_checkout');
     }
+    
 
 
     /**
@@ -251,14 +254,16 @@ class TrackController extends Controller
                 }
             }
 
-            // 3) Суми / валюта
+           // 3) Суми / валюта
             $shipping = $this->num($request->input('shipping', 0));
             $tax      = $this->num($request->input('tax', 0));
 
-            $calc = $this->calcValue($contents) + $shipping + $tax;
+            // ❗ value = тільки сума товарів (subtotal)
+            $subtotal = $this->calcValue($contents);
+
             $value = $request->filled('value')
                 ? $this->num($request->input('value'))
-                : $this->num($calc);
+                : $this->num($subtotal);
 
             if ($value < 0) $value = 0.00; // на всяк випадок від від’ємних
 
