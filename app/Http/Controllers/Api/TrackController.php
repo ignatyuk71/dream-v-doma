@@ -505,82 +505,95 @@ class TrackController extends Controller
         return null;
     }
 
-/**
- * Формує user_data для Meta CAPI.
- *
- * - IP / User-Agent завжди
- * - PII (email, phone, fn, ln) → SHA256 (нижній регістр + trim)
- * - _fbc та _fbp беремо тільки з cookies (ніяких input / генерації, без trim/перетворень)
- * - external_id → НЕ хешуємо (рекомендовано Meta)
- */
-private function userData(Request $req): array
-{
-    $data = [
-        'client_ip_address' => (string) $req->ip(),
-        'client_user_agent' => (string) $req->userAgent(),
-    ];
+    /**
+     * Формує user_data для Meta CAPI.
+     *
+     * - IP / User-Agent завжди
+     * - PII (email, phone, fn, ln) → SHA256 (нижній регістр + trim)
+     * - _fbc та _fbp беремо тільки з cookies (ніяких input / генерації, без trim/перетворень)
+     * - external_id → НЕ хешуємо (рекомендовано Meta)
+     */
+    private function userData(Request $req): array
+    {
+        $data = [
+            'client_ip_address' => (string) $req->ip(),
+            'client_user_agent' => (string) $req->userAgent(),
+        ];
 
-    // 1) _fbc / _fbp з cookie (без форматних перевірок/змін, без trim)
-    $fbc = $req->cookie('_fbc');
-    if (is_string($fbc) && $fbc !== '') {
-        $data['fbc'] = $fbc;
-    }
-    $fbp = $req->cookie('_fbp');
-    if (is_string($fbp) && $fbp !== '') {
-        $data['fbp'] = $fbp;
-    }
-
-    // 2) Fallback для _fbc: якщо cookie немає, але в URL є fbclid → згенерувати fbc
-    if (!isset($data['fbc'])) {
-        $srcUrl = $this->eventSourceUrl($req); // already resolves body→url→referer→current
-        if ($fbclid = $this->parseFbclid($srcUrl)) {
-            // важливо: не беремо event_time з боді — лише поточний time()
-            $ts = time();
-            // формат: fb.<version>.<timestamp>.<fbclid>
-            $data['fbc'] = 'fb.2.' . $ts . '.' . $fbclid;
+        // _fbc тільки через pickFbc()
+        if ($fbc = $this->pickFbc($req)) {
+            $data['fbc'] = $fbc;
+        } else {
+            return []; // ❌ немає валідного fbc → подію не шлемо
         }
-    }
 
-    // 3) external_id — НЕ хешуємо (Meta рекомендує сирий), спершу cookie _extid, потім тіло
-    $ext = $req->cookie('_extid');
-    if (is_string($ext) && ($ext = trim($ext)) !== '') {
-        $data['external_id'] = $ext;
-    } elseif ($req->filled('external_id')) {
-        $extBody = (string) $req->input('external_id');
-        if (($extBody = trim($extBody)) !== '') {
-            // обмежимо довжину для безпеки
-            $data['external_id'] = mb_substr($extBody, 0, 128);
+        // _fbp як є з cookie
+        $fbp = $req->cookie('_fbp');
+        if (is_string($fbp) && $fbp !== '') {
+            $data['fbp'] = $fbp;
         }
-    }
 
-    // 4) PII — тільки якщо є, і тільки у SHA-256
-    $email = $req->input('email');
-    if ($h = $this->sha256(is_string($email) ? $email : null)) {
-        $data['em'] = $h;
-    }
-
-    $phone = $req->input('phone');
-    if (is_string($phone) && $phone !== '') {
-        if ($norm = $this->normPhone($phone)) {
-            $data['ph'] = $this->sha256($norm);
+        // external_id
+        $ext = $req->cookie('_extid');
+        if (is_string($ext) && ($ext = trim($ext)) !== '') {
+            $data['external_id'] = $ext;
+        } elseif ($req->filled('external_id')) {
+            $extBody = trim((string) $req->input('external_id'));
+            if ($extBody !== '') {
+                $data['external_id'] = mb_substr($extBody, 0, 128);
+            }
         }
-    }
 
-    $fn = $req->input('first_name') ?? $req->input('fn');
-    if ($h = $this->sha256(is_string($fn) ? $fn : null)) {
-        $data['fn'] = $h;
-    }
+        // PII → тільки SHA-256
+        if ($h = $this->sha256($req->input('email'))) {
+            $data['em'] = $h;
+        }
+        if ($phone = $req->input('phone')) {
+            if ($norm = $this->normPhone($phone)) {
+                $data['ph'] = $this->sha256($norm);
+            }
+        }
+        if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) {
+            $data['fn'] = $h;
+        }
+        if ($h = $this->sha256($req->input('last_name') ?? $req->input('ln'))) {
+            $data['ln'] = $h;
+        }
 
-    $ln = $req->input('last_name') ?? $req->input('ln');
-    if ($h = $this->sha256(is_string($ln) ? $ln : null)) {
-        $data['ln'] = $h;
+        return $data;
     }
-
-    return $data;
-}
 
 
     
+    // ─────────────────────────────────────────────
+    // Допоміжний метод для вибору валідного _fbc
+    // ─────────────────────────────────────────────
+    private function pickFbc(Request $req): ?string
+    {
+        // 1) Пробуємо взяти з cookie
+        $fbc = $req->cookie('_fbc');
+        if (is_string($fbc) && $fbc !== '') {
+            $lastDot = strrpos($fbc, '.');
+            $tail    = $lastDot === false ? strtolower($fbc) : strtolower(substr($fbc, $lastDot + 1));
+            if ($tail !== 'fbclid') {
+                return $fbc; // ✅ валідний cookie
+            }
+            return null; // ❌ плейсхолдер
+        }
+
+        // 2) Якщо немає cookie → дивимось fbclid у URL
+        $srcUrl = $this->eventSourceUrl($req);
+        $fbclid = $this->parseFbclid($srcUrl);
+
+        if (is_string($fbclid)) {
+            $fbclid = trim($fbclid);
+            if ($fbclid !== '' && strcasecmp($fbclid, 'fbclid') !== 0) {
+                return 'fb.2.' . time() . '.' . $fbclid; // ✅ будуємо новий
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Згенерувати event_id, який сумісний із фронтом (для дедуплікації).
