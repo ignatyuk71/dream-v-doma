@@ -109,7 +109,7 @@
         var currency = (opts.currency || window.metaPixelCurrency || 'UAH').toString().trim().toUpperCase();
         var shipping = num(opts.shipping || 0);
         var tax      = num(opts.tax || 0);
-        var value    = num(opts.value != null ? opts.value : (subtotal + shipping + tax));
+        var value = subtotal;
 
         var orderNo  = opts.order_number ? String(opts.order_number) : null;
         var eventId  = genEventId('purchase');
