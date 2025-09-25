@@ -25,9 +25,6 @@
     @include('home.shared.product-carousel')
 
 
-      
-
-
     {{-- Instagram Feed --}}
 
         @include('home.shared.instagram-feed')

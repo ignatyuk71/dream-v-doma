@@ -107,9 +107,11 @@
     {{-- Footer --}}
     @include('home.footer')
 
-    {{-- Meta Pixel: ViewContent (з БД через паршал) --}}
+    {{-- Meta Pixel: ViewContent --}}
     @include('partials.meta-pixel-view-content', ['product' => $product])
 
+    {{-- GA4: view_item --}}
     @include('partials.ga4-view-item', ['product' => $product, 'currency' => $currency ?? 'UAH'])
+
     
 @endsection

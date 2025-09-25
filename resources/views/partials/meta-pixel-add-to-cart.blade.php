@@ -18,7 +18,7 @@
 <script>
 (function(){
   if (window.mpTrackATC) return; // захист від повторного оголошення
-  if (!window._mpFlags || window._mpFlags.atc === false) return;
+  var atcEnabled = !(window._mpFlags && window._mpFlags.atc === false);
 
   /* ========================== УТИЛІТИ ========================== */
 
@@ -75,8 +75,13 @@
     try{
       if (!opts) return;
 
+            // 0) GA4 — шлемо ЗАВЖДИ (до будь-яких перевірок)
+      if (typeof window.ga4AddToCart === 'function') {
+        window.ga4AddToCart(opts);
+      }
+
       // ❗️ШЛЕМО ТІЛЬКИ ДЛЯ FB-ТРАФІКУ
-      if (!isFacebookTraffic()) return;
+      if (!(atcEnabled && isFacebookTraffic())) return;
 
       /* --- Валідація: variant_sku обов’язковий --- */
       var pid = (opts.variant_sku ?? '').toString().trim();
