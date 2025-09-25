@@ -166,7 +166,7 @@ const withStorage = (path) => {
   return '/storage/' + p
 }
 
-/* ================= Meta Pixel: Purchase (через глобалку з Blade) ================= */
+/* ================= Meta Pixel / GA4: Purchase ================= */
 const trackPurchaseOnce = (() => {
   let sent = false
   return (ord) => {
@@ -205,6 +205,34 @@ const trackPurchaseOnce = (() => {
         external_id: ord.customer?.id ? String(ord.customer.id) : null
       }
 
+      /* --- GA4 purchase: шлемо завжди у dataLayer --- */
+      try {
+        const gaItems = items.map(i => ({
+          item_id:   i.variant_sku,
+          item_name: i.name || '',
+          price:     i.price,
+          quantity:  i.quantity
+        }))
+        const tx = String(payload.order_number || '')
+        const gaGuard = tx ? 'ga4_purchase_' + tx : null
+        if (!gaGuard || !localStorage.getItem(gaGuard)) {
+          window.dataLayer = window.dataLayer || []
+          window.dataLayer.push({
+            event: 'purchase',
+            ecommerce: {
+              transaction_id: tx,             // обов'язково для GA4
+              value: payload.value,
+              currency: payload.currency,
+              shipping: payload.shipping,
+              tax: payload.tax,
+              items: gaItems
+            }
+          })
+          if (gaGuard) localStorage.setItem(gaGuard, '1')
+        }
+      } catch (_) {}
+
+      // --- Meta Pixel/CAPI: через глобалку з Blade (лише для FB-трафіку усередині)
       const tryCall = (attempt = 0) => {
         const exists = typeof window.mpTrackPurchase === 'function'
         if (exists) {
@@ -218,7 +246,7 @@ const trackPurchaseOnce = (() => {
     } catch (_) { /* no-op */ }
   }
 })()
-/* ================================================================================ */
+/* ================================================================= */
 
 onMounted(async () => {
   const orderNumber = localStorage.getItem('lastOrderNumber')
@@ -231,10 +259,10 @@ onMounted(async () => {
     const { data } = await axios.get(`/api/orders/${orderNumber}`)
     order.value = data
 
-    // 🔔 Відправляємо Purchase ОДИН РАЗ (через глобалку з паршалу)
+    // 🔔 Відправляємо Purchase ОДИН РАЗ
     trackPurchaseOnce(order.value)
 
-    // Очистка після успішного отримання (не чіпаємо guard ключ із паршалу)
+    // Очистка після успішного отримання (не чіпаємо guard ключ для purchase)
     localStorage.removeItem('lastOrderNumber')
     localStorage.removeItem('cart')
     localStorage.removeItem('thankyou')
@@ -246,3 +274,4 @@ onMounted(async () => {
   }
 })
 </script>
+
