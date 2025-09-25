@@ -109,5 +109,7 @@
 
     {{-- Meta Pixel: ViewContent (з БД через паршал) --}}
     @include('partials.meta-pixel-view-content', ['product' => $product])
+
+    @include('partials.ga4-view-item', ['product' => $product, 'currency' => $currency ?? 'UAH'])
     
 @endsection
