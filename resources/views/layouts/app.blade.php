@@ -9,8 +9,7 @@
   <meta name="keywords" content="тапки, домашній одяг, вʼєтнамки, шльопанці, покупки онлайн, магазин">
   <meta name="author" content="Dream V Doma">
 
-  {{-- Google Analytics 4 --}}
-  @include('partials.ga-script')
+  {{-- Google Analytics gtm --}}
   @include('partials.gtm-head')
 
   {{-- Meta Pixel --}}
