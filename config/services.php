@@ -50,5 +50,9 @@ return [
         'enabled'        => env('GA_ENABLED', false),
         'measurement_id' => env('GA_MEASUREMENT_ID'),
     ],
+    'gtm' => [
+    'enabled'      => env('GTM_ENABLED', false),
+    'container_id' => env('GTM_ID', null), // напр. GTM-P2C22N8R
+    ],
 
 ];

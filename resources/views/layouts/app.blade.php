@@ -11,6 +11,7 @@
 
   {{-- Google Analytics 4 --}}
   @include('partials.ga-script')
+  @include('partials.gtm-head')
 
   {{-- Meta Pixel --}}
   @include('partials.meta-pixel-script')
@@ -76,6 +77,7 @@
 <body>
   {{-- NOSCRIPT Pixel — одразу після <body> --}}
   @include('partials.meta-pixel-noscript')
+  @include('partials.gtm-body')
 
   @yield('content')
   <div id="cart-offcanvas"></div>
