@@ -113,5 +113,9 @@
     {{-- GA4: view_item --}}
     @include('partials.ga4-view-item', ['product' => $product, 'currency' => $currency ?? 'UAH'])
 
+    {{-- GA4 + FB: add_to_cart --}}
+    @include('partials.ga4-add-to-cart', ['currency' => $currency ?? 'UAH'])
+    @include('partials.meta-pixel-add-to-cart')
+
     
 @endsection
