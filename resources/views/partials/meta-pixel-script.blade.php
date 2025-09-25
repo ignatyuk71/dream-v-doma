@@ -27,14 +27,14 @@
 @endphp
 
 <script>
-  // Глобальні прапорці/налаштування
+  // =============== Глобальні прапорці/налаштування ===============
   window._mpFlags          = @json($flags, JSON_UNESCAPED_UNICODE);
   window.metaPixelCurrency = @json($currency);
   window._mpEnabled        = @json($enabled);
   window._mpPixelId        = @json($pixelId);
   window._mpTestCode       = @json($testCode);
 
-  // Генератор спільних event_id
+  // Спільний генератор event_id (Pixel + CAPI → дедуп)
   window._mpGenEventId = function(name){
     try {
       var a = new Uint8Array(6);
@@ -46,14 +46,14 @@
     }
   };
 
-  // Хелпери cookie
+  // ========================= Хелпери =========================
   window._mpGetCookie = function(n){
     var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
     return m ? decodeURIComponent(m[1]) : null;
   };
   window._mpSetCookie = function(n, v, days){
     var d = new Date();
-    d.setDate(d.getDate() + (days || 365*3)); // за замовч. 3 роки
+    d.setDate(d.getDate() + (days || 365*3)); // 3 роки
     var parts = [
       n + '=' + encodeURIComponent(v),
       'Path=/',
@@ -69,26 +69,40 @@
     return m ? m[1] : null;
   };
 
-  // FB/IG-трафік: fbclid або _fbc
+  // FB/IG-трафік: наявність _fbc в cookie або fbclid у URL
   window._mpIsFbTraffic = function(){
     return !!(_mpGetCookie('_fbc') || _mpGetParam('fbclid'));
   };
 
-  // --- external_id (стабільний, зберігаємо у _extid) ---
+  // Чекаємо, поки піксель поставить _fbp (до ~1 сек)
+  function _mpWaitForFbp(timeoutMs){
+    timeoutMs = Number(timeoutMs) || 1000;
+    return new Promise(function(resolve){
+      if (_mpGetCookie('_fbp')) return resolve(true);
+      var started = Date.now();
+      (function tick(){
+        if (_mpGetCookie('_fbp')) return resolve(true);
+        if (Date.now() - started >= timeoutMs) return resolve(false);
+        setTimeout(tick, 80);
+      })();
+    });
+  }
+
+  // --- external_id (стабільний id юзера у cookie _extid) ---
   (function () {
     function uuid(){ return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>
-      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
+      (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c / 4)).toString(16)); }
     var ext = _mpGetCookie('_extid');
-    if (!ext) { ext = uuid(); _mpSetCookie('_extid', ext, 365*3); } // 3 роки
+    if (!ext) { ext = uuid(); _mpSetCookie('_extid', ext, 365*3); }
     window._extid = ext;
   })();
 
-  // --- зафіксувати URL один раз для Pixel і CAPI ---
+  // Зафіксовуємо URL один раз (щоб Pixel і CAPI бачили однаковий)
   window._mpPVUrl  = window.location.href;
 </script>
 
 @if ($enabled)
-  <!-- Meta Pixel (браузер) — лише для FB-трафіку -->
+  <!-- =============== Meta Pixel (браузерний) =============== -->
   <script>
   (function(){
     if (!window._mpFlags || window._mpFlags.pv === false) return;
@@ -101,19 +115,19 @@
     t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // Advanced matching — відразу підхоплює external_id
+    // Advanced matching: проброс external_id одразу
     fbq('init', '{{ $pixelId }}', { external_id: window._extid });
 
-    // Спільний eventID для дедупу
+    // Спільний eventID для дедупу з CAPI
     var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-    // PageView у Pixel
+    // PageView у Pixel (браузер)
     fbq('track', 'PageView', {}, { eventID: pvId, external_id: window._extid });
   })();
   </script>
 @endif
 
-<!-- CAPI PageView — лише для FB-трафіку -->
+<!-- =============== CAPI PageView (серверний) =============== -->
 <script>
 (function(){
   if (!window._mpFlags || window._mpFlags.pv === false) return;
@@ -121,27 +135,29 @@
 
   var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-  var payload = {
-    event_id: pvId,
-    event_time: Math.floor(Date.now()/1000),
-    // ГОЛОВНЕ: використовуємо зафіксований URL
-    event_source_url: window._mpPVUrl
-    // fbc/fbp/external_id бекенд дістане з cookies (_fbc/_fbp/_extid)
-  };
-  if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
+  // ЧЕКАЄМО _fbp ДО 1 СЕК, ПОТІМ — ШЛЕМО НА БЕК (навіть якщо _fbp не з’явився)
+  _mpWaitForFbp(1000).then(function(){  // true/false нас не зупиняє, просто даємо шанс cookie з’явитись
+    var payload = {
+      event_id: pvId,
+      event_time: Math.floor(Date.now()/1000),
+      event_source_url: window._mpPVUrl // той самий URL, що бачив Pixel
+      // user_data (fbc/fbp/extid) бек підтягне з cookies
+    };
+    if (window._mpTestCode) payload.test_event_code = window._mpTestCode;
 
-  try {
-    var body = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/track/pv', new Blob([body], {type:'application/json'}));
-    } else {
-      fetch('/api/track/pv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        keepalive: true
-      });
-    }
-  } catch (_) {}
+    try {
+      var body = JSON.stringify(payload);
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/track/pv', new Blob([body], {type:'application/json'}));
+      } else {
+        fetch('/api/track/pv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          keepalive: true
+        });
+      }
+    } catch (_) {}
+  });
 })();
 </script>
