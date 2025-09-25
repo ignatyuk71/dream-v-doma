@@ -136,7 +136,7 @@
   var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
   // ЧЕКАЄМО _fbp ДО 1 СЕК, ПОТІМ — ШЛЕМО НА БЕК (навіть якщо _fbp не з’явився)
-  _mpWaitForFbp(1000).then(function(){  // true/false нас не зупиняє, просто даємо шанс cookie з’явитись
+  _mpWaitForFbp(1500).then(function(){  // true/false нас не зупиняє, просто даємо шанс cookie з’явитись
     var payload = {
       event_id: pvId,
       event_time: Math.floor(Date.now()/1000),
