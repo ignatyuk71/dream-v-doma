@@ -398,7 +398,7 @@ const deliveryCost = computed(() => {
   }
 })
 
-const codFee = 26 // комісія післяплати
+const codFee = 25 // комісія післяплати
 
 
 const total = computed(() => {
