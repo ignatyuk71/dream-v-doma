@@ -317,17 +317,17 @@ class TrackController extends Controller
     {
         $s = $this->settings();
     
-        // Глобальне вимкнення CAPI
+        // 0) Глобально вимкнено CAPI
         if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
             return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
         }
     
-        // Перевірка прапорця конкретної події
+        // 1) Перевірка прапорця конкретної події
         if (!$this->flagEnabled($s, $flag)) {
             return response()->json(['ok' => true, 'skipped' => "flag_{$flag}_disabled"], 202);
         }
     
-        // Відсікти адмінські урли
+        // 2) Адмінські урли — відсікти
         if ((int)($s->exclude_admin ?? 1) === 1) {
             $url = $this->eventSourceUrl($req);
             if ($this->looksLikeAdmin($url) || $req->is('admin*')) {
@@ -335,33 +335,40 @@ class TrackController extends Controller
             }
         }
     
-        // Перевірка Pixel/Token
+        // 3) Наявність Pixel/Token
         $pixelId = (string)($s->pixel_id ?? '');
         $token   = (string)($s->capi_token ?? '');
         if ($pixelId === '' || $token === '') {
             return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
         }
     
-        // custom_data лише там, де потрібно
+        // 4) Зібрати user_data та зупинитись, якщо немає валідного _fbc
+        $ud = $this->userData($req);
+        if (empty($ud)) {
+            // немає _fbc (або він плейсхолдер) → НЕ шлемо подію
+            return response()->json(['ok' => true, 'skipped' => 'no_valid_fbc'], 202);
+        }
+    
+        // 5) custom_data (за потреби)
         $custom = $buildCustomData();
     
-        // Подія Meta
+        // 6) Формування події
         $event = [
             'event_name'       => $name,
             'event_time'       => (int)($req->input('event_time') ?: time()),
             'action_source'    => 'website',
             'event_source_url' => $this->eventSourceUrl($req),
             'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId($name)),
-            'user_data'        => $this->userData($req),
+            'user_data'        => $ud, // не змінюємо
         ];
         if (!empty($custom)) {
             $event['custom_data'] = $custom;
         }
     
-        // test_event_code
+        // 7) test_event_code (якщо є)
         $testCode = $req->input('test_event_code', $s->capi_test_code ?? null);
     
-        // ВІДПРАВКА
+        // 8) Надсилання до Meta
         try {
             $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
             $resp = $capi->send([$event], $testCode);
@@ -375,7 +382,6 @@ class TrackController extends Controller
     
         $body = $resp->json();
     
-        // Перевірка відповіді
         if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
             return response()->json([
                 'ok'     => false,
@@ -394,7 +400,6 @@ class TrackController extends Controller
             ], 502);
         }
     
-        // OK
         return response()->json([
             'ok'              => true,
             'event'           => $name,
@@ -575,30 +580,27 @@ class TrackController extends Controller
     // ─────────────────────────────────────────────
     private function pickFbc(Request $req): ?string
     {
-        // 1) Пробуємо взяти з cookie
-        $fbc = $req->cookie('_fbc');
-        if (is_string($fbc) && $fbc !== '') {
-            $lastDot = strrpos($fbc, '.');
-            $tail    = $lastDot === false ? strtolower($fbc) : strtolower(substr($fbc, $lastDot + 1));
-            if ($tail !== 'fbclid') {
-                return $fbc; // ✅ валідний cookie
+        // 1) Якщо є _fbc cookie — повертаємо його БЕЗ змін
+        $cookie = $req->cookie('_fbc');
+        if (is_string($cookie) && $cookie !== '') {
+            // Відсікати лише явний плейсхолдер "...fbclid" (без зміни регістру)
+            if (preg_match('/\.fbclid$/', $cookie)) {
+                return null;
             }
-            return null; // ❌ плейсхолдер
+            return $cookie; // as-is
         }
 
-        // 2) Якщо немає cookie → дивимось fbclid у URL
+        // 2) Якщо cookie немає — будуємо з fbclid з джерельного URL
         $srcUrl = $this->eventSourceUrl($req);
-        $fbclid = $this->parseFbclid($srcUrl);
-
-        if (is_string($fbclid)) {
-            $fbclid = trim($fbclid);
-            if ($fbclid !== '' && strcasecmp($fbclid, 'fbclid') !== 0) {
-                return 'fb.2.' . time() . '.' . $fbclid; // ✅ будуємо новий
-            }
+        $fbclid = $this->parseFbclid($srcUrl); // повертає сирий фрагмент з URL
+        if (is_string($fbclid) && $fbclid !== '' && $fbclid !== 'fbclid') {
+            // ВАЖЛИВО: префікс fb.1.
+            return 'fb.1.' . time() . '.' . $fbclid;
         }
 
         return null;
     }
+
 
     /**
      * Згенерувати event_id, який сумісний із фронтом (для дедуплікації).

@@ -57,7 +57,7 @@
               </div>
             </div>
 
-            <!-- Купон -->
+            <!-- 
             <div class="bg-success rounded px-4 py-4" style="--cz-bg-opacity: .2">
               <div class="py-3">
                 <h2 class="h5 text-center pb-2 mb-1">🎉 Вітаємо! Знижка 30% на наступну покупку!</h2>
@@ -67,7 +67,7 @@
                   <button type="button" class="btn btn-dark" data-copy-text-from="#couponCode">Скопіювати</button>
                 </div>
               </div>
-            </div>
+            </div>Купон -->
 
             <p class="fs-sm pt-4 pt-md-5 mt-2 mt-sm-3 mt-md-0 mb-0">
               Потрібна допомога?
