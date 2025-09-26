@@ -26,9 +26,6 @@
     // Не перевизначати глобалку при повторних монтаннях SPA
     if (window.mpTrackPurchase) return;
 
-    // Додатковий фронтовий прапорець — можна вимкнути подію Purchase
-    if (window._mpFlags && window._mpFlags.purchase === false) return;
-
     /* ========================== УТИЛІТИ ========================== */
 
     // Приведення значення до числа з 2-ма знаками
@@ -50,7 +47,7 @@
       return m ? decodeURIComponent(m[1]) : null;
     }
 
-    // ❗️Лише платний FB/IG-трафік: _fbc cookie або fbclid у URL
+    // ❗️Лише FB/IG-трафік: _fbc cookie або fbclid у URL
     function isFacebookTraffic(){
       return !!(getCookie('_fbc') || getParam('fbclid'));
     }
@@ -121,9 +118,7 @@
           localStorage.setItem(guardKey, '1');
         }
 
-        /* ====================== 1) Pixel (браузер) ======================
-           Якщо fbq ще не підвантажився — ретраїмо до ~5 секунд.
-        ================================================================== */
+        /* ====================== 1) Pixel (браузер) ====================== */
         (function sendPixel(attempt){
           attempt = attempt || 0;
           if (typeof window.fbq !== 'function') {
@@ -142,12 +137,7 @@
           } catch (_) {}
         })();
 
-        /* ========================= 2) CAPI (сервер) =========================
-           Надсилаємо ті ж custom_data на бек:
-           – бек додасть user_data (IP/UA, fbc/fbp з cookies, PII-хеші за потреби),
-           – використає той самий event_id для дедупу з Pixel.
-           ⚠️ fbp/fbc з фронта НЕ передаємо.
-        ==================================================================== */
+        /* ========================= 2) CAPI (сервер) ========================= */
         var capiBody = {
           event_id: eventId,
           event_time: Math.floor(Date.now()/1000),

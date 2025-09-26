@@ -100,11 +100,17 @@
 
       if (!contents.length) return;
 
-      var currency    = opts.currency || (window.metaPixelCurrency || 'UAH');
+      // ✅ Приводимо валюту до UPPERCASE (узгоджено з беком)
+      var currency    = (opts.currency || window.metaPixelCurrency || 'UAH')
+                          .toString().trim().toUpperCase();
       var value       = num(total);
       var icId        = genEventId('ic'); // спільний event_id
-      var contentName = '';               // опціонально: назва першого товару для зручності в EM
-      // шукаємо перший валідний item з name
+
+      // Рахуємо num_items один раз і використовуємо в обох відправках
+      var numItems = contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0);
+
+      // (опц.) content_name — візьмемо перший валідний name
+      var contentName = '';
       for (var j=0; j<opts.items.length; j++){
         var it2 = opts.items[j] || {};
         if ((it2.variant_sku ?? '').toString().trim() && typeof it2.name === 'string' && it2.name.trim()){
@@ -127,10 +133,9 @@
             content_ids: content_ids,
             content_type: 'product',
             contents: contents,
-            num_items: contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0),
+            num_items: numItems,
             value: value,
             currency: currency,
-            // не обов'язково, але зручно в EM:
             ...(contentName ? { content_name: contentName } : {})
           }, { eventID: icId });
         } catch (_) {}
@@ -149,7 +154,7 @@
         content_type: 'product',
         content_ids: content_ids,
         contents: contents,
-        num_items: contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0),
+        num_items: numItems,
         value: value,
         currency: currency
       };
