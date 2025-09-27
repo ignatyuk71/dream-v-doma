@@ -526,27 +526,30 @@ class TrackController extends Controller
      * - Якщо немає валідного _fbc → повертає [], а handleEvent має пропустити подію (202).
      */
 
+    // ─────────────────────────────────────────────
+    // Формування user_data для Meta CAPI
+    // ─────────────────────────────────────────────
     private function userData(Request $req): array
     {
+        // IP + User-Agent — базові ключі для матчингу
         $data = [
             'client_ip_address' => $this->realIp($req),
             'client_user_agent' => (string) $req->userAgent(),
         ];
 
-        // _fbc тільки через pickFbc()
+        // _fbc — додаємо тільки якщо є валідний (але НЕ відкидаємо подію, якщо його нема)
         if ($fbc = $this->pickFbc($req)) {
             $data['fbc'] = $fbc;
-        } else {
-            return []; // ❌ немає валідного fbc → подію не шлемо
         }
 
-        // _fbp як є з cookie
+        // _fbp — віддаємо "як є" із cookie (ніяких trim/хешів)
         $fbp = $req->cookie('_fbp');
         if (is_string($fbp) && $fbp !== '') {
             $data['fbp'] = $fbp;
         }
 
-        // external_id
+        // external_id — необов’язковий; якщо є, шлемо таким, як вирішили бізнес-правилами
+        // (можна raw UUID, а можна попередньо захешувати — головне: однаково у Browser і Server)
         $ext = $req->cookie('_extid');
         if (is_string($ext) && ($ext = trim($ext)) !== '') {
             $data['external_id'] = mb_substr($ext, 0, 128);
@@ -557,24 +560,23 @@ class TrackController extends Controller
             }
         }
 
-        // PII → тільки SHA-256
-        if ($h = $this->sha256($req->input('email'))) {
-            $data['em'] = $h;
+        // PII — ТІЛЬКИ SHA-256 після нормалізації значень
+        if ($em = $this->normEmail($req->input('email'))) {
+            $data['em'] = hash('sha256', $em);
         }
-        if ($phone = $req->input('phone')) {
-            if ($norm = $this->normPhone($phone)) {
-                $data['ph'] = $this->sha256($norm);
-            }
+        if ($pn = $this->normPhone($req->input('phone'))) {
+            $data['ph'] = hash('sha256', $pn);
         }
-        if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) {
-            $data['fn'] = $h;
+        if ($fn = $this->normName($req->input('first_name') ?? $req->input('fn'))) {
+            $data['fn'] = hash('sha256', $fn);
         }
-        if ($h = $this->sha256($req->input('last_name') ?? $req->input('ln'))) {
-            $data['ln'] = $h;
+        if ($ln = $this->normName($req->input('last_name') ?? $req->input('ln'))) {
+            $data['ln'] = hash('sha256', $ln);
         }
 
         return $data;
     }
+
 
     private function realIp(Request $req): string
     {
@@ -589,37 +591,40 @@ class TrackController extends Controller
 
     
     // ─────────────────────────────────────────────
-    // Валідний fallback для _fbc (без жодних змін значення)
+    // Валідний fallback для _fbc (без змін cookie)
     // ─────────────────────────────────────────────
     private function pickFbc(Request $req): ?string
     {
-        // 1) Якщо є cookie _fbc — повертаємо 1:1 (жодних trim/strtolower/urldecode)
+        // 1) Якщо є cookie _fbc — повертаємо як є (жодних trim/strtolower/urldecode)
         $cookie = $req->cookie('_fbc');
         if (is_string($cookie) && $cookie !== '') {
-            // відсік тільки явного плейсхолдера типу "...fbclid" (без зміни регістру)
+            // Якщо це явний плейсхолдер типу "...fbclid" — вважаємо невалідним
             if (preg_match('/\.fbclid$/', $cookie)) {
                 return null;
             }
-            // бажано перевірити базовий патерн, але не змінювати значення
+            // Перевіряємо базовий формат: fb.<версія>.<13-значні мс>.<щось>
             if (preg_match('/^fb\.\d\.\d{13}\..+$/', $cookie)) {
-                return $cookie; // as-is
+                return $cookie; // повертаємо 1:1, інакше Meta вважатиме "изменённое значение"
             }
-            // якщо формат дивний — краще нічого не відправляти, ніж “модифіковане”
+            // Дивний формат? Краще нічого не відправляти, ніж псувати діагностику Meta
             return null;
         }
 
-        // 2) Нема cookie — будуємо з fbclid (сирий, без перетворень регістру)
+        // 2) Cookie немає — пробуємо зібрати _fbc з fbclid параметра URL
+        //    ВАЖЛИВО: fbclid беремо сирим, без зміни регістру/декодування
         $srcUrl = $this->eventSourceUrl($req);
         $fbclid = $this->parseFbclid($srcUrl) ?? $req->query('fbclid');
 
         if (is_string($fbclid) && $fbclid !== '' && $fbclid !== 'fbclid') {
-            // правильний префікс і ТІЛЬКИ мілісекунди
-            $ms = (int) round(microtime(true) * 1000);
+            // Префікс має бути fb.2., а мітка часу — у мілісекундах (13 цифр)
+            $ms = now()->valueOf(); // 13-значні мс
             return 'fb.2.' . $ms . '.' . $fbclid;
         }
 
+        // 3) Нема ні cookie, ні fbclid — просто не додаємо fbc (це ОК)
         return null;
     }
+
 
 
 
