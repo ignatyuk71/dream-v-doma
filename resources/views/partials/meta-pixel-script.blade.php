@@ -10,20 +10,19 @@
     && !empty($pixelId)
     && !((int)($t?->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
-  // Лишаємо лише прапорець PageView
   $pvEnabled = $enabled && (bool)($t?->send_page_view ?? true);
 @endphp
 
 @if ($pvEnabled)
-  <!-- Meta Pixel (тільки браузерний PageView) -->
+  <!-- Meta Pixel (лише браузерний PageView + SPA-хук) -->
   <script>
-    // (опц.) простий external_id у кукі для advanced matching — не обов'язково
+    // (опц.) external_id у cookie для advanced matching
     (function () {
       try {
         var name = '_extid';
         if (!document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '='))) {
-          var r = (crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(16)) : Array.from({length:16},()=>Math.floor(Math.random()*256)))
-            .reduce((s,b)=>s+('0'+b.toString(16)).slice(-2),'');
+          var src = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint8Array(16)) : Array.from({length:16},()=>Math.floor(Math.random()*256));
+          var r = Array.from(src).map(b=>('0'+b.toString(16)).slice(-2)).join('');
           var d = new Date(); d.setDate(d.getDate() + 365*3);
           document.cookie = name + '=' + r + '; Path=/; Expires=' + d.toUTCString() + '; SameSite=Lax' + (location.protocol==='https:'?'; Secure':'');
           window._extid = r;
@@ -39,9 +38,45 @@
     t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // Ініціалізація пікселя. Можеш прибрати external_id, якщо не потрібен.
+    // Ініт (можеш прибрати external_id, якщо не треба)
     fbq('init', '{{ $pixelId }}', window._extid ? { external_id: window._extid } : {});
-    fbq('track', 'PageView'); // лише PageView
+
+    // 1) первинний PageView (на завантаженні сторінки)
+    fbq('track', 'PageView');
+
+    // 2) SPA-хук: тригеримо PageView при зміні history (push/replace/back/forward)
+    (function(){
+      if (window.__mpSpaHooked) return; // щоб не дублювати при повторних інжектах
+      window.__mpSpaHooked = true;
+
+      var lastUrl = location.href;
+
+      function firePVIfChanged() {
+        var now = location.href;
+        if (now !== lastUrl) {
+          lastUrl = now;
+          try { fbq('track', 'PageView'); } catch (_) {}
+        }
+      }
+
+      // Обгортаємо pushState / replaceState
+      ['pushState','replaceState'].forEach(function(fn){
+        var orig = history[fn];
+        if (!orig) return;
+        history[fn] = function(){
+          var ret = orig.apply(this, arguments);
+          // Даємо історії оновити адресу, тоді шлемо PV
+          setTimeout(firePVIfChanged, 0);
+          return ret;
+        };
+      });
+
+      // Назад/вперед
+      window.addEventListener('popstate', function(){ setTimeout(firePVIfChanged, 0); });
+
+      // (опц.) публічний хелпер, якщо хочеш вручну штовхнути PV після свого роутера:
+      window.mpPageView = function(){ try{ fbq('track','PageView'); }catch(_){ } };
+    })();
   </script>
   <noscript>
     <img height="1" width="1" style="display:none"
