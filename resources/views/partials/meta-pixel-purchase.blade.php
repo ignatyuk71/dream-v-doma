@@ -47,10 +47,7 @@
       return m ? decodeURIComponent(m[1]) : null;
     }
 
-    // ❗️Лише FB/IG-трафік: _fbc cookie або fbclid у URL
-    function isFacebookTraffic(){
-      return !!(getCookie('_fbc') || getParam('fbclid'));
-    }
+
 
     // Випадковий event_id (ідентичний для Pixel і CAPI → дедуп)
     function genEventId(name){
@@ -94,7 +91,7 @@
     window.mpTrackPurchase = function(opts){
       try{
         if (!opts || !Array.isArray(opts.items) || !opts.items.length) return;
-        if (!isFacebookTraffic()) return; // шлемо лише рекламний FB-трафік
+
 
         var contents = buildContents(opts.items);
         if (!contents.length) return;
