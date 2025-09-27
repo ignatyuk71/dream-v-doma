@@ -342,12 +342,9 @@ class TrackController extends Controller
             return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
         }
     
-        // 4) Зібрати user_data та зупинитись, якщо немає валідного _fbc
+        // 4) Зібрати user_data
+        //    Навіть якщо немає _fbc або інших ключів — все одно відправляємо подію.
         $ud = $this->userData($req);
-        if (empty($ud)) {
-            // немає _fbc (або він плейсхолдер) → НЕ шлемо подію
-            return response()->json(['ok' => true, 'skipped' => 'no_valid_fbc'], 202);
-        }
     
         // 5) custom_data (за потреби)
         $custom = $buildCustomData();
@@ -359,7 +356,7 @@ class TrackController extends Controller
             'action_source'    => 'website',
             'event_source_url' => $this->eventSourceUrl($req),
             'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId($name)),
-            'user_data'        => $ud, // не змінюємо
+            'user_data'        => $ud, // навіть якщо пустий масив — Meta прийме
         ];
         if (!empty($custom)) {
             $event['custom_data'] = $custom;
@@ -407,6 +404,7 @@ class TrackController extends Controller
             'fbtrace_id'      => is_array($body) ? ($body['fbtrace_id'] ?? null) : null,
         ], 200);
     }
+    
     
     
     
@@ -526,56 +524,54 @@ class TrackController extends Controller
      * - Якщо немає валідного _fbc → повертає [], а handleEvent має пропустити подію (202).
      */
 
-    // ─────────────────────────────────────────────
-    // Формування user_data для Meta CAPI
-    // ─────────────────────────────────────────────
-    private function userData(Request $req): array
-    {
-        // IP + User-Agent — базові ключі для матчингу
-        $data = [
-            'client_ip_address' => $this->realIp($req),
-            'client_user_agent' => (string) $req->userAgent(),
-        ];
-
-        // _fbc — додаємо тільки якщо є валідний (але НЕ відкидаємо подію, якщо його нема)
-        if ($fbc = $this->pickFbc($req)) {
-            $data['fbc'] = $fbc;
-        }
-
-        // _fbp — віддаємо "як є" із cookie (ніяких trim/хешів)
-        $fbp = $req->cookie('_fbp');
-        if (is_string($fbp) && $fbp !== '') {
-            $data['fbp'] = $fbp;
-        }
-
-        // external_id — необов’язковий; якщо є, шлемо таким, як вирішили бізнес-правилами
-        // (можна raw UUID, а можна попередньо захешувати — головне: однаково у Browser і Server)
-        $ext = $req->cookie('_extid');
-        if (is_string($ext) && ($ext = trim($ext)) !== '') {
-            $data['external_id'] = mb_substr($ext, 0, 128);
-        } elseif ($req->filled('external_id')) {
-            $extBody = trim((string) $req->input('external_id'));
-            if ($extBody !== '') {
-                $data['external_id'] = mb_substr($extBody, 0, 128);
-            }
-        }
-
-        // PII — ТІЛЬКИ SHA-256 після нормалізації значень
-        if ($em = $this->normEmail($req->input('email'))) {
-            $data['em'] = hash('sha256', $em);
-        }
-        if ($pn = $this->normPhone($req->input('phone'))) {
-            $data['ph'] = hash('sha256', $pn);
-        }
-        if ($fn = $this->normName($req->input('first_name') ?? $req->input('fn'))) {
-            $data['fn'] = hash('sha256', $fn);
-        }
-        if ($ln = $this->normName($req->input('last_name') ?? $req->input('ln'))) {
-            $data['ln'] = hash('sha256', $ln);
-        }
-
-        return $data;
-    }
+     private function userData(Request $req): array
+     {
+         $data = [
+             'client_ip_address' => $this->realIp($req),
+             'client_user_agent' => (string) $req->userAgent(),
+         ];
+     
+         // _fbc — додаємо тільки якщо є валідний; якщо нема — подію все одно шлемо
+         if ($fbc = $this->pickFbc($req)) {
+             $data['fbc'] = $fbc;
+         }
+     
+         // _fbp — як є з cookie (не трімати/не хешувати)
+         $fbp = $req->cookie('_fbp');
+         if (is_string($fbp) && $fbp !== '') {
+             $data['fbp'] = $fbp;
+         }
+     
+         // external_id — опційно (raw або узгодь із браузером один формат)
+         $ext = $req->cookie('_extid');
+         if (is_string($ext) && ($ext = trim($ext)) !== '') {
+             $data['external_id'] = mb_substr($ext, 0, 128);
+         } elseif ($req->filled('external_id')) {
+             $extBody = trim((string) $req->input('external_id'));
+             if ($extBody !== '') {
+                 $data['external_id'] = mb_substr($extBody, 0, 128);
+             }
+         }
+     
+         // PII → тільки SHA-256 після нормалізації
+         if ($h = $this->sha256($req->input('email'))) {
+             $data['em'] = $h;
+         }
+         if ($phone = $req->input('phone')) {
+             if ($norm = $this->normPhone($phone)) {
+                 $data['ph'] = $this->sha256($norm);
+             }
+         }
+         if ($h = $this->sha256($req->input('first_name') ?? $req->input('fn'))) {
+             $data['fn'] = $h;
+         }
+         if ($h = $this->sha256($req->input('last_name') ?? $req->input('ln'))) {
+             $data['ln'] = $h;
+         }
+     
+         return $data;
+     }
+     
 
 
     private function realIp(Request $req): string
