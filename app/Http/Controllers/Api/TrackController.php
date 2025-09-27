@@ -17,85 +17,18 @@ class TrackController extends Controller
     /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
     private ?object $settingsCache = null;
 
-    /*
+    /* ===================== PUBLIC ENDPOINTS ===================== */
+
+    /**
      * PageView — базова подія перегляду сторінки.
-     * Нічого не пишемо в custom_data (Meta рекомендує).
-     * Подія дублюється з фронта (Pixel) і з бека (CAPI).
-     * Завжди йде з event_id (для дедуплікації).
+     * Нічого не пишемо в custom_data (рекомендація Meta).
+     * Дедуп: бажано передавати з фронта той самий event_id у fbq і в цей ендпойнт.
      */
-    public function pv(Request $req)
+    public function pv(Request $request)
     {
-        $s = DB::table('tracking_settings')->first();
-        if (!$s || (int)($s->capi_enabled ?? 0) !== 1) {
-            return response()->json(['ok' => true, 'skipped' => 'capi_disabled'], 202);
-        }
-
-        $pixelId = (string)($s->pixel_id ?? '');
-        $token   = (string)($s->capi_token ?? '');
-        if ($pixelId === '' || $token === '') {
-            return response()->json(['ok' => false, 'error' => 'missing_pixel_or_token'], 422);
-        }
-
-        // --- user_data (мінімальний набір)
-        $ud = [
-            'client_ip_address' => $this->realIp($req),
-            'client_user_agent' => (string) $req->userAgent(),
-        ];
-
-        // _fbc і _fbp підтягнемо з cookies (як є)
-        if ($fbc = $req->cookie('_fbc')) {
-            $ud['fbc'] = $fbc;
-        }
-        if ($fbp = $req->cookie('_fbp')) {
-            $ud['fbp'] = $fbp;
-        }
-        // external_id із cookie або body
-        $ext = $req->cookie('_extid') ?: $req->input('external_id');
-        if ($ext) {
-            $ud['external_id'] = mb_substr(trim((string) $ext), 0, 128);
-        }
-
-        // --- формуємо подію
-        $event = [
-            'event_name'       => 'PageView',
-            'event_time'       => (int)($req->input('event_time') ?: time()),
-            'action_source'    => 'website',
-            'event_source_url' => $req->input('event_source_url', url()->current()),
-            'event_id'         => (string)($req->input('event_id') ?: $this->makeEventId('pv')),
-            'user_data'        => $ud,
-        ];
-
-        // test_event_code — з фронта або з БД
-        $testCode = $req->input('test_event_code', $s->capi_test_code ?? null);
-
-        try {
-            $capi = new MetaCapi($pixelId, $token, (string)($s->capi_api_version ?? 'v20.0'));
-            $resp = $capi->send([$event], $testCode);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ok'    => false,
-                'error' => 'capi_exception',
-                'msg'   => $e->getMessage(),
-            ], 502);
-        }
-
-        $body = $resp->json();
-
-        if (!$resp->ok() || (is_array($body) && isset($body['error']))) {
-            return response()->json([
-                'ok'     => false,
-                'error'  => 'capi_request_failed',
-                'status' => $resp->status(),
-                'body'   => $body,
-            ], 502);
-        }
-
-        return response()->json([
-            'ok'              => true,
-            'event'           => 'PageView',
-            'events_received' => $body['events_received'] ?? null,
-            'fbtrace_id'      => $body['fbtrace_id'] ?? null,
-        ], 200);
+        return $this->handleEvent('PageView', $request, function () {
+            return []; // PV без custom_data
+        }, flag: 'send_page_view'); // якщо прапорця немає у БД — вважаємо увімкненим
     }
 
     /**
