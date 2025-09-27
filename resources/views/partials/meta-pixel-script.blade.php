@@ -16,11 +16,11 @@
     'vc'   => (bool)($t?->send_view_content       ?? true),
     'atc'  => (bool)($t?->send_add_to_cart        ?? true),
     'ic'   => (bool)($t?->send_initiate_checkout  ?? true),
-    'pur'  => (bool)($t?->send_purchase           ?? true),
+    'purchase'  => (bool)($t?->send_purchase           ?? true),
     'lead' => (bool)($t?->send_lead               ?? false),
   ];
   if (!$enabled) {
-    $flags = ['pv'=>false,'vc'=>false,'atc'=>false,'ic'=>false,'pur'=>false,'lead'=>false];
+    $flags = ['pv'=>false,'vc'=>false,'atc'=>false,'ic'=>false,'purchase'=>false,'lead'=>false];
   }
 
   $testCode = $t?->capi_test_code ?? null;
@@ -46,28 +46,40 @@
     }
   };
 
-  // ========================= Хелпери =========================
-  window._mpGetCookie = function(n){
-    var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
-    return m ? decodeURIComponent(m[1]) : null;
-  };
-  window._mpSetCookie = function(n, v, days){
-    var d = new Date();
-    d.setDate(d.getDate() + (days || 365*3)); // 3 роки
-    var parts = [
-      n + '=' + encodeURIComponent(v),
-      'Path=/',
-      'Expires=' + d.toUTCString(),
-      'Domain=.dream-v-doma.com.ua',
-      (location.protocol === 'https:' ? 'Secure' : ''),
-      'SameSite=Lax',
-    ].filter(Boolean);
-    document.cookie = parts.join('; ');
-  };
-  window._mpGetParam = function(name){
-    var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
-    return m ? m[1] : null;
-  };
+// ========================= Хелпери =========================
+window._mpGetCookie = function(n){
+  var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]+)'));
+  return m ? decodeURIComponent(m[1]) : null;
+};
+
+window._mpSetCookie = function(n, v, days){
+  var d = new Date();
+  d.setDate(d.getDate() + (days || 365*3)); // 3 роки
+
+  // авто-домен для кукі (без Domain для localhost/IP)
+  var host = location.hostname.replace(/^www\./, '');
+  var isIp = /^[\d.]+$/.test(host);
+  var domainAttr = (!isIp && host !== 'localhost')
+    ? 'Domain=.' + host
+    : '';
+
+  var parts = [
+    n + '=' + encodeURIComponent(v),
+    'Path=/',
+    'Expires=' + d.toUTCString(),
+    domainAttr,
+    (location.protocol === 'https:' ? 'Secure' : ''),
+    'SameSite=Lax'
+  ].filter(Boolean);
+
+  document.cookie = parts.join('; ');
+};
+
+window._mpGetParam = function(name){
+  var m = location.search.match(new RegExp('[?&]'+name+'=([^&]+)'));
+  return m ? m[1] : null;
+};
+
 
   // FB/IG-трафік: наявність _fbc в cookie або fbclid у URL
   window._mpIsFbTraffic = function(){
@@ -104,27 +116,28 @@
 @if ($enabled)
   <!-- =============== Meta Pixel (браузерний) =============== -->
   <script>
-  (function(){
-    if (!window._mpFlags || window._mpFlags.pv === false) return;
-    if (!window._mpIsFbTraffic()) return;
-    if (!window._mpPixelId) return;
+    (function(){
+      if (!window._mpFlags || window._mpFlags.pv === false) return;
+      if (!window._mpIsFbTraffic()) return;
+      if (!window._mpPixelId) return;
 
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
 
-    // Advanced matching: проброс external_id одразу
-    fbq('init', '{{ $pixelId }}', { external_id: window._extid });
+      // Advanced matching
+      fbq('init', '{{ $pixelId }}', { external_id: window._extid });
 
-    // Спільний eventID для дедупу з CAPI
-    var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
+      // Спільний eventID
+      var pvId = window._mpPVId || (window._mpPVId = window._mpGenEventId('pv'));
 
-    // PageView у Pixel (браузер)
-    fbq('track', 'PageView', {}, { eventID: pvId, external_id: window._extid });
-  })();
-  </script>
+      // PageView: external_id → у params, eventID → в options
+      fbq('track', 'PageView', { external_id: window._extid }, { eventID: pvId });
+    })();
+</script>
+
 @endif
 
 <!-- =============== CAPI PageView (серверний) =============== -->
