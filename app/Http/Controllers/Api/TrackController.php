@@ -589,30 +589,38 @@ class TrackController extends Controller
 
     
     // ─────────────────────────────────────────────
-    // Допоміжний метод для вибору валідного _fbc
+    // Валідний fallback для _fbc (без жодних змін значення)
     // ─────────────────────────────────────────────
     private function pickFbc(Request $req): ?string
     {
-        // 1) Якщо є _fbc cookie — повертаємо його БЕЗ змін
+        // 1) Якщо є cookie _fbc — повертаємо 1:1 (жодних trim/strtolower/urldecode)
         $cookie = $req->cookie('_fbc');
         if (is_string($cookie) && $cookie !== '') {
-            // Відсікати лише явний плейсхолдер "...fbclid" (без зміни регістру)
+            // відсік тільки явного плейсхолдера типу "...fbclid" (без зміни регістру)
             if (preg_match('/\.fbclid$/', $cookie)) {
                 return null;
             }
-            return $cookie; // as-is
+            // бажано перевірити базовий патерн, але не змінювати значення
+            if (preg_match('/^fb\.\d\.\d{13}\..+$/', $cookie)) {
+                return $cookie; // as-is
+            }
+            // якщо формат дивний — краще нічого не відправляти, ніж “модифіковане”
+            return null;
         }
 
-        // 2) Якщо cookie немає — будуємо з fbclid з джерельного URL
+        // 2) Нема cookie — будуємо з fbclid (сирий, без перетворень регістру)
         $srcUrl = $this->eventSourceUrl($req);
-        $fbclid = $this->parseFbclid($srcUrl); // повертає сирий фрагмент з URL
+        $fbclid = $this->parseFbclid($srcUrl) ?? $req->query('fbclid');
+
         if (is_string($fbclid) && $fbclid !== '' && $fbclid !== 'fbclid') {
-            // ВАЖЛИВО: префікс fb.1.
-            return 'fb.1.' . time() . '.' . $fbclid;
+            // правильний префікс і ТІЛЬКИ мілісекунди
+            $ms = (int) round(microtime(true) * 1000);
+            return 'fb.2.' . $ms . '.' . $fbclid;
         }
 
         return null;
     }
+
 
 
     /**
