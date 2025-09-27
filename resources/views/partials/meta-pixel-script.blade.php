@@ -3,58 +3,48 @@
 
   $t = DB::table('tracking_settings')->first();
 
-  $pixelOk = $t
-    && (int)($t->pixel_enabled ?? 0) === 1
-    && !empty($t->pixel_id)
-    && !((int)($t->exclude_admin ?? 1) === 1 && request()->is('admin*'));
+  $pixelId  = $t?->pixel_id ?? null;
 
-  $allowVC = $pixelOk && (int)($t->send_view_content ?? 1) === 1;
-  $currency = $t->default_currency ?? 'UAH';
+  $enabled  = $t
+    && (int)($t?->pixel_enabled ?? 0) === 1
+    && !empty($pixelId)
+    && !((int)($t?->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
-  // URL поточної сторінки товару (з урахуванням локалі/слугу)
-  $productUrl = url()->current();
+  // Лишаємо лише прапорець PageView
+  $pvEnabled = $enabled && (bool)($t?->send_page_view ?? true);
 @endphp
 
-@if ($allowVC && isset($product))
-<script>
-(function(){
-  // не дублюємо у SPA
-  if (window.__vcSentOnce) return;
-  window.__vcSentOnce = true;
+@if ($pvEnabled)
+  <!-- Meta Pixel (тільки браузерний PageView) -->
+  <script>
+    // (опц.) простий external_id у кукі для advanced matching — не обов'язково
+    (function () {
+      try {
+        var name = '_extid';
+        if (!document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '='))) {
+          var r = (crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(16)) : Array.from({length:16},()=>Math.floor(Math.random()*256)))
+            .reduce((s,b)=>s+('0'+b.toString(16)).slice(-2),'');
+          var d = new Date(); d.setDate(d.getDate() + 365*3);
+          document.cookie = name + '=' + r + '; Path=/; Expires=' + d.toUTCString() + '; SameSite=Lax' + (location.protocol==='https:'?'; Secure':'');
+          window._extid = r;
+        } else {
+          window._extid = (document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'))||[])[1];
+        }
+      } catch (_) {}
+    })();
 
-  // дані товару
-  var pid   = @json($product->sku ?? $product->id);
-  var price = Number(String(@json($product->price ?? 0)).replace(',', '.').replace(/[^\d.]/g,''));
-  var curr  = @json($currency);
-  var expectedUrl = @json($productUrl); // те, що Blade бачить як URL товару
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
 
-  function sendVC(){
-    // 1) fbq готовий?
-    if (typeof window.fbq !== 'function') { return setTimeout(sendVC, 80); }
-
-    // 2) ми точно на URL товару? (захист від запуску на головній/категорії)
-    if (location.href.indexOf(expectedUrl) !== 0) {
-      return; // не шлемо, якщо URL не співпадає
-    }
-
-    try {
-      fbq('track', 'ViewContent', {
-        content_ids: [String(pid)],
-        content_type: 'product',
-        value: Number.isFinite(price) ? +price.toFixed(2) : 0,
-        currency: curr
-      });
-      // (опц.) дебаг у Test Events
-      // console.log('[FB Pixel] VC sent @', location.href, {pid, price, curr});
-    } catch(_) {}
-  }
-
-  // чекаємо DOM і один тик черги — щоб URL точно був уже продукту (важливо для SPA/pushState)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(sendVC, 0); });
-  } else {
-    setTimeout(sendVC, 0);
-  }
-})();
-</script>
+    // Ініціалізація пікселя. Можеш прибрати external_id, якщо не потрібен.
+    fbq('init', '{{ $pixelId }}', window._extid ? { external_id: window._extid } : {});
+    fbq('track', 'PageView'); // лише PageView
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id={{ $pixelId }}&ev=PageView&noscript=1"/>
+  </noscript>
 @endif
