@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log; // ← додали логер
+use Illuminate\Support\Facades\Log;
 
 class MetaCapi
 {
@@ -50,13 +50,16 @@ class MetaCapi
         try {
             $body = $resp->json();
         } catch (\Throwable $e) {
-            $body = $resp->body(); // якщо не JSON
+            $body = $resp->body();
         }
 
         Log::info('CAPI_HTTP_RESPONSE', [
             'status' => $resp->status(),
             'body'   => $body,
         ]);
+
+        // ---- Роздільник ----
+        Log::info(str_repeat('─', 120)); // або можна Log::info(''); для пустого рядка
 
         return $resp;
     }
