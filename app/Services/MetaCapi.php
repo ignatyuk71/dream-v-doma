@@ -23,56 +23,62 @@ class MetaCapi
         $endpoint = "https://graph.facebook.com/{$this->apiVersion}/{$this->pixelId}/events";
 
         $payload = [
-            'data'         => $events,            // ← саме це летить у Meta
-            'access_token' => $this->accessToken, // ← частина POST
+            'data'         => $events,
+            'access_token' => $this->accessToken,
         ];
         if ($testCode) {
             $payload['test_event_code'] = $testCode;
         }
 
-        // ===== ЛОГ ДО ВІДПРАВКИ (точний payload) =====
-        $raw = (bool) env('CAPI_LOG_RAW', false); // true = без масок
-
+        // ===== ЛОГ ДО ВІДПРАВКИ =====
+        $raw = (bool) env('CAPI_LOG_RAW', false); // true = показуємо все без маски
         $logPayload = $payload;
 
-        // Маскуємо токен, якщо raw = false
-        if (!$raw && isset($logPayload['access_token'])) {
+        if (!$raw) {
+            // маскуємо токен
             $logPayload['access_token'] = '***hidden***';
-        }
-
-        // Маскуємо fbc/fbp всередині подій, якщо raw = false
-        if (!$raw && isset($logPayload['data']) && is_array($logPayload['data'])) {
-            foreach ($logPayload['data'] as &$ev) {
-                if (isset($ev['user_data']['fbc'])) {
-                    $v = (string) $ev['user_data']['fbc'];
-                    $ev['user_data']['fbc'] = mb_substr($v, 0, 6).'…'.mb_substr($v, -4);
+            // маскуємо ключі user_data
+            if (isset($logPayload['data']) && is_array($logPayload['data'])) {
+                $mask = static function (string $v): string {
+                    $len = mb_strlen($v);
+                    if ($len <= 12) return '***masked***';
+                    return mb_substr($v, 0, 6) . '…' . mb_substr($v, -4);
+                };
+                foreach ($logPayload['data'] as &$ev) {
+                    if (isset($ev['user_data']) && is_array($ev['user_data'])) {
+                        foreach (['fbc','fbp','em','ph','fn','ln','external_id','ct','st','zp','country'] as $k) {
+                            if (!empty($ev['user_data'][$k]) && is_string($ev['user_data'][$k])) {
+                                $ev['user_data'][$k] = $mask($ev['user_data'][$k]);
+                            }
+                        }
+                    }
                 }
-                if (isset($ev['user_data']['fbp'])) {
-                    $v = (string) $ev['user_data']['fbp'];
-                    $ev['user_data']['fbp'] = mb_substr($v, 0, 6).'…'.mb_substr($v, -4);
-                }
+                unset($ev);
             }
-            unset($ev);
         }
 
         Log::info('CAPI_HTTP_POST', [
             'endpoint' => $endpoint,
-            'payload'  => $logPayload, // ← 1-в-1 структура того, що піде у POST (з маскуванням при raw=false)
+            'payload'  => $logPayload, // ← такої форми піде POST (з маскуванням при raw=false)
         ]);
 
         // ===== ВІДПРАВКА =====
         $resp = Http::timeout(8)
             ->connectTimeout(4)
             ->retry(2, 250)
-            ->withHeaders(['Content-Type' => 'application/json'])
+            ->asJson() // гарантуємо JSON
             ->post($endpoint, $payload);
 
         // ===== ЛОГ ВІДПОВІДІ =====
+        $rawBody = $resp->body();
+        $bodyJson = null;
+        try { $bodyJson = $resp->json(); } catch (\Throwable $e) { /* ignore */ }
+
         Log::info('CAPI_HTTP_RESPONSE', [
             'status' => $resp->status(),
-            'body'   => $resp->json(),
+            'body'   => $bodyJson ?? mb_strimwidth($rawBody, 0, 4000, '…'),
         ]);
-        Log::info(str_repeat('─', 100)); // візуальний роздільник
+        Log::info(str_repeat('─', 100)); // роздільник у логах
 
         return $resp;
     }
