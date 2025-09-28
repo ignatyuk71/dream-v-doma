@@ -53,11 +53,11 @@
                 </template>
               </li>
 
-              <!-- Комісія післяплати (червоним) -->
+              <!-- Комісія післяплати (червоним) 
               <li v-if="paymentType === 'cod'" class="d-flex justify-content-between py-1 text-danger">
                 <span class="fw-semibold">{{ $t('checkout.order.cod_fee_short') || 'Комісія післяплати' }}</span>
                 <span class="fw-bold">{{ codFee }} {{ $t('currency') }}</span>
-              </li>
+              </li>-->
 
               <li v-if="bonuses > 0" class="d-flex justify-content-between py-1 text-success">
                 <span>{{ $t('checkout.order.bonuses') }}</span>
@@ -71,14 +71,14 @@
               <span>{{ $t('checkout.order.free_shipping_msg') || 'Вітаємо! Ваше замовлення відповідає умовам безкоштовної доставки.' }}</span>
             </div>
 
-            <!-- Підсумок -->
+            <!-- Підсумок 
             <div class="d-flex justify-content-between align-items-center border-top pt-3 mb-2">
               <span class="fs-6 fw-semibold">{{ $t('checkout.order.total') }}</span>
-              <span class="fs-4 fw-bold">{{ total }} {{ $t('currency') }}</span>
-            </div>
+              <span class="fs-4 fw-bold">{{ total - codFee  }} {{ $t('currency') }}</span>
+            </div>-->
 
             <!-- Кнопка підтвердження -->
-            <button class="btn btn-success w-100 py-2" @click="submitForm">
+            <button class="btn btn-lg btn-primary py-3 w-100 animate-slide-end" @click="submitForm">
               {{ $t('checkout.order.button') }}
             </button>
 
