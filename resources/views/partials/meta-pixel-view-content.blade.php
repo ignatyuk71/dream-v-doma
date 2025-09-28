@@ -4,72 +4,37 @@
   $t = DB::table('tracking_settings')->first();
 
   $pixelOk = $t
-    && (int)($t?->pixel_enabled ?? 0) === 1
-    && !empty($t?->pixel_id)
-    && !((int)($t?->exclude_admin ?? 1) === 1 && request()->is('admin*'));
+    && (int)($t->pixel_enabled ?? 0) === 1
+    && !empty($t->pixel_id)
+    && !((int)($t->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
-  $allowVC = $pixelOk && (int)($t?->send_view_content ?? 1) === 1;
+  $allowVC = $pixelOk && (int)($t->send_view_content ?? 1) === 1;
 
   $locale = app()->getLocale() ?: 'uk';
   $tr = ($product->translations ?? collect())
-        ->firstWhere('locale', $locale)
-        ?? ($product->translations ?? collect())->firstWhere('locale', 'uk')
-        ?? ($product->translations ?? collect())->firstWhere('locale', 'ru')
-        ?? null;
+          ->firstWhere('locale', $locale)
+        ?? ($product->translations ?? collect())->firstWhere('locale','uk')
+        ?? ($product->translations ?? collect())->firstWhere('locale','ru');
 
-  $translatedName = $tr->name ?? '';
+  $pid      = (string)($product->sku ?? $product->id ?? '');
+  $name     = (string)($tr->name ?? $product->name ?? '');
+  $price    = round((float)($product->price ?? 0), 2);       // ✅ порахували в PHP
   $currency = $t?->default_currency ?? 'UAH';
-
-  // Очікуваний URL цієї сторінки продукту
-  $productUrl = url()->current();
 @endphp
 
-@if ($allowVC && isset($product))
+@if ($allowVC && isset($product) && $pid !== '')
 <script>
-(function () {
-  if (window._sentVC) return;
-  window._sentVC = true;
+(function(){
+  if (window._vcOnce) return; window._vcOnce = true;
 
-  // --- helper: нормалізація URL (без query/hash, без кінцевого слеша)
-  function norm(u){
-    try {
-      var x = new URL(u, location.origin);
-      var p = x.pathname.replace(/\/+$/,''); // обрізаємо кінцевий /
-      return x.origin + p;
-    } catch (_){
-      // fallback
-      return String(u).replace(/[?#].*$/,'').replace(/\/+$/,'');
-    }
-  }
-
-  // Перевірка, що ми справді на сторінці цього продукту
-  var expected = norm(@json($productUrl));
-  var current  = norm(location.href);
-  if (current !== expected) return; // не шлемо, якщо URL не збігається
-
-  // Дані товару
-  var pid = String(@json($product->sku ?? $product->id ?? ''));
-  if (!pid) return;
-
-  var name     = @json($translatedName);
-  var rawPrice = @json($product->price ?? 0);
+  var pid      = @json($pid);
+  var name     = @json($name);
+  var price    = @json($price);        // ✅ вже число
   var currency = @json($currency);
-
-  var price = (function (p) {
-    var s = String(p).replace(',', '.').replace(/[^\d.]/g, '');
-    var n = parseFloat(s);
-    return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
-  })(rawPrice);
 
   var contents = [{ id: pid, quantity: 1, item_price: price }];
 
-  // чекаємо fbq і відправляємо VC
-  (function sendVC(attempt){
-    attempt = attempt || 0;
-    if (typeof window.fbq !== 'function') {
-      if (attempt > 60) return; // ~5 сек
-      return setTimeout(function(){ sendVC(attempt+1); }, 80);
-    }
+  function fireVC(){
     try {
       fbq('track', 'ViewContent', {
         content_ids: [pid],
@@ -79,8 +44,14 @@
         value: price,
         currency: currency
       });
-    } catch(_) {}
-  })();
+    } catch(e) {}
+  }
+
+  (function wait(i){
+    if (typeof window.fbq === 'function') return fireVC();
+    if (i > 60) return;
+    setTimeout(function(){ wait(i+1); }, 80);
+  })(0);
 })();
 </script>
 @endif
