@@ -1,6 +1,6 @@
 {
-  "_index-DFUXqQ3U.js": {
-    "file": "assets/index-DFUXqQ3U.js",
+  "_index-DrHwqw0t.js": {
+    "file": "assets/index-DrHwqw0t.js",
     "name": "index"
   },
   "public/assets/img/nova-poshta.svg": {
@@ -23,12 +23,12 @@
     "isEntry": true
   },
   "resources/js/admin/index.js": {
-    "file": "assets/index-Q14XhBkG.js",
+    "file": "assets/index-D1ZEgywd.js",
     "name": "index",
     "src": "resources/js/admin/index.js",
     "isEntry": true,
     "imports": [
-      "_index-DFUXqQ3U.js"
+      "_index-DrHwqw0t.js"
     ],
     "css": [
       "assets/index-BDTvWKko.css",
@@ -36,15 +36,15 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-JTUpWbKP.js",
+    "file": "assets/app-D350ct4Y.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_index-DFUXqQ3U.js"
+      "_index-DrHwqw0t.js"
     ],
     "css": [
-      "assets/app-C8Qc57Rj.css"
+      "assets/app-BNS3CML9.css"
     ],
     "assets": [
       "assets/nova-poshta-g-ZN1yRV.svg"
