@@ -409,8 +409,8 @@ const total = computed(() => {
 
 const itemsCountText = computed(() => {
   const units = cart.items.reduce((acc, it) => acc + (it.quantity || 0), 0)
-  const one = t('checkout.order.item_one') || 'товар'
-  const many = t('checkout.order.item_many') || 'товарів'
+  const one = t('checkout.order.item_one') || 'товар на суму'
+  const many = t('checkout.order.item_few') || 'товари на суму'
   return `${units} ${units === 1 ? one : many}`
 })
 
