@@ -46,7 +46,7 @@
       // 👉 Відкладений на 2 секунди браузерний PageView
       setTimeout(function () {
         fbq('track', 'PageView', {}, { eventID: eventId });
-      }, 2000);
+      }, 800);
 
       @if ($sendCapiPv)
       // Server PV через бекенд — одразу (той самий eventId)
