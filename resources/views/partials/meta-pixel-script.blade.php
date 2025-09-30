@@ -36,19 +36,23 @@
       s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
     }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
 
-    // ── Один і той самий eventID для дедуплікації
     (function(){
+      // Один і той самий eventID для fbq і CAPI
       var eventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
 
-      // Browser PV
+      // Ініціалізація Pixel одразу
       fbq('init', '{{ $pixelId }}');
-      fbq('track', 'PageView', {}, { eventID: eventId });
 
-      // Server PV через бекенд
+      // 👉 Відкладений на 2 секунди браузерний PageView
+      setTimeout(function () {
+        fbq('track', 'PageView', {}, { eventID: eventId });
+      }, 2000);
+
       @if ($sendCapiPv)
+      // Server PV через бекенд — одразу (той самий eventId)
       var payload = JSON.stringify({ event_id: eventId, page_url: location.href });
 
-      // 1) Перший пріоритет — sendBeacon (працює навіть при unload)
+      // 1) Перший пріоритет — sendBeacon
       var sent = false;
       if (navigator.sendBeacon) {
         try {
@@ -70,18 +74,8 @@
       }
       @endif
     })();
-
-    // ── (Опційно) SPA: якщо використовуєш Vue Router, викликай це на зміні маршруту
-    // window._mpSendPvOnRoute = function(){
-    //   var eventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
-    //   fbq('track','PageView',{}, { eventID: eventId });
-    //   var payload = JSON.stringify({ event_id: eventId, page_url: location.href });
-    //   if (navigator.sendBeacon) {
-    //     try { navigator.sendBeacon('/api/track/pv', new Blob([payload],{type:'application/json'})); return; } catch(e){}
-    //   }
-    //   fetch('/api/track/pv', { method:'POST', keepalive:true, headers:{'Content-Type':'application/json'}, body:payload }).catch(function(){});
-    // };
   }
 </script>
+
 @endif
 @endonce
