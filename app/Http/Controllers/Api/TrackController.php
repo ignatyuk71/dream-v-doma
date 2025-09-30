@@ -14,23 +14,200 @@ use App\Services\MetaCapi;
  */
 class TrackController extends Controller
 {
+
+    /**
+     * CAPI: PageView
+     * Приймає з фронта: event_id (опц.), page_url (опц.)
+     * Відправляє у Meta: PageView з user_data (IP/UA + fbc/fbp)
+     */
+    public function pv(Request $req)
+    {
+        // 1) Налаштування
+        $t = DB::table('tracking_settings')->first();
+        if (!$t) {
+            return response()->json(['ok' => false, 'skip' => 'no_settings'], 200);
+        }
+
+        // CAPI має бути увімкнено, і мають бути pixel_id + token
+        if ((int)($t->capi_enabled ?? 0) !== 1 || empty($t->pixel_id) || empty($t->capi_token)) {
+            return response()->json(['ok' => false, 'skip' => 'capi_disabled_or_missing_creds'], 200);
+        }
+
+        // Не стріляємо з адмін-зон (за правилом exclude_admin)
+        if ((int)($t->exclude_admin ?? 1) === 1 && $req->is('admin*')) {
+            return response()->json(['ok' => false, 'skip' => 'admin_excluded'], 200);
+        }
+
+        // Сьогодні працюємо лише з PageView — прапорець має дозволяти
+        if (!(bool)($t->send_page_view ?? true)) {
+            return response()->json(['ok' => false, 'skip' => 'page_view_disabled'], 200);
+        }
+
+        // 2) Побудова події
+        $eventId = (string)($req->input('event_id') ?: ('pv-'.bin2hex(random_bytes(4)).'-'.time()));
+        $eventSourceUrl = $this->eventSourceUrl($req) ?? url()->current();
+
+        $userData = $this->collectUserData($req, $eventSourceUrl);
+
+        $event = [
+            'event_name'       => 'PageView',
+            'event_time'       => time(),                 // unix seconds
+            'action_source'    => 'website',
+            'event_source_url' => $eventSourceUrl,
+            'event_id'         => $eventId,
+            'user_data'        => $userData,
+        ];
+
+        // 3) Відправка через сервіс
+        $apiVersion = $t->capi_api_version ?: 'v20.0';
+        $testCode   = $t->capi_test_code ?: null;
+
+        $meta = new MetaCapi($t->pixel_id, $t->capi_token, $apiVersion);
+        $resp = $meta->send([$event], $testCode);
+
+        // 4) Відповідь фронту (логування робить сервіс)
+        return response()->json([
+            'ok'        => $resp->successful(),
+            'status'    => $resp->status(),
+            'event_id'  => $eventId,
+        ], 200);
+    }
+
+    /**
+     * Визначаємо джерело URL події:
+     * 1) явний page_url з тіла; 2) Referer; 3) поточний URL
+     */
+    private function eventSourceUrl(Request $req): ?string
+    {
+        if ($u = $req->input('page_url')) return (string)$u;
+        if ($r = $req->headers->get('referer')) return (string)$r;
+        return $req->fullUrl();
+    }
+
+    /**
+     * user_data для CAPI: IP, UA, fbc/fbp (якщо є).
+     * Якщо _fbc немає, але є fbclid у URL → згенерувати fbc.
+     */
+    private function collectUserData(Request $req, string $eventSourceUrl): array
+    {
+        $data = [
+            'client_ip_address' => (string)$req->ip(),
+            'client_user_agent' => (string)$req->userAgent(),
+        ];
+
+        // _fbc/_fbp з кукі (якщо є)
+        if (is_string($req->cookie('_fbc'))) {
+            $v = trim((string)$req->cookie('_fbc'));
+            if ($v !== '') $data['fbc'] = $v;
+        }
+        if (is_string($req->cookie('_fbp'))) {
+            $v = trim((string)$req->cookie('_fbp'));
+            if ($v !== '') $data['fbp'] = $v;
+        }
+
+        // fallback для fbc: якщо нема кукі, але в URL є fbclid → згенерувати fbc
+        if (!isset($data['fbc'])) {
+            $fbclid = $this->extractFbclid($eventSourceUrl) ?: $this->extractFbclid($req->fullUrl());
+            if (!$fbclid && is_string($req->input('page_url'))) {
+                $fbclid = $this->extractFbclid((string)$req->input('page_url'));
+            }
+            if ($fbclid) {
+                // формат: fb.2.<timestamp>.<fbclid>
+                $data['fbc'] = 'fb.2.' . time() . '.' . $fbclid;
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Дістаємо fbclid із рядка URL, якщо він там є.
+     */
+    private function extractFbclid(?string $url): ?string
+    {
+        if (!$url) return null;
+        $parts = parse_url($url);
+        if (!isset($parts['query'])) return null;
+
+        parse_str($parts['query'], $qs);
+        $fbclid = $qs['fbclid'] ?? null;
+
+        $fbclid = is_string($fbclid) ? trim($fbclid) : null;
+        return ($fbclid !== '') ? $fbclid : null;
+    }
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
     private ?object $settingsCache = null;
 
     /* ===================== PUBLIC ENDPOINTS ===================== */
-
-    /**
-     * PageView — базова подія перегляду сторінки.
-     * Нічого не пишемо в custom_data (рекомендація Meta).
-     * Дедуп: бажано передавати з фронта той самий event_id у fbq і в цей ендпойнт.
-     */
-    public function pv(Request $request)
-    {
-        return $this->handleEvent('PageView', $request, function () {
-            return []; // PV без custom_data
-        }, flag: 'send_page_view'); // якщо прапорця немає у БД — вважаємо увімкненим
-    }
-
     /**
      * ViewContent — подія перегляду товару/контенту.
      *
@@ -444,18 +621,7 @@ class TrackController extends Controller
         return (int)($s->{$flag} ?? 0) === 1;
     }
 
-    /**
-     * Визначити URL джерела події:
-     * 1) event_source_url з тіла, 2) url з тіла, 3) Referer, 4) поточний URL.
-     */
-    private function eventSourceUrl(Request $req): string
-    {
-        if ($req->filled('event_source_url')) return (string)$req->input('event_source_url');
-        if ($req->filled('url'))              return (string)$req->input('url');
-
-        $ref = (string)$req->headers->get('referer', '');
-        return $ref !== '' ? $ref : url()->current();
-    }
+   
 
     /**
      * Просте визначення “адмінського” URL для відсікання подій.
