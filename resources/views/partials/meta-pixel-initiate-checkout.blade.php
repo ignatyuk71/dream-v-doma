@@ -9,22 +9,31 @@
     && !((int)($t->exclude_admin ?? 1) === 1 && request()->is('admin*'));
 
   $allowIC = $pixelOk && (int)($t->send_initiate_checkout ?? 1) === 1;
+
+  // CAPI лише якщо ввімкнено і є токен
+  $capiOn = $allowIC && $t && (int)($t->capi_enabled ?? 0) === 1 && !empty($t->capi_token);
 @endphp
 
 @if ($allowIC)
 <script>
 (function(){
-  if (window.mpTrackIC) return; // не переоголошувати
-  if (window._mpFlags && window._mpFlags.ic === false) return; // вимикач, якщо явно false
+  if (window.mpTrackIC) return;              // не переоголошувати
+  if (window._mpFlags && window._mpFlags.ic === false) return;
 
-  // ---- helpers ----
+  // ── helpers ─────────────────────────────────────────
   function num(v){
     var s = String(v ?? 0).replace(',', '.').replace(/[^\d.\-]/g,'');
     var n = parseFloat(s);
     return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
   }
+  // анти дабл-клік для IC (часто викликають двічі)
+  var _lastIC = 0;
+  function notTooSoon(ms){
+    var now = Date.now();
+    if (now - _lastIC < ms) return false;
+    _lastIC = now; return true;
+  }
   function genEventId(name){
-    if (typeof window._mpGenEventId === 'function') return window._mpGenEventId(name);
     try {
       var a = new Uint8Array(6);
       (window.crypto || window.msCrypto).getRandomValues(a);
@@ -36,7 +45,7 @@
   }
 
   /**
-   * Викликати коли юзер починає оформлення:
+   * Викликати, коли юзер реально заходить у чекаут:
    * window.mpTrackIC({
    *   items: [
    *     { variant_sku:'PRD-001', price:799.00, quantity:1, name:'Назва 1' },
@@ -48,12 +57,13 @@
   window.mpTrackIC = function(opts){
     try{
       if (!opts || !Array.isArray(opts.items) || !opts.items.length) return;
+      if (!notTooSoon(800)) return; // 0.8s анти-дубль
 
-      // build contents / content_ids / total
+      // build contents / ids / totals
       var contents = [], content_ids = [], total = 0, firstName = '';
       for (var i=0; i<opts.items.length; i++){
         var it = opts.items[i] || {};
-        var id = (it.variant_sku ?? '').toString().trim();
+        var id = (it.variant_sku ?? it.sku ?? it.id ?? '').toString().trim();
         if (!id) continue;
 
         var qty = Number(it.quantity || 1); if (!Number.isFinite(qty) || qty <= 0) qty = 1;
@@ -74,12 +84,12 @@
       var numItems = contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0);
       var icId     = genEventId('ic');
 
-      // ---- 1) Pixel (browser) ----
-      (function sendPixel(attempt){
-        attempt = attempt || 0;
+      // 1) Browser Pixel (чекаємо fbq до ~2с)
+      (function sendPixel(i){
+        i = i || 0;
         if (typeof window.fbq !== 'function') {
-          if (attempt > 60) return;            // ~5s
-          return setTimeout(function(){ sendPixel(attempt+1); }, 80);
+          if (i >= 25) return; // ~2s
+          return setTimeout(function(){ sendPixel(i+1); }, 80);
         }
         try {
           var payload = {
@@ -96,33 +106,41 @@
         } catch(_) {}
       })();
 
-      // ---- 2) CAPI (server) ----
-      var bodyObj = {
-        event_id: icId,
-        event_time: Math.floor(Date.now()/1000),
-        event_source_url: window.location.href,
-        content_type: 'product',
-        content_ids: content_ids,
-        contents: contents,
-        num_items: numItems,
-        value: value,
-        currency: currency
-      };
-      if (firstName) bodyObj.content_name = firstName;
-      if (window._mpTestCode) bodyObj.test_event_code = window._mpTestCode;
-
-      var body = JSON.stringify(bodyObj);
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon('/api/track/ic', new Blob([body], {type:'application/json'}));
-      } else {
-        fetch('/api/track/ic', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          keepalive: true,
-          body
+      // 2) Server (CAPI) — той самий event_id; бек сам підставить event_time/url
+      @if ($capiOn)
+      (function(){
+        var body = JSON.stringify({
+          event_id: icId,
+          page_url: location.href,   // ← консистентно з pv/vc/atc
+          currency: currency,
+          contents: contents,
+          num_items: numItems,
+          name: firstName || null,
+          value: value
         });
-      }
+
+        var sent = false;
+        if (navigator.sendBeacon) {
+          try { sent = navigator.sendBeacon('/api/track/ic', new Blob([body], {type:'application/json'})); } catch(_){}
+        }
+        if (!sent) {
+          try {
+            fetch('/api/track/ic', {
+              method: 'POST',
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json' },
+              body
+            }).catch(function(){});
+          } catch(_){}
+        }
+      })();
+      @endif
+
+      // (опціонально) GA4 begin_checkout:
+      // if (typeof window.ga4BeginCheckout === 'function') {
+      //   window.ga4BeginCheckout({ contents, currency, value, num_items: numItems, name: firstName || '' });
+      // }
+
     } catch(e){
       console.warn('[IC] mpTrackIC exception', e);
     }

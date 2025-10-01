@@ -374,92 +374,127 @@ class TrackController extends Controller
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
-    private ?object $settingsCache = null;
     
     /**
-     * InitiateCheckout — початок оформлення замовлення.
-     *
-     * 🔹 Основний формат: contents[] = [{ id, quantity, item_price }]
-     * 🔹 Fallback: items[]/старі поля → нормалізуємо у contents[]
-     * 🔹 value = передане явно або сума (qty * item_price)
-     * 🔹 Додаємо content_ids[] для сумісності з рекомендаціями Meta
-     * 🔹 (опц.) content_name — якщо передано
+     * CAPI: InitiateCheckout
+     * Очікує JSON:
+     * {
+     *   "event_id": "ic-..."              (опц.)
+     *   "page_url": "https://..."         (опц.)
+     *   "currency": "UAH|USD|..."         (опц.; fallback -> settings.default_currency)
+     *   "contents": [                     (обов’язково; ≥1 валідний item)
+     *     { "id":"SKU", "quantity":1, "item_price":399.00 }, ...
+     *   ],
+     *   "num_items": 3                    (опц.; якщо нема — рахуємо із contents)
+     *   "name": "Перший товар"            (опц.)
+     *   "value": 1197.00                  (опц.; якщо нема — рахуємо із contents)
+     * }
      */
-    public function ic(Request $request)
+    public function ic(Request $req)
     {
-        return $this->handleEvent('InitiateCheckout', $request, function () use ($request) {
-    
-            // 1) Основний шлях: contents[] з тіла
-            $contents = $this->contentsFromRequest($request);
-    
-            // 2) Fallback: items[] → приводимо до contents[]
-            if (empty($contents)) {
-                $items = (array)$request->input('items', []);
-                foreach ($items as $i) {
-                    $id = (string)($i['variant_sku'] ?? $i['sku'] ?? $i['id'] ?? '');
-                    if ($id === '') continue;
-                    $qty = (int)($i['quantity'] ?? 1);
-                    $pr  = $this->num($i['price'] ?? $i['item_price'] ?? 0);
-                    $contents[] = ['id' => $id, 'quantity' => $qty, 'item_price' => $pr];
-                }
-            }
-    
-            // 3) Підсумки: ТІЛЬКИ subtotal (без shipping/tax)
-            $subtotal = $this->calcValue($contents);
-            $value    = $request->filled('value')
-                ? $this->num($request->input('value'))   // якщо явно передали — беремо як є
-                : $this->num($subtotal);                 // інакше — сума позицій
-    
-            if ($value < 0) $value = 0.00;
-    
-            $currency = strtoupper(trim((string)$request->input('currency', $this->currency())));
-            $numItems = array_reduce($contents, fn($s, $c) => $s + (int)$c['quantity'], 0);
-            $ids      = array_map(fn($c) => (string)$c['id'], $contents);
-    
-            // 4) custom_data
-            $data = [
-                'content_type' => 'product',
-                'content_ids'  => $ids,
-                'contents'     => $contents,
-                'num_items'    => $numItems,
-                'value'        => $value,
-                'currency'     => $currency,
+        // 1) Налаштування
+        $t = DB::table('tracking_settings')->first();
+        if (!$t) {
+            return response()->json(['ok' => false, 'skip' => 'no_settings'], 200);
+        }
+
+        // CAPI вмикнено та є креденшіали
+        if ((int)($t->capi_enabled ?? 0) !== 1 || empty($t->pixel_id) || empty($t->capi_token)) {
+            return response()->json(['ok' => false, 'skip' => 'capi_disabled_or_missing_creds'], 200);
+        }
+
+        // Виключити адмін-зони
+        if ((int)($t->exclude_admin ?? 1) === 1 && $req->is('admin*')) {
+            return response()->json(['ok' => false, 'skip' => 'admin_excluded'], 200);
+        }
+
+        // Подія дозволена?
+        if ((int)($t->send_initiate_checkout ?? 0) !== 1) {
+            return response()->json(['ok' => false, 'skip' => 'initiate_checkout_disabled'], 200);
+        }
+
+        // 2) Заголовки події
+        $eventId        = (string)($req->input('event_id') ?: ('ic-'.bin2hex(random_bytes(4)).'-'.time()));
+        $eventSourceUrl = $this->eventSourceUrl($req) ?? url()->current();
+        $userData       = $this->collectUserData($req, $eventSourceUrl);
+
+        // 3) Дані кошика
+        $currency = strtoupper((string)($req->input('currency') ?: ($t->default_currency ?? 'UAH')));
+        $name     = $req->filled('name') ? (string)$req->input('name') : null;
+
+        // contents[]
+        $contentsIn = $req->input('contents');
+        if (!is_array($contentsIn) || empty($contentsIn)) {
+            return response()->json(['ok' => false, 'skip' => 'missing_contents'], 200);
+        }
+
+        $contents   = [];
+        $sum        = 0.0;
+        $itemsCount = 0;
+
+        foreach ($contentsIn as $row) {
+            $row = (array)$row;
+
+            $id = isset($row['id']) ? trim((string)$row['id']) : '';
+            if ($id === '') continue;
+
+            $qty = isset($row['quantity']) ? (int)$row['quantity'] : 1;
+            if ($qty <= 0) $qty = 1;
+
+            $ip = isset($row['item_price']) ? (float)$row['item_price'] : 0.0;
+            if ($ip < 0) $ip = 0.0;
+
+            $contents[] = [
+                'id'         => $id,
+                'quantity'   => $qty,
+                'item_price' => $ip,
             ];
-    
-            // опціонально: назва (якщо прийшла з фронта)
-            if ($request->filled('content_name') || $request->filled('name')) {
-                $data['content_name'] = (string)($request->input('content_name') ?? $request->input('name'));
-            }
-    
-            return $data;
-        }, flag: 'send_initiate_checkout');
+            $sum        += $qty * $ip;
+            $itemsCount += $qty;
+        }
+
+        if (empty($contents)) {
+            return response()->json(['ok' => false, 'skip' => 'empty_contents_after_norm'], 200);
+        }
+
+        // num_items / value — беремо з тіла або рахуємо
+        $numItems = $req->filled('num_items') ? max(0, (int)$req->input('num_items')) : $itemsCount;
+        $value    = $req->filled('value')     ? round((float)$req->input('value'), 2) : round($sum, 2);
+
+        $contentIds = array_values(array_map(fn($c) => (string)$c['id'], $contents));
+
+        // 4) Подія
+        $event = [
+            'event_name'       => 'InitiateCheckout',
+            'event_time'       => time(),
+            'action_source'    => 'website',
+            'event_source_url' => $eventSourceUrl,
+            'event_id'         => $eventId,
+            'user_data'        => $userData,
+            'custom_data'      => array_filter([
+                'content_type'     => 'product',
+                'content_ids'      => $contentIds,
+                'contents'         => $contents,
+                'num_items'        => $numItems,
+                'value'            => $value,
+                'currency'         => $currency,
+                'content_name'     => $name, // опційно
+            ], static fn($v) => $v !== null),
+        ];
+
+        // 5) Відправка у Meta
+        $apiVersion = $t->capi_api_version ?: 'v20.0';
+        $testCode   = $t->capi_test_code ?: null;
+
+        $meta = new MetaCapi($t->pixel_id, $t->capi_token, $apiVersion);
+        $resp = $meta->send([$event], $testCode);
+
+        return response()->json([
+            'ok'       => $resp->successful(),
+            'status'   => $resp->status(),
+            'event_id' => $eventId,
+        ], 200);
     }
-    
 
 
     /**
@@ -477,6 +512,10 @@ class TrackController extends Controller
         }, flag: 'send_lead');
     }
 
+
+
+    /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
+    private ?object $settingsCache = null;
 
     /**
      * Purchase — підтвердження покупки.
