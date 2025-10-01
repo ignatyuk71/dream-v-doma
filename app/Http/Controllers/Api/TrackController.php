@@ -258,7 +258,122 @@ class TrackController extends Controller
      }
      
     
-        
+    /**
+     * CAPI: AddToCart
+     * Очікує з фронта (JSON):
+     * {
+     *   "event_id": "atc-... (опц.)",
+     *   "page_url": "https://... (опц.)",
+     *   "currency": "UAH|USD|...",
+     *   "contents": [{ "id":"SKU", "quantity":1, "item_price":399.00 }, ...],
+     *   "name": "Назва товару (опц.)"
+     * }
+     */
+    public function atc(\Illuminate\Http\Request $req)
+    {
+        // 1) Налаштування
+        $t = \DB::table('tracking_settings')->first();
+        if (!$t) {
+            return response()->json(['ok' => false, 'skip' => 'no_settings'], 200);
+        }
+
+        // CAPI має бути увімкнений і мають бути креденшіали
+        if ((int)($t->capi_enabled ?? 0) !== 1 || empty($t->pixel_id) || empty($t->capi_token)) {
+            return response()->json(['ok' => false, 'skip' => 'capi_disabled_or_missing_creds'], 200);
+        }
+
+        // Виключити адмін-зони (підстраховка і по URL-шляху)
+        if ((int)($t->exclude_admin ?? 1) === 1) {
+            $path = (string) parse_url($req->fullUrl(), PHP_URL_PATH);
+            if ($req->is('admin*') || str_contains($path, '/admin')) {
+                return response()->json(['ok' => false, 'skip' => 'admin_excluded'], 200);
+            }
+        }
+
+        // Подія має бути дозволена
+        if ((int)($t->send_add_to_cart ?? 1) !== 1) {
+            return response()->json(['ok' => false, 'skip' => 'add_to_cart_disabled'], 200);
+        }
+
+        // 2) Заголовки події
+        $eventId        = (string)($req->input('event_id') ?: ('atc-'.bin2hex(random_bytes(4)).'-'.time()));
+        $eventSourceUrl = $this->eventSourceUrl($req) ?? url()->current();
+        $userData       = $this->collectUserData($req, $eventSourceUrl); // IP/UA + fbc/fbp з валід. fbclid
+
+        // 3) Дані кошика з тіла
+        $currency = strtoupper((string)($req->input('currency') ?: ($t->default_currency ?? 'UAH')));
+        $name     = $req->filled('name') ? (string)$req->input('name') : null;
+
+        // contents[]
+        $contentsIn = $req->input('contents');
+        if (!is_array($contentsIn) || empty($contentsIn)) {
+            return response()->json(['ok' => false, 'skip' => 'missing_contents'], 200);
+        }
+
+        $contents   = [];
+        $sum        = 0.0;
+        foreach ($contentsIn as $row) {
+            $row = (array)$row;
+
+            $id  = isset($row['id']) ? trim((string)$row['id']) : '';
+            if ($id === '') continue;
+
+            $qty = isset($row['quantity']) ? (int)$row['quantity'] : 1;
+            if ($qty <= 0) $qty = 1;
+
+            $ip  = isset($row['item_price']) ? (float)$row['item_price'] : 0.0;
+            if ($ip < 0) $ip = 0.0;
+
+            $contents[] = [
+                'id'         => $id,
+                'quantity'   => $qty,
+                'item_price' => $ip,
+            ];
+            $sum += $qty * $ip;
+        }
+
+        if (empty($contents)) {
+            return response()->json(['ok' => false, 'skip' => 'empty_contents_after_norm'], 200);
+        }
+
+        $value = round($sum, 2);
+        $contentIds = array_values(array_map(fn($c) => (string)$c['id'], $contents));
+
+        // 4) Збирання події
+        $event = [
+            'event_name'       => 'AddToCart',
+            'event_time'       => time(),
+            'action_source'    => 'website',
+            'event_source_url' => $eventSourceUrl,
+            'event_id'         => $eventId,
+            'user_data'        => $userData,
+            'custom_data'      => array_filter([
+                'content_type'     => 'product',
+                'content_ids'      => $contentIds,
+                'contents'         => $contents,
+                'value'            => $value,
+                'currency'         => $currency,
+                'content_name'     => $name, // опційно
+            ], static fn($v) => $v !== null),
+        ];
+
+        // 5) Відправка у Meta
+        $apiVersion = $t->capi_api_version ?: 'v20.0';
+        $testCode   = $t->capi_test_code ?: null;
+
+        $meta = new \App\Services\MetaCapi($t->pixel_id, $t->capi_token, $apiVersion);
+        $resp = $meta->send([$event], $testCode);
+
+        return response()->json([
+            'ok'       => $resp->successful(),
+            'status'   => $resp->status(),
+            'event_id' => $eventId,
+        ], 200);
+    }
+
+
+
+
 
 
 
@@ -286,62 +401,6 @@ class TrackController extends Controller
     /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
     private ?object $settingsCache = null;
     
-
-
-    /**
-     * AddToCart — подія додавання товару в кошик.
-     *
-     * 🔹 Використовується для відслідковування натиску кнопки «Додати в кошик».
-     * 🔹 Meta рекомендує надсилати масив contents[] у форматі:
-     *     [{ "id": "SKU123", "quantity": 2, "item_price": 799.00 }]
-     * 🔹 Якщо contents[] немає — використовуємо "фолбек" з id/sku/price/quantity.
-     * 🔹 Значення value = або передане явно, або обчислене як ціна * кількість.
-     * 🔹 Валюта береться з запиту або з налаштувань (default = UAH).
-     */
-    public function atc(Request $request)
-    {
-        return $this->handleEvent('AddToCart', $request, function () use ($request) {
-    
-            // --- 1) Новий формат: contents[] = [{id, quantity, item_price}]
-            $contents = $this->contentsFromRequest($request);
-    
-            if (!empty($contents)) {
-                // Якщо є value у запиті — беремо його, інакше рахуємо самі
-                $value = $request->filled('value')
-                    ? $this->num($request->input('value'))
-                    : $this->calcValue($contents);
-    
-                return [
-                    'content_type' => 'product',
-                    'content_ids'  => array_map(fn($c) => (string)$c['id'], $contents), // масив ID
-                    'contents'     => $contents,                                       // товари з qty і цінами
-                    'value'        => $value,                                          // сума
-                    'currency'     => strtoupper(trim((string)$request->input('currency', $this->currency()))), // валюта
-                ];
-            }
-    
-            // --- 2) Фолбек: окремі поля (id/sku + price + quantity)
-            $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
-            $qty      = (int)$request->input('quantity', 1);
-            $price    = $this->num($request->input('price', $request->input('item_price', 0)));
-            $currency = strtoupper(trim((string)$request->input('currency', $this->currency())));
-            $value    = $this->num($qty * $price);
-    
-            return [
-                'content_type' => 'product',
-                'content_ids'  => $pid ? [$pid] : [], // масив із одним ID (або пустий)
-                'contents'     => $pid ? [[           // contents з одним елементом
-                    'id'         => $pid,
-                    'quantity'   => $qty,
-                    'item_price' => $price,
-                ]] : [],
-                'value'        => $value,
-                'currency'     => $currency,
-            ];
-        }, flag: 'send_add_to_cart');
-    }
-    
-
     /**
      * InitiateCheckout — початок оформлення замовлення.
      *
