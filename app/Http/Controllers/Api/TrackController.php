@@ -135,79 +135,7 @@ class TrackController extends Controller
         $fbclid = is_string($fbclid) ? trim($fbclid) : null;
         return ($fbclid !== '') ? $fbclid : null;
     }
-    
-    
-    
-    
-    
-    
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
-    private ?object $settingsCache = null;
-
-    /* ===================== PUBLIC ENDPOINTS ===================== */
     /**
      * ViewContent — подія перегляду товару/контенту.
      *
@@ -218,58 +146,145 @@ class TrackController extends Controller
      * 🔹 Значення value = сума (ціна * кількість).
      * 🔹 Валюта береться з запиту або з налаштувань (default = UAH).
      */
-    public function vc(Request $request)
-    {
-        return $this->handleEvent('ViewContent', $request, function () use ($request) {
     
-            // --- 1) Новий формат: contents[] = [{id, quantity, item_price}]
-            $contents = $this->contentsFromRequest($request);
+     public function vc(\Illuminate\Http\Request $req)
+     {
+         // 1) Налаштування
+         $t = \DB::table('tracking_settings')->first();
+         if (!$t) {
+             return response()->json(['ok' => false, 'skip' => 'no_settings'], 200);
+         }
+     
+         if ((int)($t->capi_enabled ?? 0) !== 1 || empty($t->pixel_id) || empty($t->capi_token)) {
+             return response()->json(['ok' => false, 'skip' => 'capi_disabled_or_missing_creds'], 200);
+         }
+     
+         // Вимкнути з адмін-зон (плюс підстраховка по URL)
+         if ((int)($t->exclude_admin ?? 1) === 1) {
+             $path = (string) parse_url($req->fullUrl(), PHP_URL_PATH);
+             if ($req->is('admin*') || str_contains($path, '/admin')) {
+                 return response()->json(['ok' => false, 'skip' => 'admin_excluded'], 200);
+             }
+         }
+     
+         // Дозвіл саме на VC
+         if (!(bool)($t->send_view_content ?? true)) {
+             return response()->json(['ok' => false, 'skip' => 'view_content_disabled'], 200);
+         }
+     
+         // 2) Подія
+         $eventId        = (string)($req->input('event_id') ?: ('vc-'.bin2hex(random_bytes(4)).'-'.time()));
+         $eventSourceUrl = $this->eventSourceUrl($req) ?? url()->current();
+         $userData       = $this->collectUserData($req, $eventSourceUrl); // IP/UA + fbc/fbp (з валідацією fbclid у collectUserData)
+     
+         // 3) Дані товару: або product{...}, або contents[]
+         $p        = (array)($req->input('product') ?? []);
+         $sku      = isset($p['sku']) ? (string)$p['sku'] : null;
+         $id       = isset($p['id'])  ? (string)$p['id']  : null;
+         $cid      = $sku ?: $id; // content_id (краще SKU)
+         if (!$cid) {
+             return response()->json(['ok' => false, 'skip' => 'missing_content_id'], 200);
+         }
+     
+         $name     = isset($p['name']) ? (string)$p['name'] : null;
+         $cat      = isset($p['category']) ? (string)$p['category'] : null;
+         $currency = isset($p['currency']) && $p['currency'] ? strtoupper((string)$p['currency']) : strtoupper($t->default_currency ?? 'UAH');
+     
+         // Якщо прийшов масив contents[] — нормалізуємо і перерахуємо value
+         $contentsIn = $req->input('contents');
+         $contents   = [];
+         $totalValue = null;
+     
+         if (is_array($contentsIn) && !empty($contentsIn)) {
+             $sum = 0.0;
+             foreach ($contentsIn as $row) {
+                 $row = (array)$row;
+                 $iid = (string)($row['id'] ?? $cid);
+                 $qty = max(1, (int)($row['quantity'] ?? 1));
+                 $ip  = (float)($row['item_price'] ?? 0);
+                 if ($ip < 0) $ip = 0.0;
+     
+                 $contents[] = [
+                     'id'         => $iid,
+                     'quantity'   => $qty,
+                     'item_price' => $ip,
+                 ];
+                 $sum += $ip * $qty;
+             }
+             $totalValue = round($sum, 2);
+         } else {
+             // Фолбек: 1 товар із ціною, якщо вона є
+             $value = array_key_exists('price', $p) && $p['price'] !== null ? (float)$p['price'] : null;
+             if ($value !== null && $value < 0) $value = 0.0;
+     
+             if ($value !== null) {
+                 $contents   = [[ 'id' => $cid, 'quantity' => 1, 'item_price' => $value ]];
+                 $totalValue = round($value, 2);
+             }
+         }
+     
+         // 4) custom_data для VC
+         $custom = [
+             'content_type' => 'product',
+             'content_ids'  => [$cid],
+         ];
+         if (!empty($contents))             $custom['contents']         = $contents;
+         if ($name)                         $custom['content_name']     = $name;
+         if ($cat)                          $custom['content_category'] = $cat;
+         if ($totalValue !== null) {
+             $custom['value']    = $totalValue;
+             $custom['currency'] = $currency;
+         }
+     
+         // 5) Збирання і відправка
+         $event = [
+             'event_name'       => 'ViewContent',
+             'event_time'       => time(),
+             'action_source'    => 'website',
+             'event_source_url' => $eventSourceUrl,
+             'event_id'         => $eventId,
+             'user_data'        => $userData,
+             'custom_data'      => $custom,
+         ];
+     
+         $meta = new \App\Services\MetaCapi($t->pixel_id, $t->capi_token, $t->capi_api_version ?: 'v20.0');
+         $resp = $meta->send([$event], $t->capi_test_code ?: null);
+     
+         return response()->json([
+             'ok'       => $resp->successful(),
+             'status'   => $resp->status(),
+             'event_id' => $eventId,
+         ], 200);
+     }
+     
     
-            if (!empty($contents)) {
-                $value = $this->calcValue($contents);
-    
-                return [
-                    'content_type' => 'product',
-                    'content_ids'  => array_map(fn($c) => (string)$c['id'], $contents), // масив ID
-                    'contents'     => $contents,                                       // деталі товарів
-                    'value'        => $value,                                          // сума
-                    'currency'     => strtoupper(trim((string)$request->input('currency', $this->currency()))), // валюта
-                    'content_name' => $request->input('content_name') ?? $request->input('name'), // назва (опц.)
-                ];
-            }
-    
-            // --- 2) Фолбек: окремі поля (id/sku + price + quantity)
-            $pid      = (string)($request->input('id') ?? $request->input('sku') ?? '');
-            $price    = $this->num(
-                $request->input('price', $request->input('item_price', $request->input('value', 0)))
-            );
-            $qty      = (int)$request->input('quantity', 1);
-            $currency = strtoupper(trim((string)$request->input('currency', $this->currency())));
-    
-            $data = [
-                'content_type' => 'product',
-                'content_ids'  => $pid ? [$pid] : [],                // ID товару
-                'value'        => $this->num($price * max(1, $qty)), // вартість = ціна * кількість
-                'currency'     => $currency,
-            ];
-    
-            // додаємо contents[], якщо є ID
-            if ($pid) {
-                $data['contents'] = [[
-                    'id'         => $pid,
-                    'quantity'   => $qty,
-                    'item_price' => $price,
-                ]];
-            }
-    
-            // додаємо назву, якщо передана (content_name або name)
-            if ($request->filled('content_name') || $request->filled('name')) {
-                $data['content_name'] = (string) ($request->input('content_name') ?? $request->input('name'));
-            }
-    
-            return $data;
-        }, flag: 'send_view_content');
-    }
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /** Кеш налаштувань у межах одного HTTP-запиту (мінус зайві звернення до БД) */
+    private ?object $settingsCache = null;
     
 
 

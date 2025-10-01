@@ -48,7 +48,7 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    // SEO-friendly show
+    
     public function show($locale, $categorySlug, $productSlug)
     {
         App::setLocale($locale);
