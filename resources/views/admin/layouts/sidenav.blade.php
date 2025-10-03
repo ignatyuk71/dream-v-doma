@@ -15,7 +15,7 @@
   $isBannersGrp   = $isBannersInsta || $isBannersMain || $isSpecial;
 
   $isReviews   = request()->routeIs('admin.reviews.*');
-  $isSettings  = request()->routeIs('admin.settings.*');
+  $isSettings  = request()->routeIs('admin.settings_pixel.*'); 
   $isMail      = request()->routeIs('admin.mail.*');
   $isChat      = request()->routeIs('admin.chat.*');
   $isUsers     = request()->routeIs('admin.users.*');
@@ -81,38 +81,36 @@
       </ul>
     </li>
 
-<!-- Замовлення -->
-<li class="menu-item {{ $isOrders ? 'active open' : '' }}">
-  <a href="javascript:void(0);" class="menu-link menu-toggle">
-    <i class="menu-icon icon-base ti tabler-file-dollar"></i>
-    <div data-i18n="Orders">Замовлення</div>
-  </a>
-
-  @php
-    $routeOrder    = request()->route('order'); // може бути ID або модель
-    $currentOrderId = is_object($routeOrder) ? ($routeOrder->id ?? null) : (is_numeric($routeOrder) ? $routeOrder : null);
-  @endphp
-
-  <ul class="menu-sub">
-    <li class="menu-item {{ request()->routeIs('admin.orders.index') ? 'active' : '' }}">
-      <a href="{{ route('admin.orders.index') }}" class="menu-link">
-        <div data-i18n="Order List">Список</div>
+    <!-- Замовлення -->
+    <li class="menu-item {{ $isOrders ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon icon-base ti tabler-file-dollar"></i>
+        <div data-i18n="Orders">Замовлення</div>
       </a>
-    </li>
-    <li class="menu-item {{ request()->routeIs('admin.orders.show') ? 'active' : '' }}">
-      <a href="{{ $currentOrderId ? route('admin.orders.show', $currentOrderId) : route('admin.orders.index') }}" class="menu-link">
-        <div data-i18n="Order Details">Деталі</div>
-      </a>
-    </li>
-  </ul>
-</li>
 
+      @php
+        $routeOrder    = request()->route('order'); // може бути ID або модель
+        $currentOrderId = is_object($routeOrder) ? ($routeOrder->id ?? null) : (is_numeric($routeOrder) ? $routeOrder : null);
+      @endphp
 
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('admin.orders.index') ? 'active' : '' }}">
+          <a href="{{ route('admin.orders.index') }}" class="menu-link">
+            <div data-i18n="Order List">Список</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('admin.orders.show') ? 'active' : '' }}">
+          <a href="{{ $currentOrderId ? route('admin.orders.show', $currentOrderId) : route('admin.orders.index') }}" class="menu-link">
+            <div data-i18n="Order Details">Деталі</div>
+          </a>
+        </li>
+      </ul>
+    </li>
 
     <!-- Банери -->
     <li class="menu-item {{ $isBannersGrp ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
-      <i class="bi bi-image me-2"></i> 
+        <i class="bi bi-image me-2"></i>
         <div data-i18n="Banners">Банери</div>
       </a>
       <ul class="menu-sub">
@@ -142,15 +140,22 @@
       </a>
     </li>
 
-    <li class="menu-item {{ $isSettings ? 'active' : '' }}">
-      <a href="" class="menu-link">
+    <!-- Налаштування -->
+    <li class="menu-item {{ $isSettings ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon icon-base ti tabler-settings"></i>
         <div data-i18n="Settings">Налаштування</div>
       </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('admin.settings_pixel.index') ? 'active' : '' }}">
+          <a href="{{ route('admin.settings_pixel.index') }}" class="menu-link">
+            <div data-i18n="Tracking: Meta Pixel & CAPI">Meta Pixel &amp; CAPI</div>
+          </a>
+        </li>
+      </ul>
     </li>
 
-
-        <!-- Клієнти -->
+    <!-- Клієнти -->
     <li class="menu-item {{ $isCustomers ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon icon-base ti tabler-users"></i>
@@ -176,8 +181,6 @@
         <div data-i18n="Mail">Пошта</div>
       </a>
     </li>
-
-
 
     <li class="menu-item {{ $isUsers ? 'active' : '' }}">
       <a href="" class="menu-link">

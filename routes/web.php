@@ -134,6 +134,24 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/admin/orders/{order}/status', [\App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('admin.orders.status.update');
     // ✅ Видалення замовлення
     Route::delete('/admin/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'destroy'])->name('admin.orders.destroy');
+
+
+    // =========================
+    // Налаштування (Settings)
+    // =========================
+
+    // Огляд Pixel & CAPI
+    Route::get('/admin/settings', [\App\Http\Controllers\Admin\TrackingSettingsController::class, 'index'])
+        ->name('admin.settings_pixel.index');
+
+    // Форма редагування Pixel & CAPI
+    Route::get('/admin/settings/tracking', [\App\Http\Controllers\Admin\TrackingSettingsController::class, 'edit'])
+        ->name('admin.settings_pixel.tracking');
+
+    // Сабміт форми
+    Route::match(['put','patch'], '/admin/settings/tracking', [\App\Http\Controllers\Admin\TrackingSettingsController::class, 'update'])
+        ->name('admin.settings_pixel.tracking.update');
+
 });
 
 // 🔑 Аутентифікація
