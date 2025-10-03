@@ -36,39 +36,45 @@
       s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
     }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
 
-    // ── Один і той самий eventID для дедуплікації
+    // ⏱ Затримка перед відправкою
     (function(){
-      var eventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
+      var DELAY_MS = 1000; // можна підкрутити (300–1000мс)
+      setTimeout(function() {
+        // Один і той самий eventID для дедуплікації
+        var eventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
 
-      // Browser PV
-      fbq('init', '{{ $pixelId }}');
-      fbq('track', 'PageView', {}, { eventID: eventId });
-
-      // Server PV через бекенд
-      @if ($sendCapiPv)
-      var payload = JSON.stringify({ event_id: eventId, page_url: location.href });
-
-      // 1) Перший пріоритет — sendBeacon (працює навіть при unload)
-      var sent = false;
-      if (navigator.sendBeacon) {
+        // Browser PV
         try {
-          var blob = new Blob([payload], { type: 'application/json' });
-          sent = navigator.sendBeacon('/api/track/pv', blob);
-        } catch(e) { /* ignore */ }
-      }
+          fbq('init', '{{ $pixelId }}');
+          fbq('track', 'PageView', {}, { eventID: eventId });
+        } catch (e) { /* ignore */ }
 
-      // 2) Fallback — fetch keepalive
-      if (!sent) {
-        try {
-          fetch('/api/track/pv', {
-            method: 'POST',
-            keepalive: true,
-            headers: { 'Content-Type': 'application/json' },
-            body: payload
-          }).catch(function(){});
-        } catch(e) { /* ignore */ }
-      }
-      @endif
+        // Server PV через бекенд
+        @if ($sendCapiPv)
+        var payload = JSON.stringify({ event_id: eventId, page_url: location.href });
+
+        // 1) Перший пріоритет — sendBeacon (працює навіть при unload)
+        var sent = false;
+        if (navigator.sendBeacon) {
+          try {
+            var blob = new Blob([payload], { type: 'application/json' });
+            sent = navigator.sendBeacon('/api/track/pv', blob);
+          } catch(e) { /* ignore */ }
+        }
+
+        // 2) Fallback — fetch keepalive
+        if (!sent) {
+          try {
+            fetch('/api/track/pv', {
+              method: 'POST',
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json' },
+              body: payload
+            }).catch(function(){});
+          } catch(e) { /* ignore */ }
+        }
+        @endif
+      }, DELAY_MS);
     })();
 
     // ── (Опційно) SPA: якщо використовуєш Vue Router, викликай це на зміні маршруту
