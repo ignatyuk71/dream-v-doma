@@ -38,7 +38,7 @@
 
     // ⏱ Затримка перед відправкою
     (function(){
-      var DELAY_MS = 1000; // можна підкрутити (300–1000мс)
+      var DELAY_MS = 1500; // можна підкрутити (300–1000мс)
       setTimeout(function() {
         // Один і той самий eventID для дедуплікації
         var eventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
