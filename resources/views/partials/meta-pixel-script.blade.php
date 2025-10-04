@@ -47,7 +47,7 @@
     // ⏱ CAPI — ЗАТРИМКА 1s ЛИШЕ ДЛЯ СЕРВЕРНОГО ВІДПРАВЛЕННЯ
     @if ($sendCapiPv)
     (function(){
-      var DELAY_MS = 1500; // ← затримка тільки для CAPI
+      var DELAY_MS = 0; // ← затримка тільки для CAPI
       setTimeout(function(){
         var payload = JSON.stringify({
           event_id: mpPvEventId,     // той самий для дедуплікації
