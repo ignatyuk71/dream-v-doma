@@ -70,7 +70,7 @@
       } catch(e){}
       return;
     }
-    if (i > 25) return; // ~5с
+    if (i > 15) return; // 
     setTimeout(function(){ waitFbq(i+1); }, 80);
   })(0);
 

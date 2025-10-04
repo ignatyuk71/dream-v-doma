@@ -56,11 +56,10 @@
     /**
      * Викликати відразу після успішного створення замовлення/оплати:
      * window.mpTrackPurchase({
-     *   order_number: 'A12345',                  // бажано
-     *   items: [{ variant_sku, price, quantity, name? }, ...], // обов'язково
-     *   value?: number, currency?: 'UAH', shipping?: number, tax?: number,
-     *   // опціонально (для кращого матчінгу; бек хешує):
-     *   email?: string, phone?: string, first_name?: string, last_name?: string, external_id?: string
+     *   order_number: 'A12345',
+     *   items: [{ variant_sku, price, quantity, name? }, ...],
+     *   value?, currency?, shipping?, tax?,
+     *   email?, phone?, first_name?, last_name?, external_id?
      * })
      */
     window.mpTrackPurchase = function(opts){
@@ -89,7 +88,7 @@
           localStorage.setItem(guardKey, '1');
         }
 
-        // 1) Browser Pixel — чекаємо fbq до ~2с (25 * 80мс)
+        // 1) Pixel — БЕЗ затримки; чекаємо fbq максимум ~1s (12 * 80мс)
         (function wait(i){
           i = i || 0;
           if (typeof window.fbq === 'function') {
@@ -107,50 +106,53 @@
             }catch(_){}
             return;
           }
-          if (i >= 25) return;
+          if (i >= 15) return; // ~1s
           setTimeout(function(){ wait(i+1); }, 80);
         })();
 
-        // 2) Server (CAPI) — той самий event_id; бек сам додасть event_time/url/test_code
+        // 2) CAPI — ЗАТРИМКА 1.0–1.5s (той самий event_id)
         @if ($capiOn)
         (function(){
-          var body = JSON.stringify({
-            event_id: eventId,
-            page_url: location.href,
-            // custom_data core:
-            currency: currency,
-            contents: contents,
-            content_ids: ids,    // зручно бекові для швидкого доступу
-            num_items: qtySum,
-            value: value,
-            shipping: shipping,
-            tax: tax,
-            order_number: orderNo,
-            // PII (опціонально — бек їх хешує):
-            email: opts.email || null,
-            phone: opts.phone || null,
-            first_name: opts.first_name || null,
-            last_name: opts.last_name || null
-          });
+          var DELAY_MS = 1000; // 1000–1500 мс
+          setTimeout(function(){
+            var body = JSON.stringify({
+              event_id: eventId,
+              page_url: location.href,
+              // custom_data core:
+              currency: currency,
+              contents: contents,
+              content_ids: ids,
+              num_items: qtySum,
+              value: value,
+              shipping: shipping,
+              tax: tax,
+              order_number: orderNo,
+              // PII (опційно — бек їх хешує):
+              email: opts.email || null,
+              phone: opts.phone || null,
+              first_name: opts.first_name || null,
+              last_name: opts.last_name || null
+            });
 
-          var sent = false;
-          if (navigator.sendBeacon) {
-            try { sent = navigator.sendBeacon('/api/track/purchase', new Blob([body], {type:'application/json'})); } catch(_){}
-          }
-          if (!sent) {
-            try {
-              fetch('/api/track/purchase', {
-                method: 'POST',
-                keepalive: true,
-                headers: { 'Content-Type': 'application/json' },
-                body
-              }).catch(function(){});
-            } catch(_){}
-          }
+            var sent = false;
+            if (navigator.sendBeacon) {
+              try { sent = navigator.sendBeacon('/api/track/purchase', new Blob([body], {type:'application/json'})); } catch(_){}
+            }
+            if (!sent) {
+              try {
+                fetch('/api/track/purchase', {
+                  method: 'POST',
+                  keepalive: true,
+                  headers: { 'Content-Type': 'application/json' },
+                  body
+                }).catch(function(){});
+              } catch(_){}
+            }
+          }, DELAY_MS);
         })();
         @endif
 
-        // (опціонально) GA4 purchase — за потреби можемо додати окремий хук
+        // (опційно) GA4 purchase — тут можна додати ваш хук
 
       } catch(_){}
     };

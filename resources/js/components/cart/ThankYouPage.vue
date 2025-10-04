@@ -147,7 +147,7 @@ const { t } = useI18n()
 const cart = useCartStore()
 const order = ref(null)
 
-// ---- helpers
+/* ---------- helpers (форматування чисел/валюти, підрахунок рядка, шлях до зображення) ---------- */
 const toNumber = (v) => {
   if (typeof v === 'number') return v
   const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.]/g, ''))
@@ -166,7 +166,21 @@ const withStorage = (path) => {
   return '/storage/' + p
 }
 
+/* ---------- splitFullName: ділить повне ім'я на first/last (останнє слово — прізвище) ---------- */
+function splitFullName(str = '') {
+  const parts = String(str).trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { first_name: null, last_name: null }
+  if (parts.length === 1)  return { first_name: parts[0], last_name: null }
+  return { first_name: parts.slice(0, -1).join(' '), last_name: parts.at(-1) }
+}
+
 /* ================= Meta Pixel / GA4: Purchase ================= */
+/**
+ * trackPurchaseOnce: формує payload з замовлення та:
+ *  - пушить подію purchase у GA4 (dataLayer)
+ *  - викликає window.mpTrackPurchase(payload) для Meta Pixel/CAPI (з ретраями)
+ * Подія відправляється один раз на сторінку.
+ */
 const trackPurchaseOnce = (() => {
   let sent = false
   return (ord) => {
@@ -175,10 +189,12 @@ const trackPurchaseOnce = (() => {
       if (!ord || !Array.isArray(ord.items)) return
       if (window._mpFlags && window._mpFlags.purchase === false) return
 
+      // Фільтруємо товари без sku
       const rawItems = ord.items || []
       const withSku  = rawItems.filter(i => String(i?.variant_sku ?? '').trim().length > 0)
       if (!withSku.length) return
 
+      // Нормалізовані items для евентів
       const items = withSku.map(i => ({
         variant_sku: String(i.variant_sku),
         price: toNumber(i.price),
@@ -186,6 +202,24 @@ const trackPurchaseOnce = (() => {
         name: i.product_name || i.name || ''
       }))
 
+      // Витягуємо PII: якщо last_name порожній, а first_name містить пробіли — ділимо
+      const customer = ord.customer || {}
+      let first_name = (customer.first_name ?? '').trim() || null
+      let last_name  = (customer.last_name  ?? '').trim()  || null
+
+      if (!last_name && first_name && /\s/.test(first_name)) {
+        const split = splitFullName(first_name)
+        first_name = split.first_name
+        last_name  = split.last_name
+      }
+      // Fallback: якщо окремих полів нема — ділимо повне name
+      if ((!first_name || !last_name) && customer.name) {
+        const fromFull = splitFullName(customer.name)
+        first_name = first_name || fromFull.first_name
+        last_name  = last_name  || fromFull.last_name
+      }
+
+      // Підсумки/валюта
       const computedItemsSum = items.reduce((s, x) => s + x.price * x.quantity, 0)
       const payload = {
         order_number: ord.order_number || ord.id || undefined,
@@ -197,15 +231,15 @@ const trackPurchaseOnce = (() => {
         shipping: toNumber(ord.shipping_cost ?? ord.delivery_cost ?? 0),
         tax: toNumber(ord.tax ?? 0),
 
-        // PII — піде лише у CAPI (Pixel не отримає PII)
-        email: ord.customer?.email || null,
-        phone: ord.customer?.phone || null,
-        first_name: ord.customer?.first_name || ord.customer?.name || null,
-        last_name: ord.customer?.last_name || null,
-        external_id: ord.customer?.id ? String(ord.customer.id) : null
+        // PII → тільки у CAPI (Pixel не отримує PII)
+        email: customer.email || null,
+        phone: customer.phone || null,
+        first_name,
+        last_name,
+        external_id: customer.id ? String(customer.id) : null
       }
 
-      /* --- GA4 purchase: шлемо завжди у dataLayer --- */
+      /* --- GA4 purchase (dataLayer) --- */
       try {
         const gaItems = items.map(i => ({
           item_id:   i.variant_sku,
@@ -220,7 +254,7 @@ const trackPurchaseOnce = (() => {
           window.dataLayer.push({
             event: 'purchase',
             ecommerce: {
-              transaction_id: tx,             // обов'язково для GA4
+              transaction_id: tx,
               value: payload.value,
               currency: payload.currency,
               shipping: payload.shipping,
@@ -232,22 +266,23 @@ const trackPurchaseOnce = (() => {
         }
       } catch (_) {}
 
-      // --- Meta Pixel/CAPI: через глобалку з Blade (лише для FB-трафіку усередині)
+      /* --- Meta Pixel / CAPI: викликаємо глобалку з ретраями --- */
       const tryCall = (attempt = 0) => {
         const exists = typeof window.mpTrackPurchase === 'function'
         if (exists) {
           window.mpTrackPurchase(payload)
           sent = true
         } else if (attempt < 120) {
-          setTimeout(() => tryCall(attempt + 1), 80)
+          setTimeout(() => tryCall(attempt + 1), 80) // ~9.6s загалом
         }
       }
       tryCall()
-    } catch (_) { /* no-op */ }
+    } catch (_) {}
   }
 })()
 /* ================================================================= */
 
+/* ---------- onMounted: тягнемо замовлення та запускаємо purchase ---------- */
 onMounted(async () => {
   const orderNumber = localStorage.getItem('lastOrderNumber')
   if (!orderNumber) {
@@ -259,19 +294,22 @@ onMounted(async () => {
     const { data } = await axios.get(`/api/orders/${orderNumber}`)
     order.value = data
 
-    // 🔔 Відправляємо Purchase ОДИН РАЗ
+    // Відправляємо Purchase один раз
     trackPurchaseOnce(order.value)
 
-    // Очистка після успішного отримання (не чіпаємо guard ключ для purchase)
+    // Очистка локальних даних після успішного отримання
     localStorage.removeItem('lastOrderNumber')
     localStorage.removeItem('cart')
     localStorage.removeItem('thankyou')
     sessionStorage.removeItem('checkout')
     sessionStorage.clear()
     cart.clearCart?.()
-  } catch (_) {
-    // тихо ігноруємо
-  }
+  } catch (_) {}
 })
 </script>
+
+
+
+
+
 

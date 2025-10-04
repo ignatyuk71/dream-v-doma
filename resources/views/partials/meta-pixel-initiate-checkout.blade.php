@@ -26,7 +26,7 @@
     var n = parseFloat(s);
     return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
   }
-  // анти дабл-клік для IC (часто викликають двічі)
+  // анти дабл-клік для IC
   var _lastIC = 0;
   function notTooSoon(ms){
     var now = Date.now();
@@ -84,11 +84,11 @@
       var numItems = contents.reduce(function(s,c){ return s + (Number(c.quantity)||0) }, 0);
       var icId     = genEventId('ic');
 
-      // 1) Browser Pixel (чекаємо fbq до ~2с)
+      // 1) Pixel — БЕЗ затримки (чекаємо fbq максимум ~1s)
       (function sendPixel(i){
         i = i || 0;
         if (typeof window.fbq !== 'function') {
-          if (i >= 25) return; // ~2s
+          if (i >= 15) return; // ~1s (12 * 80ms)
           return setTimeout(function(){ sendPixel(i+1); }, 80);
         }
         try {
@@ -106,37 +106,40 @@
         } catch(_) {}
       })();
 
-      // 2) Server (CAPI) — той самий event_id; бек сам підставить event_time/url
+      // 2) CAPI — ЗАТРИМКА 1.0–1.5s (той самий event_id)
       @if ($capiOn)
       (function(){
-        var body = JSON.stringify({
-          event_id: icId,
-          page_url: location.href,   // ← консистентно з pv/vc/atc
-          currency: currency,
-          contents: contents,
-          num_items: numItems,
-          name: firstName || null,
-          value: value
-        });
+        var DELAY_MS = 1000; // 1000–1500 мс
+        setTimeout(function(){
+          var body = JSON.stringify({
+            event_id: icId,
+            page_url: location.href,   // консистентно з pv/vc/atc
+            currency: currency,
+            contents: contents,
+            num_items: numItems,
+            name: firstName || null,
+            value: value
+          });
 
-        var sent = false;
-        if (navigator.sendBeacon) {
-          try { sent = navigator.sendBeacon('/api/track/ic', new Blob([body], {type:'application/json'})); } catch(_){}
-        }
-        if (!sent) {
-          try {
-            fetch('/api/track/ic', {
-              method: 'POST',
-              keepalive: true,
-              headers: { 'Content-Type': 'application/json' },
-              body
-            }).catch(function(){});
-          } catch(_){}
-        }
+          var sent = false;
+          if (navigator.sendBeacon) {
+            try { sent = navigator.sendBeacon('/api/track/ic', new Blob([body], {type:'application/json'})); } catch(_){}
+          }
+          if (!sent) {
+            try {
+              fetch('/api/track/ic', {
+                method: 'POST',
+                keepalive: true,
+                headers: { 'Content-Type': 'application/json' },
+                body
+              }).catch(function(){});
+            } catch(_){}
+          }
+        }, DELAY_MS);
       })();
       @endif
 
-      // (опціонально) GA4 begin_checkout:
+      // (опц.) GA4 begin_checkout:
       // if (typeof window.ga4BeginCheckout === 'function') {
       //   window.ga4BeginCheckout({ contents, currency, value, num_items: numItems, name: firstName || '' });
       // }
