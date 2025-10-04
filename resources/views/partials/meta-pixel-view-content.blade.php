@@ -77,7 +77,7 @@
   // 14) CAPI — ЗАТРИМКА 1s ТІЛЬКИ ДЛЯ СЕРВЕРНОГО ВІДПРАВЛЕННЯ
   @if ($sendCapiVc)
   (function(){
-    var DELAY_MS = 1000; // ← тільки CAPI
+    var DELAY_MS = 1500; // ← тільки CAPI
     setTimeout(function(){
       var body = JSON.stringify({
         event_id: vcEventId,      // той самий для дедуплікації
