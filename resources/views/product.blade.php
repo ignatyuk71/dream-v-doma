@@ -110,6 +110,9 @@
     {{-- Meta Pixel: ViewContent --}}
     @include('partials.meta-pixel-view-content', ['product' => $product])
 
+    {{-- TikTok: ViewContent --}}
+    @include('partials.tiktok-view-content', ['product' => $product, 'currency' => $currency ?? 'UAH'])
+
     {{-- GA4: view_item --}}
     @include('partials.ga4-view-item', ['product' => $product, 'currency' => $currency ?? 'UAH'])
 
