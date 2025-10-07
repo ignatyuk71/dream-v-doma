@@ -23,6 +23,9 @@
     <div id="checkout-page" data-locale="{{ app()->getLocale() }}"></div>
   </div>
 
+  {{-- InitiateCheckout (TikTok Pixel) --}}
+  @include('partials.tiktok-pixel-initiate-checkout')
+
   {{-- InitiateCheckout (Meta Pixel) --}}
   @include('partials.meta-pixel-initiate-checkout')
 

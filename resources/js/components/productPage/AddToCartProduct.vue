@@ -72,7 +72,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 /**
  * Кнопка “Додати в кошик” з перевіркою наявності.
@@ -132,6 +131,50 @@ const getSelectedSize = () => {
 const getMatchedVariant = (size) => {
   if (!size) return null
   return variants.value.find(v => (v?.size ?? '') === size) || null
+}
+
+/* ──────────────────────────────────────────────────────────
+   TikTok AddToCart helper (BROWSER PIXEL only)
+   - НІЯКОГО CAPI тут
+   - очікує, що глобально вже ініціалізовано ttq
+   - антидубль по швидких повторних кліках
+   ────────────────────────────────────────────────────────── */
+let _ttLastAtcTs = 0
+function trackTikTokATC({ variantSku, price, qty, name, category, currency, size, color }) {
+  if (!(window.ttq && typeof window.ttq.track === 'function')) {
+    console.warn('[TikTok] ttq не знайдений — AddToCart не надіслано')
+    return
+  }
+  const now = Date.now()
+  if (now - _ttLastAtcTs < 300) return // антиспам 300мс
+  _ttLastAtcTs = now
+
+  const itemPrice = Number(price)
+  const quantity  = Number(qty)
+
+  const payload = {
+    content_id: variantSku,               // головний ID — variant_sku
+    content_type: 'product',
+    content_name: name,
+    content_category: category || undefined,
+    value: itemPrice * quantity,          // загальна сума
+    currency,
+    contents: [{
+      content_id: variantSku,
+      content_type: 'product',
+      content_name: name,
+      quantity,
+      price: itemPrice
+    }]
+  }
+
+  // Додамо item_variant (size/color) для зручнішої аналітики
+  const itemVariant = [size, color].filter(Boolean).join(' ').trim()
+  if (itemVariant) payload.contents[0].item_variant = itemVariant
+
+  ttq.track('AddToCart', payload)
+  // залиш сконсолений payload на час дебагу
+  console.log('[TikTok] AddToCart payload', payload)
 }
 
 /* ===================== НАЯВНІСТЬ ===================== */
@@ -253,6 +296,16 @@ const addToCart = async () => {
     window.showGlobalToast?.('⚠️ Відсутній артикул варіанта (variant_sku). Подія трекінгу пропущена.', 'warning')
     return
   }
+
+  // (необов.) Витягуємо локалізовану "головну" категорію з продукту для TikTok payload
+  let catName = null
+  try {
+    const cat = props.product?.categories?.[0]
+    const tr  = cat?.translations?.find(ti => ti.locale === locale.value) || cat?.translations?.[0]
+    catName   = tr?.name ?? null
+  } catch (_) { /* noop */ }
+
+  // 1) ТВОЯ існуюча аналітика — залишаємо без змін
   if (typeof window.mpTrackATC === 'function') {
     window.mpTrackATC({
       variant_sku: vSku,
@@ -262,5 +315,17 @@ const addToCart = async () => {
       currency
     })
   }
+
+  // 2) TikTok Pixel — AddToCart (browser only, БЕЗ CAPI)
+  trackTikTokATC({
+    variantSku: vSku,
+    price: finalPrice,
+    qty: quantity.value,
+    name: productName,
+    category: catName,
+    currency,
+    size: matchedVariant.size,
+    color: matchedVariant.color ?? ''
+  })
 }
 </script>
