@@ -41,18 +41,6 @@
   if (window._vcFired['{{ $contentId }}']) return;
   window._vcFired['{{ $contentId }}'] = true;
 
-    // ❗ Блокатор для TikTok-трафіку на основі "липкої" мітки
-    function getCookie(name){
-    var s=document.cookie||''; if(!s) return '';
-    var a=s.split('; ');
-    for (var i=0;i<a.length;i++){
-      var p=a[i].split('=');
-      if (p[0]===name) return decodeURIComponent(p.slice(1).join('='));
-    }
-    return '';
-  }
-
-  if (getCookie('_mp_src') === 'tiktok') return;
 
   // 9) Спільний eventID для fbq і CAPI
   var vcEventId = 'vc-' + Math.random().toString(16).slice(2) + '-' + Date.now();
