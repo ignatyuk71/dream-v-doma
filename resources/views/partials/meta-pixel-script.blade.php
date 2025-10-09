@@ -39,11 +39,7 @@
       return !!_mp_qp('fbclid') || !!_mp_rc('_fbc');
     }
 
-    // Дозволяємо Meta лише якщо є ознаки FB-трафіку
-    var _MP_ALLOW_META = _mp_isMetaTraffic();
 
-    // Якщо не Meta — нічого не відправляємо
-    if (!_MP_ALLOW_META) return;
 
     // Генеруємо eventId один раз (для дедуплікації)
     var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
@@ -63,6 +59,13 @@
       fbq('init', '{{ $pixelId }}');
       fbq('track', 'PageView', {}, { eventID: mpPvEventId });
     } catch (e) { /* ignore */ }
+
+    // Дозволяємо Meta лише якщо є ознаки FB-трафіку
+    var _MP_ALLOW_META = _mp_isMetaTraffic();
+
+    // Якщо не Meta — нічого не відправляємо
+    if (!_MP_ALLOW_META) return;
+
 
     // ⏱ CAPI — невелика затримка, щоб встигли створитись cookies
     @if ($sendCapiPv)
