@@ -36,7 +36,10 @@
 
   // ✅ Дозволяємо Meta для всього, КРІМ TikTok
   var _MP_ALLOW_META = !_mp_isTikTokTraffic();
-  if (!_MP_ALLOW_META)  setCookie('_mp_src','tiktok', 60*60); return;
+  if (!_MP_ALLOW_META) {
+    setCookie('_mp_src', 'tiktok', 60*60); // 60 хв
+    return; // ← виходимо, Meta не запускаємо
+  }
 
   // ▶ Bootstrap FB Pixel
   !function(f,b,e,v,n,t,s){

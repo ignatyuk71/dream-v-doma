@@ -10,8 +10,6 @@
   <meta name="author" content="Dream V Doma">
 
 
-  {{-- Липка мітка джерела: ПЕРЕД GTM/Meta/TikTok --}}
-  @include('partials.tracking-source-sticky')
 
   {{-- Google Analytics gtm --}}
   @include('partials.gtm-head')
