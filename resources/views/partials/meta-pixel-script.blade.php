@@ -43,6 +43,7 @@
     return q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1;
   }
 
+
   // Якщо вже позначений як TikTok → продовжимо життя мітки (ковзне вікно 60 хв)
   if (hasCookieKV('_mp_src=tiktok')) setCookie('_mp_src','tiktok', 60*60);
 
@@ -53,6 +54,8 @@
     setCookie('_mp_src', 'tiktok', 60*60);
     return;
   }
+  var _isTT = hasCookieKV('_mp_src=tiktok') || _mp_isTikTokTrafficNow();
+  if (_isTT) { setCookie('_mp_src','tiktok',60*60); return; }
   // ▶ Bootstrap FB Pixel
   !function(f,b,e,v,n,t,s){
     if(f.fbq) return;
