@@ -32,7 +32,7 @@
   var ua  = (navigator.userAgent|| '').toLowerCase();
 
   // 1) перший хіт із TikTok → ставимо мітку
-  if (q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1 || getCookie('_ttp')) {
+  if (q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1) {
     setCookie('_mp_src', 'tiktok', 60*60); // 60 хв
   }
 
