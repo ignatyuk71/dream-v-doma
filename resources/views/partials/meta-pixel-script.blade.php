@@ -25,6 +25,34 @@
   if (!window._mpPvFired) {
     window._mpPvFired = true;
 
+
+
+    // читання cookie за ім'ям
+    function _mp_rc(name) {
+      var m = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\/+^])/g, '\\$1') + '=([^;]*)');
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    function _mp_isTikTokTraffic() {
+      var q   = (location.search || '').toLowerCase();
+      var ref = (document.referrer || '').toLowerCase();
+      var ua  = (navigator.userAgent || '').toLowerCase();
+
+      // сигнали TikTok:
+      var hasParam   = q.indexOf('ttclid=') !== -1;           // ?ttclid=
+      var hasRef     = ref.indexOf('tiktok') !== -1;          // реферер tiktok
+      var hasUA      = ua.indexOf('tiktok') !== -1;           // in-app браузер
+      var hasCookie  = !!_mp_rc('_ttp') || !!_mp_rc('__ttmid') || !!_mp_rc('tt_sessionId'); // кукі TikTok
+
+      return hasParam || hasRef || hasUA || hasCookie;
+    }
+
+    // ✅ Дозволяємо Meta для всього, КРІМ TikTok
+    var _MP_ALLOW_META = !_mp_isTikTokTraffic();
+    if (!_MP_ALLOW_META) return;
+
+
+
     // ▶ Bootstrap FB Pixel
     !function(f,b,e,v,n,t,s){
       if(f.fbq) return;
