@@ -25,6 +25,29 @@
   if (!window._mpPvFired) {
     window._mpPvFired = true;
 
+    // ---------- Helpers: query / cookie ----------
+    function _mp_qp(name) {
+      var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    }
+    function _mp_rc(name) {
+      var m = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g, '\\$1') + '=([^;]*)');
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+    function _mp_isMetaTraffic() {
+      // Facebook/Instagram клік → fbclid у URL або _fbc у cookie
+      return !!_mp_qp('fbclid') || !!_mp_rc('_fbc');
+    }
+
+    // Дозволяємо Meta лише якщо є ознаки FB-трафіку
+    var _MP_ALLOW_META = _mp_isMetaTraffic();
+
+    // Якщо не Meta — нічого не відправляємо
+    if (!_MP_ALLOW_META) return;
+
+    // Генеруємо eventId один раз (для дедуплікації)
+    var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
+
     // ▶ Bootstrap FB Pixel
     !function(f,b,e,v,n,t,s){
       if(f.fbq) return;
@@ -35,31 +58,27 @@
       s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
     }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
 
-    // ✅ Генеруємо eventId один раз
-    var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
-
-    // ✅ БРАУЗЕРНИЙ PageView — БЕЗ ЗАТРИМКИ (щоб Pixel встиг поставити _fbc/_fbp)
+    // ✅ Браузерний PageView
     try {
       fbq('init', '{{ $pixelId }}');
       fbq('track', 'PageView', {}, { eventID: mpPvEventId });
     } catch (e) { /* ignore */ }
 
-    // ⏱ CAPI — ЗАТРИМКА 1s ЛИШЕ ДЛЯ СЕРВЕРНОГО ВІДПРАВЛЕННЯ
+    // ⏱ CAPI — невелика затримка, щоб встигли створитись cookies
     @if ($sendCapiPv)
     (function(){
-      var DELAY_MS = 1500; // ← затримка тільки для CAPI
+      var DELAY_MS = 1500;
       setTimeout(function(){
         var payload = JSON.stringify({
-          event_id: mpPvEventId,     // той самий для дедуплікації
+          event_id: mpPvEventId,
           page_url: location.href
         });
 
         var sent = false;
         if (navigator.sendBeacon) {
           try {
-            var blob = new Blob([payload], { type: 'application/json' });
-            sent = navigator.sendBeacon('/api/track/pv', blob);
-          } catch(e) { /* ignore */ }
+            sent = navigator.sendBeacon('/api/track/pv', new Blob([payload], { type: 'application/json' }));
+          } catch(e) {}
         }
         if (!sent) {
           try {
@@ -69,14 +88,15 @@
               headers: { 'Content-Type': 'application/json' },
               body: payload
             }).catch(function(){});
-          } catch(e) { /* ignore */ }
+          } catch(e) {}
         }
       }, DELAY_MS);
     })();
     @endif
 
-    // (Опційно) SPA-роутінг: викликати на зміну маршруту
+    // (Опційно) SPA-роутінг:
     // window._mpSendPvOnRoute = function(){
+    //   if (!_mp_isMetaTraffic()) return;
     //   var id = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
     //   try { fbq('track','PageView',{}, { eventID: id }); } catch(e){}
     //   @if ($sendCapiPv)
