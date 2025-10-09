@@ -34,11 +34,16 @@
   if (window._vcFired[@json($contentId)]) return;
 
   // ❗ Блокатор для TikTok-трафіку на основі "липкої" мітки
-  function _mp_getCookie(n){
-    var m=document.cookie.match('(?:^|; )'+n.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g,'\\$1')+'=([^;]*)');
-    return m?decodeURIComponent(m[1]):'';
+  function getCookie(name){
+    var s=document.cookie||''; if(!s) return '';
+    var a=s.split('; ');
+    for (var i=0;i<a.length;i++){
+      var p=a[i].split('=');
+      if (p[0]===name) return decodeURIComponent(p.slice(1).join('='));
+    }
+    return '';
   }
-  if (_mp_getCookie('_mp_src') === 'tiktok') return;
+  if (getCookie('_mp_src') === 'tiktok') return;
 
   window._vcFired[@json($contentId)] = true;
 
