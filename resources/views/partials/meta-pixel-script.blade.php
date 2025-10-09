@@ -25,19 +25,6 @@
   if (!window._mpPvFired) {
     window._mpPvFired = true;
 
-
-    function _mp_isTikTokTraffic() {
-      var q   = (location.search || '').toLowerCase();
-      var ref = (document.referrer || '').toLowerCase();
-      var ua  = (navigator.userAgent || '').toLowerCase();
-      // ловимо 3 сигнали: ?ttclid, реферер tiktok, або in-app user agent TikTok
-      return q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1;
-    }
-
-    // ✅ Дозволяємо Meta для ВСЬОГО, крім TikTok
-    var _MP_ALLOW_META = !_mp_isTikTokTraffic();
-    if (!_MP_ALLOW_META) return;
-
     
 
     // ▶ Bootstrap FB Pixel
