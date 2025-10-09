@@ -26,6 +26,15 @@
   if (window._mpPvFired) return;
   window._mpPvFired = true;
 
+ // ── helpers ─────────────────────────────────────────────
+ function setCookie(name, value, seconds){
+    // host-only + SameSite=Lax (стабільно крос-сторінково в межах сайту)
+    var attrs = '; Max-Age=' + (seconds|0) + '; Path=/; SameSite=Lax';
+    if (location.protocol === 'https:') attrs += '; Secure';
+    document.cookie = name + '=' + encodeURIComponent(value) + attrs;
+  }
+  function hasCookieKV(kv){ return (document.cookie || '').indexOf(kv) !== -1; }
+
   // ——— Визначення TikTok-трафіку (URL, referrer, user-agent)
   function _mp_isTikTokTraffic() {
     var q   = (location.search   || '').toLowerCase();
@@ -34,13 +43,16 @@
     return q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1;
   }
 
+  // Якщо вже позначений як TikTok → продовжимо життя мітки (ковзне вікно 60 хв)
+  if (hasCookieKV('_mp_src=tiktok')) setCookie('_mp_src','tiktok', 60*60);
+
   // ✅ Дозволяємо Meta для всього, КРІМ TikTok
   var _MP_ALLOW_META = !_mp_isTikTokTraffic();
   if (!_MP_ALLOW_META) {
-    setCookie('_mp_src', 'tiktok', 60*60); // 60 хв
-    return; // ← виходимо, Meta не запускаємо
+    // перший хіт з TikTok → ставимо мітку і нічого не шлемо в Meta
+    setCookie('_mp_src', 'tiktok', 60*60);
+    return;
   }
-
   // ▶ Bootstrap FB Pixel
   !function(f,b,e,v,n,t,s){
     if(f.fbq) return;
