@@ -9,8 +9,7 @@
   <meta name="keywords" content="тапки, домашній одяг, вʼєтнамки, шльопанці, покупки онлайн, магазин">
   <meta name="author" content="Dream V Doma">
 
-  {{-- Липка мітка джерела: ПЕРЕД GTM/Meta/TikTok --}}
-  @include('partials.tracking-source-sticky')
+ 
 
   {{-- Google Analytics gtm --}}
   @include('partials.gtm-head')
@@ -22,6 +21,9 @@
   <!-- TikTok Pixel Code Start -->
   @include('partials.tiktok-pixel')
   <!-- TikTok Pixel Code End -->
+
+  {{-- Липка мітка джерела: ПЕРЕД GTM/Meta/TikTok --}}
+  @include('partials.tracking-source-sticky')
 
 
   <!-- PWA / icons -->
