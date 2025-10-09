@@ -33,14 +33,8 @@
   window._vcFired = window._vcFired || {};
   if (window._vcFired[@json($contentId)]) return;
 
-  // --- фільтр: усе, крім TikTok
-  function _mp_isTikTokTraffic() {
-    var q   = (location.search   || '').toLowerCase();
-    var ref = (document.referrer || '').toLowerCase();
-    var ua  = (navigator.userAgent|| '').toLowerCase();
-    return q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1;
-  }
-  if (_mp_isTikTokTraffic()) return;
+  // --- фільтр: усе, крім TikTok (точна перевірка куки)
+  if (/(?:^|; )_mp_src=tiktok(?:;|$)/.test(document.cookie || '')) return;
 
   window._vcFired[@json($contentId)] = true;
 
@@ -106,4 +100,3 @@
 })();
 </script>
 @endif
-ы
