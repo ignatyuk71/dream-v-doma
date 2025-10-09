@@ -33,7 +33,9 @@
       // ловимо 3 сигнали: ?ttclid, реферер tiktok, або in-app user agent TikTok
       return q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1;
     }
-
+    console.debug('TT UA:', navigator.userAgent);
+  console.debug('TT ref:', document.referrer);
+  console.debug('_MP_ALLOW_META =', _MP_ALLOW_META);
     // ✅ Дозволяємо Meta для ВСЬОГО, крім TikTok
     var _MP_ALLOW_META = !_mp_isTikTokTraffic();
     if (!_MP_ALLOW_META) return;
