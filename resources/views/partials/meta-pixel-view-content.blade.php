@@ -51,6 +51,7 @@
     }
     return '';
   }
+
   if (getCookie('_mp_src') === 'tiktok') return;
 
   // 9) Спільний eventID для fbq і CAPI
