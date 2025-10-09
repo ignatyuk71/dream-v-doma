@@ -33,8 +33,12 @@
   window._vcFired = window._vcFired || {};
   if (window._vcFired[@json($contentId)]) return;
 
-  // --- фільтр: усе, крім TikTok (точна перевірка куки)
-  if (/(?:^|; )_mp_src=tiktok(?:;|$)/.test(document.cookie || '')) return;
+  // ❗ Блокатор для TikTok-трафіку на основі "липкої" мітки
+  function _mp_getCookie(n){
+    var m=document.cookie.match('(?:^|; )'+n.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g,'\\$1')+'=([^;]*)');
+    return m?decodeURIComponent(m[1]):'';
+  }
+  if (_mp_getCookie('_mp_src') === 'tiktok') return;
 
   window._vcFired[@json($contentId)] = true;
 

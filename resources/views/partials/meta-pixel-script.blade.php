@@ -26,36 +26,13 @@
   if (window._mpPvFired) return;
   window._mpPvFired = true;
 
- // ── helpers ─────────────────────────────────────────────
- function setCookie(name, value, seconds){
-    // host-only + SameSite=Lax (стабільно крос-сторінково в межах сайту)
-    var attrs = '; Max-Age=' + (seconds|0) + '; Path=/; SameSite=Lax';
-    if (location.protocol === 'https:') attrs += '; Secure';
-    document.cookie = name + '=' + encodeURIComponent(value) + attrs;
+  // ❗ Блокатор для TikTok-трафіку на основі "липкої" мітки
+  function _mp_getCookie(n){
+    var m=document.cookie.match('(?:^|; )'+n.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g,'\\$1')+'=([^;]*)');
+    return m?decodeURIComponent(m[1]):'';
   }
-  function hasCookieKV(kv){ return (document.cookie || '').indexOf(kv) !== -1; }
+  if (_mp_getCookie('_mp_src') === 'tiktok') return;
 
-  // ——— Визначення TikTok-трафіку (URL, referrer, user-agent)
-  function _mp_isTikTokTraffic() {
-    var q   = (location.search   || '').toLowerCase();
-    var ref = (document.referrer || '').toLowerCase();
-    var ua  = (navigator.userAgent|| '').toLowerCase();
-    return q.indexOf('ttclid=') !== -1 || ref.indexOf('tiktok') !== -1 || ua.indexOf('tiktok') !== -1;
-  }
-
-
-  // Якщо вже позначений як TikTok → продовжимо життя мітки (ковзне вікно 60 хв)
-  if (hasCookieKV('_mp_src=tiktok')) setCookie('_mp_src','tiktok', 60*60);
-
-  // ✅ Дозволяємо Meta для всього, КРІМ TikTok
-  var _MP_ALLOW_META = !_mp_isTikTokTraffic();
-  if (!_MP_ALLOW_META) {
-    // перший хіт з TikTok → ставимо мітку і нічого не шлемо в Meta
-    setCookie('_mp_src', 'tiktok', 60*60);
-    return;
-  }
-  var _isTT = hasCookieKV('_mp_src=tiktok') || _mp_isTikTokTrafficNow();
-  if (_isTT) { setCookie('_mp_src','tiktok',60*60); return; }
   // ▶ Bootstrap FB Pixel
   !function(f,b,e,v,n,t,s){
     if(f.fbq) return;
@@ -104,7 +81,7 @@
 
   // (опційно) SPA-хук:
   // window._mpSendPvOnRoute = function(){
-  //   if (_mp_isTikTokTraffic()) return;
+  //   if (_mp_getCookie('_mp_src') === 'tiktok') return;
   //   var id = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
   //   try { fbq('track','PageView',{}, { eventID: id }); } catch(e){}
   //   @if ($sendCapiPv)
