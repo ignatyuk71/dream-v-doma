@@ -25,57 +25,85 @@
   if (!window._mpPvFired) {
     window._mpPvFired = true;
 
-    // -----------------------
-    // 1) Визначення джерела Meta Ads
-    // -----------------------
+    // ---------- helpers ----------
     function getParam(name) {
-      try {
-        return new URLSearchParams(location.search).get(name);
-      } catch (e) { return null; }
+      try { return new URLSearchParams(location.search).get(name); }
+      catch(e){ return null; }
     }
-
     function getRefHost() {
-      try {
-        return new URL(document.referrer).hostname || '';
-      } catch (e) { return ''; }
+      try { return new URL(document.referrer).hostname || ''; }
+      catch(e){ return ''; }
+    }
+    function setCookie(name, value, maxAgeSec) {
+      var parts = [name + '=' + encodeURIComponent(value), 'Path=/','SameSite=Lax'];
+      if (maxAgeSec) parts.push('Max-Age=' + maxAgeSec);
+      // якщо сайт на HTTPS — додай Secure:
+      if (location.protocol === 'https:') parts.push('Secure');
+      document.cookie = parts.join('; ');
+    }
+    function getCookie(name) {
+      return document.cookie.split('; ').reduce(function(acc, pair){
+        var idx = pair.indexOf('=');
+        var k = pair.slice(0, idx), v = pair.slice(idx+1);
+        if (k === name) acc = decodeURIComponent(v);
+        return acc;
+      }, null);
+    }
+    function delCookie(name) {
+      document.cookie = name + '=; Path=/; Max-Age=0; SameSite=Lax' + (location.protocol==='https:'?'; Secure':'');
     }
 
+    // ---------- detect sources ----------
     var fbclid = getParam('fbclid');
+    var ttclid = getParam('ttclid'); // TikTok
     var refHost = getRefHost();
 
-    // Рекламні редіректи Meta + fbclid у URL
-    var isMetaAdRef = /^(l|lm)\.(facebook|instagram)\.com$/i.test(refHost);
-    var isMetaAdClick = !!fbclid || isMetaAdRef;
+    var isMetaRef = /^(l|lm)\.(facebook|instagram)\.com$/i.test(refHost);
+    var isMetaAdClickNow = !!fbclid || isMetaRef;
 
-    // OPTIONAL: якщо хочеш ще й органіку Meta (коментар знизу)
-    // var isMetaAny = isMetaAdClick || /(facebook|instagram)\.com$/i.test(refHost);
+    // прапор: чи вже знаємо, що це сесія з Meta Ads
+    var META_FLAG_NAME = '_meta_ad';
+    var META_FLAG_TTL = 7 * 24 * 60 * 60; // 7 днів (зміни за потреби)
+    var hasMetaFlag = getCookie(META_FLAG_NAME) === '1';
 
-    // -----------------------
-    // 2) Bootstrap FB Pixel (тільки якщо потенційно будемо щось слати)
-    //    (можеш завжди грузити fbq, але подію шлемо лише при isMetaAdClick)
-    // -----------------------
-    !function(f,b,e,v,n,t,s){
-      if(f.fbq) return;
-      n=f.fbq=function(){ n.callMethod ? n.callMethod.apply(n,arguments) : n.queue.push(arguments) };
-      if(!f._fbq) f._fbq=n;
-      n.push=n; n.loaded=!0; n.version='2.0'; n.queue=[];
-      t=b.createElement(e); t.async=!0; t.src=v;
-      s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
-    }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    // якщо зараз явний Meta Ad click — фіксуємо прапор
+    if (isMetaAdClickNow) {
+      setCookie(META_FLAG_NAME, '1', META_FLAG_TTL);
+      hasMetaFlag = true;
+    }
 
-    // Один eventId для браузерного та CAPI (дедуп)
-    var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
+    // якщо зараз явний TikTok click — приберемо Meta прапор (щоб не змішувати)
+    if (ttclid) {
+      delCookie(META_FLAG_NAME);
+      hasMetaFlag = false;
+    }
 
-    // -----------------------
-    // 3) Вогонь: шлемо ТІЛЬКИ для реклами Meta
-    // -----------------------
-    if (isMetaAdClick) {
+    // дозволяємо відправку подій, якщо:
+    //  - поточний перехід Meta Ads АБО
+    //  - раніше у сесії вже позначено як Meta Ads
+    var allowMetaPV = isMetaAdClickNow || hasMetaFlag;
+
+    // ---------- bootstrap pixel (лише якщо потенційно шлемо) ----------
+    if (allowMetaPV) {
+      !function(f,b,e,v,n,t,s){
+        if(f.fbq) return;
+        n=f.fbq=function(){ n.callMethod ? n.callMethod.apply(n,arguments) : n.queue.push(arguments) };
+        if(!f._fbq) f._fbq=n;
+        n.push=n; n.loaded=!0; n.version='2.0'; n.queue=[];
+        t=b.createElement(e); t.async=!0; t.src=v;
+        s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
+      }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+
+      // один eventId для дедупу
+      var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
+
+      // Браузерний PageView — без затримки
       try {
         fbq('init', '{{ $pixelId }}');
         fbq('track', 'PageView', {}, { eventID: mpPvEventId });
-      } catch (e) { /* ignore */ }
+      } catch(e){}
 
-      // CAPI з невеликою затримкою (щоб _fbp/_fbc встигли встановитись)
+      // CAPI з малою затримкою (щоб _fbp/_fbc встигли з'явитись)
       @if ($sendCapiPv)
       (function(){
         var DELAY_MS = 1500;
@@ -84,14 +112,16 @@
             event_id: mpPvEventId,
             page_url: location.href,
             referrer: document.referrer || null,
-            fbclid: fbclid || null
+            fbclid: fbclid || null,
+            ttclid: ttclid || null,
+            meta_session: hasMetaFlag ? 1 : 0
           });
 
           var sent = false;
           if (navigator.sendBeacon) {
             try {
               sent = navigator.sendBeacon('/api/track/pv', new Blob([payload], { type: 'application/json' }));
-            } catch(e) { /* ignore */ }
+            } catch(e){}
           }
           if (!sent) {
             try {
@@ -101,29 +131,24 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: payload
               }).catch(function(){});
-            } catch(e) { /* ignore */ }
+            } catch(e){}
           }
         }, DELAY_MS);
       })();
       @endif
     } else {
-      // Не Meta-реклама — нічого не шлемо
-      // console.debug('PageView заблоковано: не Meta Ads', { refHost, fbclid });
+      // console.debug('PageView заблоковано (не Meta Ads):', { refHost, fbclid, ttclid, hasMetaFlag });
     }
 
-    // -----------------------
-    // 4) (Опційно) якщо у тебе SPA — додай аналогічну перевірку на роут-чендж
-    // -----------------------
+    // ---------- (опційно) для SPA викликайте на зміну маршруту ----------
     // window._mpSendPvOnRoute = function(){
-    //   var fbclidNow = getParam('fbclid');
-    //   var refNow = getRefHost();
-    //   var isMetaAdNow = !!fbclidNow || /^(l|lm)\.(facebook|instagram)\.com$/i.test(refNow);
-    //   if (!isMetaAdNow) return;
+    //   var hasFlag = getCookie(META_FLAG_NAME) === '1';
+    //   if (!hasFlag) return;
     //
     //   var id = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
     //   try { fbq('track', 'PageView', {}, { eventID: id }); } catch(e){}
     //   @if ($sendCapiPv)
-    //   var payload = JSON.stringify({ event_id: id, page_url: location.href, referrer: document.referrer || null, fbclid: fbclidNow || null });
+    //   var payload = JSON.stringify({ event_id: id, page_url: location.href, referrer: document.referrer || null, meta_session: 1 });
     //   if (navigator.sendBeacon) {
     //     try { navigator.sendBeacon('/api/track/pv', new Blob([payload], {type:'application/json'})); return; } catch(e){}
     //   }
@@ -134,4 +159,5 @@
 </script>
 @endif
 @endonce
+
 
