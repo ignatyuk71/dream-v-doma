@@ -15,10 +15,6 @@
 <script>
   (function(){
     // ---------- helpers ----------
-    function getParam(name) {
-      try { return new URLSearchParams(location.search).get(name); }
-      catch(e){ return null; }
-    }
     function getRefHost() {
       try { return new URL(document.referrer).hostname || ''; }
       catch(e){ return ''; }
@@ -33,44 +29,26 @@
       var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+./?[\\\]^{|}-]/g,'\\$&') + '=([^;]*)'));
       return m ? decodeURIComponent(m[1]) : null;
     }
-    function delCookie(name) {
-      document.cookie = name + '=; Path=/; Max-Age=0; SameSite=Lax' + (location.protocol==='https:'?'; Secure':'');
-    }
 
-    // ---------- detect TikTok Ads ----------
-    var ttclid  = getParam('ttclid');
-    var refHost = getRefHost();
-    // типові тік-ток редіректи/домен Ads
-    var isTiktokRef = /^(t|m|ads|business)\.tiktok\.com$/i.test(refHost);
-    var isTiktokAdClickNow = !!ttclid || isTiktokRef;
+    // ---------- detect ONLY by referrer ----------
+    var refHost      = getRefHost();
+    var isTiktokRef  = /^(t|m|ads|business)\.tiktok\.com$/i.test(refHost);
 
-    // наш прапор сесії TikTok Ads
+    // прапор через cookie (без sessionStorage)
     var TT_FLAG_NAME = '_tt_ad';
-    var TT_FLAG_TTL  = 7 * 24 * 60 * 60; // 7 днів
+    var TT_FLAG_TTL  = 7 * 24 * 60 * 60; // 7 днів (можеш змінити)
     var hasTtFlagCookie = getCookie(TT_FLAG_NAME) === '1';
-    var hasTtFlagSS = false;
-    try { hasTtFlagSS = sessionStorage.getItem(TT_FLAG_NAME) === '1'; } catch(e){}
 
-    // якщо поточний клік з реклами — фіксуємо прапор
-    if (isTiktokAdClickNow) {
+    // якщо зараз чіткий TikTok referrer — ставимо cookie
+    if (isTiktokRef) {
       setCookie(TT_FLAG_NAME, '1', TT_FLAG_TTL);
-      try { sessionStorage.setItem(TT_FLAG_NAME, '1'); } catch(e){}
       hasTtFlagCookie = true;
-      hasTtFlagSS = true;
     }
 
-    // (опційно) якщо хочеш глушити TikTok при явному fbclid — розкоментуй:
-    // if (new URLSearchParams(location.search).get('fbclid')) {
-    //   delCookie(TT_FLAG_NAME);
-    //   try { sessionStorage.removeItem(TT_FLAG_NAME); } catch(e){}
-    //   hasTtFlagCookie = false;
-    //   hasTtFlagSS = false;
-    // }
+    // ✅ дозволяємо TikTok Pixel ТІЛЬКИ за referrer або вже виставленою cookie
+    var allowTiktokPV = isTiktokRef || hasTtFlagCookie;
 
-    // дозволяємо TikTok Pixel тільки якщо зараз TikTok Ads або раніше зафіксовано
-    var allowTiktokPV = isTiktokAdClickNow || hasTtFlagCookie || hasTtFlagSS;
-
-    // глобальний прапор + безпечний хелпер (для інших подій)
+    // глобальний прапор + безпечний хелпер для інших подій
     window._mpTtEnabled = !!allowTiktokPV;
     window.sendTtEvent = function(name, params){
       if (!window._mpTtEnabled) return;
@@ -78,7 +56,7 @@
     };
 
     if (!allowTiktokPV) {
-      // Заборонено: не вантажимо TikTok SDK і не шлемо події
+      // Не TikTok Ads — не вантажимо SDK і не шлемо події
       return;
     }
 
@@ -97,7 +75,7 @@
         e=d.getElementsByTagName("script")[0]; e.parentNode.insertBefore(n,e);
       };
       ttq.load(@json($pixelId));
-      ttq.page(); // PageView піде лише коли allowTiktokPV === true
+      ttq.page(); // піде лише якщо allowTiktokPV === true
     }(window, document, 'ttq');
   })();
 </script>
