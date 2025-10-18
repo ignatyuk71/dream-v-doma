@@ -25,7 +25,7 @@
   if (!window._mpPvFired) {
     window._mpPvFired = true;
 
-    // ---------------- helpers ----------------
+    // ---------- helpers ----------
     function getParam(name) {
       try { return new URLSearchParams(location.search).get(name); }
       catch(e){ return null; }
@@ -35,65 +35,56 @@
       catch(e){ return ''; }
     }
     function setCookie(name, value, maxAgeSec) {
-      var parts = [name + '=' + encodeURIComponent(value), 'Path=/', 'SameSite=Lax'];
+      var parts = [name + '=' + encodeURIComponent(value), 'Path=/','SameSite=Lax'];
       if (maxAgeSec) parts.push('Max-Age=' + maxAgeSec);
+      // якщо сайт на HTTPS — додай Secure:
       if (location.protocol === 'https:') parts.push('Secure');
       document.cookie = parts.join('; ');
     }
     function getCookie(name) {
-      // швидкий парсер куки
-      var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+./?[\\\]^{|}-]/g,'\\$&') + '=([^;]*)'));
-      return m ? decodeURIComponent(m[1]) : null;
+      return document.cookie.split('; ').reduce(function(acc, pair){
+        var idx = pair.indexOf('=');
+        var k = pair.slice(0, idx), v = pair.slice(idx+1);
+        if (k === name) acc = decodeURIComponent(v);
+        return acc;
+      }, null);
     }
     function delCookie(name) {
       document.cookie = name + '=; Path=/; Max-Age=0; SameSite=Lax' + (location.protocol==='https:'?'; Secure':'');
     }
 
-    // ------------- detect sources -------------
-    var fbclid  = getParam('fbclid');
-    var ttclid  = getParam('ttclid'); // TikTok
+    // ---------- detect sources ----------
+    var fbclid = getParam('fbclid');
+    var ttclid = getParam('ttclid'); // TikTok
     var refHost = getRefHost();
 
-    // Рекламні редіректи Meta
-    var isMetaRef        = /^(l|lm)\.(facebook|instagram)\.com$/i.test(refHost);
+    var isMetaRef = /^(l|lm)\.(facebook|instagram)\.com$/i.test(refHost);
     var isMetaAdClickNow = !!fbclid || isMetaRef;
 
-    // _fbc ставиться Meta лише коли був fbclid (формат: fb.1.<ts>.<fbclid>)
-    var fbcCookie = getCookie('_fbc');
-    var hasFbc    = !!(fbcCookie && /^fb\.1\.\d+\.[A-Za-z0-9_-]+$/.test(fbcCookie));
-
-    // Прапор сесії Meta
+    // прапор: чи вже знаємо, що це сесія з Meta Ads
     var META_FLAG_NAME = '_meta_ad';
-    var META_FLAG_TTL  = 7 * 24 * 60 * 60; // 7 днів (за потреби зміни на 86400)
-    var hasMetaFlagCookie = getCookie(META_FLAG_NAME) === '1';
-    var hasMetaFlagSS = false;
-    try { hasMetaFlagSS = sessionStorage.getItem(META_FLAG_NAME) === '1'; } catch(e){}
+    var META_FLAG_TTL = 7 * 24 * 60 * 60; // 7 днів (зміни за потреби)
+    var hasMetaFlag = getCookie(META_FLAG_NAME) === '1';
 
-    // Якщо зараз явний Meta-клік або вже є _fbc — фіксуємо прапор
-    if (isMetaAdClickNow || hasFbc) {
+    // якщо зараз явний Meta Ad click — фіксуємо прапор
+    if (isMetaAdClickNow) {
       setCookie(META_FLAG_NAME, '1', META_FLAG_TTL);
-      try { sessionStorage.setItem(META_FLAG_NAME, '1'); } catch(e){}
-      hasMetaFlagCookie = true;
-      hasMetaFlagSS = true;
+      hasMetaFlag = true;
     }
 
-    // Якщо явний TikTok click — глушимо Meta-прапор (щоб не змішувати атрибуцію)
+    // якщо зараз явний TikTok click — приберемо Meta прапор (щоб не змішувати)
     if (ttclid) {
       delCookie(META_FLAG_NAME);
-      try { sessionStorage.removeItem(META_FLAG_NAME); } catch(e){}
-      hasMetaFlagCookie = false;
-      hasMetaFlagSS = false;
+      hasMetaFlag = false;
     }
 
-    // Дозволяємо PageView, якщо:
-    //  - поточний Meta Ad click (fbclid або l./lm. реферер),
-    //  - або присутня _fbc (ознака попереднього fbclid),
-    //  - або вже стоїть наш прапор (cookie / sessionStorage).
-    var allowMetaPV = isMetaAdClickNow || hasFbc || hasMetaFlagCookie || hasMetaFlagSS;
+    // дозволяємо відправку подій, якщо:
+    //  - поточний перехід Meta Ads АБО
+    //  - раніше у сесії вже позначено як Meta Ads
+    var allowMetaPV = isMetaAdClickNow || hasMetaFlag;
 
-    // ----------- fire Pixel/CAPI only for Meta Ads -----------
+    // ---------- bootstrap pixel (лише якщо потенційно шлемо) ----------
     if (allowMetaPV) {
-      // Bootstrap FB Pixel
       !function(f,b,e,v,n,t,s){
         if(f.fbq) return;
         n=f.fbq=function(){ n.callMethod ? n.callMethod.apply(n,arguments) : n.queue.push(arguments) };
@@ -103,16 +94,16 @@
         s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
       }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
 
-      // Дедуп для браузер+сервер
+      // один eventId для дедупу
       var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
 
       // Браузерний PageView — без затримки
       try {
         fbq('init', '{{ $pixelId }}');
         fbq('track', 'PageView', {}, { eventID: mpPvEventId });
-      } catch(e){/* ignore */}
+      } catch(e){}
 
-      // CAPI — з легкою затримкою, щоб _fbp/_fbc встигли з’явитися
+      // CAPI з малою затримкою (щоб _fbp/_fbc встигли з'явитись)
       @if ($sendCapiPv)
       (function(){
         var DELAY_MS = 1500;
@@ -123,14 +114,14 @@
             referrer: document.referrer || null,
             fbclid: fbclid || null,
             ttclid: ttclid || null,
-            meta_session: (hasMetaFlagCookie || hasMetaFlagSS) ? 1 : 0
+            meta_session: hasMetaFlag ? 1 : 0
           });
 
           var sent = false;
           if (navigator.sendBeacon) {
             try {
               sent = navigator.sendBeacon('/api/track/pv', new Blob([payload], { type: 'application/json' }));
-            } catch(e){/* ignore */}
+            } catch(e){}
           }
           if (!sent) {
             try {
@@ -140,21 +131,19 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: payload
               }).catch(function(){});
-            } catch(e){/* ignore */}
+            } catch(e){}
           }
         }, DELAY_MS);
       })();
       @endif
     } else {
-      // console.debug('PageView заблоковано (не Meta Ads):', { refHost, fbclid, ttclid, hasFbc, hasMetaFlagCookie, hasMetaFlagSS });
+      // console.debug('PageView заблоковано (не Meta Ads):', { refHost, fbclid, ttclid, hasMetaFlag });
     }
 
-    // ---------- (опційно) для SPA на зміну маршруту ----------
+    // ---------- (опційно) для SPA викликайте на зміну маршруту ----------
     // window._mpSendPvOnRoute = function(){
-    //   var hasFlag = (getCookie(META_FLAG_NAME) === '1');
-    //   var hasFlagSS = false;
-    //   try { hasFlagSS = sessionStorage.getItem(META_FLAG_NAME) === '1'; } catch(e){}
-    //   if (!(hasFlag || hasFlagSS || getCookie('_fbc'))) return;
+    //   var hasFlag = getCookie(META_FLAG_NAME) === '1';
+    //   if (!hasFlag) return;
     //
     //   var id = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
     //   try { fbq('track', 'PageView', {}, { eventID: id }); } catch(e){}
