@@ -32,6 +32,17 @@
   if (!window._mpPvFired) {
     window._mpPvFired = true;
 
+    // ---- ЛИШЕ ПЕРЕВІРКА fbclid У ПОТОЧНОМУ URL ----
+    // Якщо в URL немає fbclid — це не клік із реклами Meta → зупиняємось.
+    try {
+      var fbclid = new URLSearchParams(location.search).get('fbclid');
+      if (!fbclid) {
+        return; // ❌ не реклама — нічого не вантажимо і не шлемо
+      }
+    } catch (e) {
+      return; // перестраховка: якщо навіть парсинг впав — нічого не робимо
+    }
+
     // ▶ Bootstrap FB Pixel — стандартна ініціалізація fbq та підвантаження SDK
     !function(f,b,e,v,n,t,s){
       if(f.fbq) return;
@@ -42,36 +53,31 @@
       s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
     }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
 
-    // ✅ Генеруємо унікальний eventId для дедуплікації Pixel vs CAPI (той самий id підемо в обидва канали)
+    // один eventID для дедуплікації Pixel vs CAPI
     var mpPvEventId = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
 
-    // ✅ БРАУЗЕРНИЙ PageView — відправляємо одразу (щоб Pixel встиг виставити _fbc/_fbp)
+    // БРАУЗЕРНИЙ PageView — одразу
     try {
-      fbq('init', '{{ $pixelId }}');                  // ініціалізація пікселя
-      fbq('track', 'PageView', {}, { eventID: mpPvEventId }); // PageView з eventID
+      fbq('init', '{{ $pixelId }}');
+      fbq('track', 'PageView', {}, { eventID: mpPvEventId });
     } catch (e) { /* ignore */ }
 
-    // ⏱ CAPI — ЗАТРИМКА лише для серверного відправлення (щоб _fbc/_fbp уже були у браузері)
+    // CAPI — із затримкою (лише якщо увімкнено в налаштуваннях)
     @if ($sendCapiPv)
     (function(){
-      var DELAY_MS = 1500; // ← затримка тільки для CAPI (1.5s)
+      var DELAY_MS = 1500;
       setTimeout(function(){
-        // Мінімальний payload: спільний event_id і поточний URL
         var payload = JSON.stringify({
-          event_id: mpPvEventId,     // той самий для дедуплікації
+          event_id: mpPvEventId,
           page_url: location.href
         });
 
-        // Намагаємося відправити ненав’язливо через sendBeacon (краще при розгортанні сторінки/навігації)
         var sent = false;
         if (navigator.sendBeacon) {
           try {
-            var blob = new Blob([payload], { type: 'application/json' });
-            sent = navigator.sendBeacon('/api/track/pv', blob); // бекенд-ендпоінт для CAPI
+            sent = navigator.sendBeacon('/api/track/pv', new Blob([payload], { type: 'application/json' }));
           } catch(e) { /* ignore */ }
         }
-
-        // Якщо sendBeacon недоступний/не спрацював — фолбек на fetch з keepalive
         if (!sent) {
           try {
             fetch('/api/track/pv', {
@@ -86,9 +92,9 @@
     })();
     @endif
 
-    // (Опційно) Для SPA: викликайте цю функцію на зміну маршруту, щоб слати додаткові PageView
+    // // (Опційно) SPA-хук — якщо треба слати додаткові PV при зміні маршруту:
     // window._mpSendPvOnRoute = function(){
-    //   var id = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now(); // свіжий eventID на кожен "роут"
+    //   var id = 'pv-' + Math.random().toString(16).slice(2) + '-' + Date.now();
     //   try { fbq('track','PageView',{}, { eventID: id }); } catch(e){}
     //   @if ($sendCapiPv)
     //   var payload = JSON.stringify({ event_id: id, page_url: location.href });
