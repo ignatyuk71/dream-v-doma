@@ -27,24 +27,23 @@
     window._mpPvFired = true;
 
     // --- helpers ---
-    function getCookie(name) {
-      var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+./?[\\\]^{|}-]/g,'\\$&') + '=([^;]*)'));
-      return m ? decodeURIComponent(m[1]) : null;
-    }
-    function getUrlParam(p){
-      try { return new URLSearchParams(location.search).get(p); } catch(e){ return null; }
-    }
+// ---- ПРОСТА ПЕРЕВІРКА: fbclid у URL АБО _fbc у cookies ----
+function getCookie(name){
+  var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+./?[\\\]^{|}-]/g,'\\$&') + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
-    // --- перевірка джерела: fbclid АБО вже є _fbc ---
-    var fbclid = getUrlParam('fbclid');
-    var fbc    = getCookie('_fbc');
+var fbclid = null;
+try { fbclid = new URLSearchParams(location.search).get('fbclid'); } catch(e){}
 
-    // (опціональна валідація формату _fbc: fb.1.<ts>.<rand>)
-    var isValidFbc = typeof fbc === 'string' && /^fb\.1\.\d{10,}\..+$/i.test(fbc);
+var fbc = getCookie('_fbc');
 
-    // дозволяємо тільки якщо є поточний fbclid або валідна _fbc з попереднього хіта
-    var allowMetaAd = !!fbclid || isValidFbc;
-    if (!allowMetaAd) return;
+// якщо немає ні fbclid, ні _fbc — не реклама Meta → стоп
+if (!fbclid && !fbc) {
+  return;
+}
+
+// інакше продовжуємо: Bootstrap Pixel + відправка подій
 
     // ▶ Bootstrap FB Pixel (без змін)
     !function(f,b,e,v,n,t,s){
