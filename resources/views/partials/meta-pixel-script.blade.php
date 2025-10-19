@@ -26,22 +26,7 @@
     if (window._mpPvFired) return;
     window._mpPvFired = true;
 
-    // --- helpers ---
-// ---- ПРОСТА ПЕРЕВІРКА: fbclid у URL АБО _fbc у cookies ----
-function getCookie(name){
-  var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+./?[\\\]^{|}-]/g,'\\$&') + '=([^;]*)'));
-  return m ? decodeURIComponent(m[1]) : null;
-}
 
-var fbclid = null;
-try { fbclid = new URLSearchParams(location.search).get('fbclid'); } catch(e){}
-
-var fbc = getCookie('_fbc');
-
-// якщо немає ні fbclid, ні _fbc — не реклама Meta → стоп
-if (!fbclid && !fbc) {
-  return;
-}
 
 // інакше продовжуємо: Bootstrap Pixel + відправка подій
 
