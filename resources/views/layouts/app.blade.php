@@ -22,8 +22,6 @@
   @include('partials.tiktok-pixel')
   <!-- TikTok Pixel Code End -->
 
-  {{-- Липка мітка джерела: ПЕРЕД GTM/Meta/TikTok --}}
-  @include('partials.tracking-source-sticky')
 
 
   <!-- PWA / icons -->
