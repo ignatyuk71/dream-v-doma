@@ -8,11 +8,11 @@
         <div class="position-relative z-1 text-center text-sm-start pt-4 pt-sm-0 ps-xl-4 mt-2 mt-sm-0 order-sm-2">
           <h2 class="h3 mb-2">Домашні тапочки</h2>
           <p class="fs-sm text-light-emphasis mb-sm-4">Теплі й стильні. Встигни замовити!</p>
-          <a class="btn btn-primary" href="#">Лише 370 грн<i class="ci-arrow-up-right fs-base ms-1 me-n1"></i></a>
+          <a class="btn btn-primary" href="https://dream-v-doma.com.ua/uk/domashni-kapci">Лише 375 грн<i class="ci-arrow-up-right fs-base ms-1 me-n1"></i></a>
         </div>
         <div class="position-relative z-1 w-100 align-self-end order-sm-1" style="max-width: 416px">
           <div class="ratio rtl-flip" style="--cz-aspect-ratio: calc(320 / 416 * 100%)">
-            <img src="/assets/img/shop/electronics/banners/baner_tapki-1.png" alt="домашні тапочки">
+            <img src="/assets/img/shop/electronics/banners/baner_tapki_red.png" alt="домашні тапочки">
           </div>
         </div>
       </div>

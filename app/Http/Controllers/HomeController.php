@@ -26,7 +26,6 @@ class HomeController extends Controller
                 'translations'            => fn ($q) => $q->where('locale', $locale),
                 'products.images'         => fn ($q) => $q->where('is_main', 1),
                 'products.translations'   => fn ($q) => $q->where('locale', $locale),
-
                 // Рейтинг / кількість відгуків
                 'products' => fn ($q) =>
                     $q->withCount(['approvedReviews as reviews_count'])

@@ -12,7 +12,7 @@
                 </div>
                 <div class="col-md-6 d-flex justify-content-center justify-content-md-end">
                   <div class="me-3 me-lg-4 me-xxl-5">
-                    <img src="/assets/img/shop/electronics/banners/baner_tapki-4.png" class="d-block rtl-flip" width="335" alt="Banner" />
+                    <img src="/assets/img/shop/electronics/banners/baner_tapki_siri.png" class="d-block rtl-flip" width="335" alt="Banner" />
                   </div>
                 </div>
               </div>
