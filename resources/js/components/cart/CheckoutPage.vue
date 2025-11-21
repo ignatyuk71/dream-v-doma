@@ -96,6 +96,14 @@
 
       <!-- ◀️ Ліва колонка (головний контент) — ПЕРША на мобільному -->
       <div class="col-12 col-lg-7 order-1 order-lg-1 px-1">
+        <div class="order-warning rounded-4 shadow-sm mb-3 p-3 p-md-4">
+          <div class="text-uppercase fw-bold small tracking-wide mb-2">Важлива інформація</div>
+          <p class="mb-0 text-body fw-semibold">
+            У зв’язку з плановими відключеннями електроенергії в Україні обробка замовлень та відправка посилок може
+            затримуватися на 1–2 дні. Дякуємо за розуміння 💛💙
+          </p>
+        </div>
+
         <!-- 1) Замовлення (товари) -->
         <div class="bg-white border rounded-4 p-2 p-md-3 shadow-sm mb-3">
           <div class="d-flex justify-content-between align-items-baseline mb-2">
@@ -309,6 +317,14 @@
 </template>
 
 <style scoped>
+/* Увага про відправку */
+.order-warning {
+  background: linear-gradient(135deg, #fff7e6 0%, #fff1d6 100%);
+  border: 1px solid #f3d6a8;
+  color: #4d3500;
+  line-height: 1.5;
+}
+
 /* sticky тільки на ≥lg */
 @media (min-width: 992px) {
   .sticky-lg { position: sticky; top: 16px; }
