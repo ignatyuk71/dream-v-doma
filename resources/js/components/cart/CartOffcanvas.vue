@@ -72,7 +72,6 @@
                 <button
                   type="button"
                   class="btn btn-icon btn-sm"
-                  data-decrement
                   aria-label="Decrement quantity"
                   @click.prevent.stop="decrement(item.id)"
                 >
@@ -93,7 +92,6 @@
                 <button
                   type="button"
                   class="btn btn-icon btn-sm"
-                  data-increment
                   aria-label="Increment quantity"
                   @click.prevent.stop="increment(item.id)"
                 >
