@@ -159,31 +159,23 @@
               @endisset
             </ul>
 
-            <!-- ===== ДЕСКТОПНЕ МЕНЮ: як було (НЕ чіпав) ===== -->
-            <ul class="navbar-nav position-relative me-xl-n5 d-none d-lg-flex">
+            <!-- ===== ДЕСКТОПНЕ МЕНЮ: прості dropdown ===== -->
+            <ul class="navbar-nav me-xl-n5 d-none d-lg-flex">
               @foreach($menuCategories as $category)
                 <li class="nav-item dropdown pb-lg-2 me-lg-n1 me-xl-0">
                   @if($category['children'] && count($category['children']))
                     <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" data-bs-trigger="hover" aria-expanded="false">
                       {{ $category['name'] }}
                     </a>
-                    <div class="dropdown-menu p-4" style="--cz-dropdown-spacer: .75rem">
-                      <div class="d-flex flex-column flex-lg-row gap-4">
-                        <div style="min-width: 190px">
-                          <div class="mb-2">{{ $category['name'] }}</div>
-                          <ul class="nav flex-column gap-2 mt-0">
-                            @foreach($category['children'] as $child)
-                              <li class="d-flex w-100 pt-1">
-                                <a class="nav-link animate-underline animate-target d-inline fw-normal text-truncate p-0"
-                                   href="{{ url($locale.'/'.$child['slug']) }}">
-                                  {{ $child['name'] }}
-                                </a>
-                              </li>
-                            @endforeach
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
+                    <ul class="dropdown-menu">
+                      @foreach($category['children'] as $child)
+                        <li>
+                          <a class="dropdown-item" href="{{ url($locale.'/'.$child['slug']) }}">
+                            {{ $child['name'] }}
+                          </a>
+                        </li>
+                      @endforeach
+                    </ul>
                   @else
                     <a class="nav-link" href="{{ url($locale.'/'.$category['slug']) }}">
                       {{ $category['name'] }}
