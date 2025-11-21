@@ -101,11 +101,13 @@
 
               <button
                 type="button"
-                class="btn-close fs-sm"
+                class="btn btn-icon btn-sm text-secondary border-0 remove-btn"
                 @click.prevent.stop="removeItem(item.id)"
                 :title="$t('remove_from_cart')"
                 aria-label="Remove"
-              ></button>
+              >
+                <i class="ci-trash fs-5"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -174,5 +176,16 @@ const withStorage = (path) => {
   .offcanvas.offcanvas-end[style] {
     width: 100% !important;
   }
+}
+
+.remove-btn {
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.remove-btn:hover {
+  transform: scale(1.06);
+  color: #dc3545;
+}
+.remove-btn:active {
+  transform: scale(0.96);
 }
 </style>
