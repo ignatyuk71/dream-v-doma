@@ -17,12 +17,12 @@
             </div>
 
             <transition name="fade">
-              <div v-if="showPromoInput && !promoApplied" class="d-flex mt-3 gap-2">
-                <input type="text" v-model="promoCode" class="form-control" :placeholder="$t('checkout.order.promo_placeholder')" />
-                <button class="btn btn-outline-success" @click="applyPromo">
-                  {{ $t('checkout.order.promo_button') }}
-                </button>
-              </div>
+            <div v-if="showPromoInput && !promoApplied" class="d-flex mt-3 gap-2">
+              <input type="text" v-model="promoCode" class="form-control" :placeholder="$t('checkout.order.promo_placeholder')" />
+              <button type="button" class="btn btn-outline-success" @click="applyPromo" :disabled="!promoCode.trim()">
+                {{ $t('checkout.order.promo_button') }}
+              </button>
+            </div>
             </transition>
             <div v-if="promoApplied" class="mt-2 small text-success">
               {{ $t('checkout.order.promo_applied') || 'Промокод застосовано' }}
@@ -78,8 +78,10 @@
             </div>-->
 
             <!-- Кнопка підтвердження -->
-            <button class="btn btn-lg btn-primary py-3 w-100 animate-slide-end" @click="submitForm">
-              {{ $t('checkout.order.button') }}
+            <button class="btn btn-lg btn-primary py-3 w-100 animate-slide-end d-flex justify-content-center align-items-center gap-2"
+                    @click="submitForm" :disabled="submitInProgress">
+              <span v-if="submitInProgress" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span>{{ $t('checkout.order.button') }}</span>
             </button>
 
             <div class="mt-3 small text-muted">
@@ -171,7 +173,7 @@
                 <span>{{ $t('checkout.delivery.branch') }}</span>
               </div>
               <span class="badge bg-light text-dark fs-sm">
-                {{ !isFreeShipping ? '80 грн' : $t('checkout.order.free') }}
+                  {{ deliveryCostLabel('branch') }}
               </span>
             </label>
 
@@ -181,7 +183,7 @@
                 <span>{{ $t('checkout.delivery.postomat') }}</span>
               </div>
               <span class="badge bg-light text-dark fs-sm">
-                {{ !isFreeShipping ? '80 грн' : $t('checkout.order.free') }}
+                  {{ deliveryCostLabel('postomat') }}
               </span>
             </label>
 
@@ -191,7 +193,7 @@
                 <span>{{ $t('checkout.delivery.courier') }}</span>
               </div>
               <span class="badge bg-light text-dark fs-sm">
-                {{ !isFreeShipping ? '115 грн' : $t('checkout.order.free') }}
+                  {{ deliveryCostLabel('courier') }}
               </span>
             </label>
           </div>
@@ -214,7 +216,7 @@
             </div>
 
             <ul v-if="cityResults.length" class="list-group position-absolute start-0 end-0 mt-1 shadow-sm border rounded bg-white"
-                style="max-height:250px;overflow-y:auto">
+                style="max-height:250px;overflow-y:auto" aria-live="polite" role="status">
               <li v-for="(r,idx) in cityResults" :key="r.Ref+'-'+idx" class="list-group-item list-group-item-action"
                   @click="selectCity(r)" style="cursor:pointer">
                 {{ r.Present }}
@@ -239,7 +241,7 @@
             </div>
             <ul v-if="filteredWarehouses.length && warehouseSearch !== selectedWarehouse?.Description"
                 class="list-group position-absolute start-0 end-0 mt-1 shadow-sm border rounded bg-white"
-                style="max-height:250px;overflow-y:auto">
+                style="max-height:250px;overflow-y:auto" aria-live="polite" role="status">
               <li v-for="w in filteredWarehouses.slice(0, 50)" :key="w.Ref"
                   class="list-group-item list-group-item-action" @click="selectWarehouseFromList(w)"
                   style="cursor:pointer">{{ w.Description }}</li>
@@ -359,7 +361,7 @@ const customerEmail = ref('')
 // Доставка / Оплата
 // ------------------------------
 const deliveryType = ref('branch')
-const paymentType = ref('')
+const paymentType = ref('cod')
 const city = ref('')
 const cityResults = ref([])
 const selectedCity = ref(null)
@@ -380,6 +382,7 @@ const promoCode = ref('')
 const showPromoInput = ref(false)
 const promoApplied = ref(false)
 const bonuses = ref(0)
+const submitInProgress = ref(false)
 
 // ------------------------------
 // Кошик
@@ -405,14 +408,18 @@ const subtotal = computed(() =>
 
 const isFreeShipping = computed(() => subtotal.value >= 1000)
 
-const deliveryCost = computed(() => {
-  if (isFreeShipping.value) return 0
-  switch (deliveryType.value) {
-    case 'branch': return 80     // доставка у відділення
-    case 'postomat': return 80   // доставка у поштомат
-    case 'courier': return 115   // курʼєрська доставка
+const baseDeliveryCost = (type) => {
+  switch (type) {
+    case 'branch': return 80
+    case 'postomat': return 80
+    case 'courier': return 115
     default: return 0
   }
+}
+
+const deliveryCost = computed(() => {
+  if (isFreeShipping.value) return 0
+  return baseDeliveryCost(deliveryType.value)
 })
 
 const codFee = 25 // комісія післяплати
@@ -434,6 +441,12 @@ const itemsCountText = computed(() => {
 const deliveryCostText = computed(() =>
   deliveryCost.value === 0 ? (t('free') || 'Безкоштовно') : `${deliveryCost.value} ${t('currency')}`
 )
+
+const deliveryCostLabel = (type) => {
+  if (isFreeShipping.value) return t('checkout.order.free') || 'FREE'
+  const value = baseDeliveryCost(type)
+  return `${value} ${t('currency')}`
+}
 
 const filteredWarehouses = computed(() => {
   if (!warehouseSearch.value) return warehouses.value
@@ -586,7 +599,7 @@ watch(city, (val, oldVal = '') => {
       cityResults.value = []
       cityNotFound.value = false
     }
-  }, 1000)
+  }, 500)
 })
 
 watch(warehouseSearch, async (val) => {
@@ -608,6 +621,8 @@ watch(warehouseSearch, async (val) => {
 // Валідації / сабміт
 // ------------------------------
 function validateForm() {
+  city.value = city.value.trim()
+  warehouseSearch.value = warehouseSearch.value.trim()
   if (!firstName.value.trim()) return t('checkout.contact.first_name') + ' ' + t('checkout.validation.required')
   if (!lastName.value.trim()) return t('checkout.contact.last_name') + ' ' + t('checkout.validation.required')
   if (!isValidPhone(normalizePhone(customerPhone.value))) return t('checkout.validation.invalid_phone')
@@ -628,6 +643,8 @@ function openCart() {
 }
 
 async function submitForm() {
+  if (submitInProgress.value) return
+
   if (!cart.items.length) {
     alert('🛑 Товарів у кошику немає. Ви будете перенаправлені на головну сторінку.')
     window.location.href = `/${locale.value}`
@@ -663,6 +680,7 @@ async function submitForm() {
       : selectedWarehouse.value?.ShortAddress ?? ''
   }
 
+  submitInProgress.value = true
   try {
     const response = await axios.post('/api/orders', payload)
     const orderNumber = response.data.order_number
@@ -676,8 +694,14 @@ async function submitForm() {
     } else {
       alert('Помилка сервера, спробуйте пізніше')
     }
+  } finally {
+    submitInProgress.value = false
   }
 }
+
+watch(submitInProgress, (val) => {
+  document.body.classList.toggle('cursor-wait', val)
+})
 
 // ------------------------------
 // Хелпер зображення через /storage
