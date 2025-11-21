@@ -324,6 +324,7 @@
   color: #4d3500;
   line-height: 1.5;
 }
+.tracking-wide { letter-spacing: 0.08em; }
 
 /* sticky тільки на ≥lg */
 @media (min-width: 992px) {
