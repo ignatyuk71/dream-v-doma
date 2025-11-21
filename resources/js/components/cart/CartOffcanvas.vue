@@ -6,6 +6,7 @@
     tabindex="-1"
     aria-labelledby="shoppingCartLabel"
     data-bs-scroll="true"
+    data-bs-backdrop="false"
     style="width: 500px"
   >
     <!-- Header -->
