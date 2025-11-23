@@ -36,6 +36,13 @@
     $maxThumbsSpv  = 6;                  // найбільше slidesPerView у breakpoints
     $hasLoopThumbs = $imagesCount > $maxThumbsSpv;
 
+    // Знижка для бейджа
+    $price         = (float) ($product->price ?? 0);
+    $oldPrice      = (float) ($product->old_price ?? 0);
+    $hasDiscount   = $oldPrice > $price && $price > 0;
+    $discountPct   = $hasDiscount ? max(0, min(99, round((1 - $price / $oldPrice) * 100))) : 0;
+    $badgeDiscount = $hasDiscount ? $discountPct : 30;
+
     $mainSwiperOptions = json_encode([
         'loop' => $hasLoopMain,
         'navigation' => [
@@ -69,6 +76,9 @@
     @forelse($images as $image)
       <div class="swiper-slide">
         <div class="image-wrapper">
+          <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
+            Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
+          </span>
           <img
             src="{{ $toPublicUrl($image->url ?? null) }}"
             class="swiper-thumb-img"
@@ -167,6 +177,63 @@
       height: 100%;
       object-fit: contain;
       object-position: center;
+  }
+
+  /* Black Friday badge */
+  .bf-badge{
+    position:absolute;
+    top:8px;
+    right:8px;
+    width:78px;
+    background:#000;
+    color:#fff;
+    font-size:15px;
+    font-weight:800;
+    line-height:1.2;
+    text-align:center;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    z-index:30;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:30px 7px 9px;
+    clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
+    border-radius:7px;
+    opacity:0.9;
+  }
+  .bf-badge::before{
+    content:'';
+    position:absolute;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 0 0 2px #000;
+  }
+  .bf-badge strong{
+    display:block;
+    font-size:25px;
+    margin-top:4px;
+  }
+  @media (max-width: 576px){
+    .bf-badge{
+      width:40px;
+      padding:21px 0 3px;
+      top:3px;
+      right:3px;
+      font-size: 8px;
+      border-radius:5px;
+      opacity:0.7;
+    }
+    .bf-badge strong{
+      font-size:10px;
+      margin-top:1px;
+    }
   }
 
   .thumb-wrapper {

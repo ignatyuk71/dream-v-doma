@@ -24,6 +24,7 @@
         $oldPrice      = (float) ($product->old_price ?? 0);
         $hasDiscount   = $oldPrice > $price && $price > 0;
         $discountPct   = $hasDiscount ? max(0, min(99, round((1 - $price / $oldPrice) * 100))) : 0;
+        $badgeDiscount = $hasDiscount ? $discountPct : 30;
 
         // Рейтинг
         $ratingRaw = $product->avg_rating;
@@ -59,6 +60,9 @@
 
           <div class="position-relative">
             <a class="d-block rounded-top overflow-hidden" href="{{ $productUrl }}" itemprop="url">
+              <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
+                Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
+              </span>
               @if($hasDiscount)
                 <span class="badge bg-danger position-absolute top-0 start-0 mt-2 ms-2 mt-lg-3 ms-lg-3">
                   -{{ $discountPct }}%
@@ -207,5 +211,61 @@
     border-style:dashed;
   }
 
-  
+  /* Black Friday badge */
+  .bf-badge{
+    position:absolute;
+    top:6px;
+    right:6px;
+    width:60px;
+    /* height: 76px; */
+    background:#000;
+    color:#fff;
+    font-size:12px;
+    font-weight:800;
+    line-height:1.2;
+    text-align:center;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    z-index:30;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:25px 8px 10px;
+    clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
+    border-radius:10px;
+  }
+  .bf-badge::before{
+    content:'';
+    position:absolute;
+    top:8px;
+    left:50%;
+    transform:translateX(-50%);
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 0 0 2px #000;
+  }
+  .bf-badge strong{
+    display:block;
+    font-size:18px;
+    margin-top:4px;
+  }
+  @media (max-width: 576px){
+    .bf-badge{
+      width:40px;
+      padding:21px 0 3px;
+      top:3px;
+      right:3px;
+      font-size: 8px;
+      border-radius:5px;
+      opacity:0.7;
+    }
+    .bf-badge strong{
+      font-size:10px;
+      margin-top:1px;
+    }
+  }
+
 </style>

@@ -264,7 +264,6 @@
     padding:25px 8px 10px;
     clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
     border-radius:10px;
-    opacity:0.7;
   }
   .bf-badge::before{
     content:'';
@@ -272,8 +271,8 @@
     top:8px;
     left:50%;
     transform:translateX(-50%);
-    width:12px;
-    height:12px;
+    width:8px;
+    height:8px;
     border-radius:50%;
     background:#fff;
     box-shadow:0 0 0 2px #000;
@@ -285,16 +284,16 @@
   }
   @media (max-width: 576px){
     .bf-badge{
-      width:46px;
-      padding:24px 0 3px;
+      width:40px;
+      padding:21px 0 3px;
       top:3px;
       right:3px;
-      font-size: 11px;
+      font-size: 8px;
       border-radius:5px;
       opacity:0.7;
     }
     .bf-badge strong{
-      font-size:15px;
+      font-size:10px;
       margin-top:1px;
     }
   }
