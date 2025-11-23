@@ -284,6 +284,7 @@ class ProductController extends Controller
         $product->update([
             'sku' => $data['sku'] ?? $product->sku,
             'price' => $data['price'] ?? $product->price,
+            'old_price' => $data['old_price'] ?? $product->old_price, // 👈 додали
             'quantity_in_stock' => $data['quantity_in_stock'] ?? $product->quantity_in_stock,
             'status' => $data['status'] ?? $product->status,
             'is_popular' => $data['is_popular'] ?? $product->is_popular,
@@ -574,6 +575,7 @@ class ProductController extends Controller
             $product = Product::create([
                 'sku'               => $parsed['sku'] ?? null,
                 'price'             => $parsed['price'] ?? null,
+                'old_price'         => $parsed['old_price'] ?? null,
                 'quantity_in_stock' => $parsed['quantity_in_stock'] ?? null,
                 'status'            => $parsed['status'] ?? 1,
                 'size_guide_id'     => $parsed['size_guide_id'] ?? null,
@@ -866,6 +868,7 @@ class ProductController extends Controller
             'name_ru'            => 'required|string',
             'sku'                => 'required|string|max:255',
             'price'              => 'required|numeric',
+            'old_price'          => 'nullable|numeric', // 👈 ДОДАНО
             'quantity_in_stock'  => 'required|integer',
             'categories'         => 'required|array|min:1',
             'size_guide_id'      => 'required|exists:size_guides,id',
@@ -876,6 +879,7 @@ class ProductController extends Controller
             'sku.required'                => 'Поле "Артикул (SKU)" є обовʼязковим',
             'price.required'              => 'Поле "Ціна" є обовʼязковим',
             'price.numeric'               => 'Поле "Ціна" має бути числом',
+            'old_price.numeric'           => 'Поле "Стара ціна" має бути числом', // 👈 Можна додати текст помилки
             'quantity_in_stock.required'  => 'Поле "Кількість" є обовʼязковим',
             'quantity_in_stock.integer'   => 'Поле "Кількість" має бути цілим числом',
             'categories.required'         => 'Поле "Категорія" є обовʼязковим',
@@ -890,6 +894,7 @@ class ProductController extends Controller
         }
         return null;
     }
+    
 
     /**
      * Генерує унікальний slug для продукту з перевіркою наявності (на мові $locale)

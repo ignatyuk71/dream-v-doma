@@ -12,16 +12,18 @@ class Product extends Model
     protected $fillable = [
         'sku',
         'price',
+        'old_price',             // ← додали
         'quantity_in_stock',
         'status',
         'meta_description',
-        'size_guide_id', // ✅ додано для mass assignment
+        'size_guide_id',
         'is_popular'
     ];
 
     protected $casts = [
         'status' => 'boolean',
         'price' => 'decimal:2',
+        'old_price' => 'decimal:2',  // ← додали
     ];
 
     // 🔗 Переклади
@@ -81,7 +83,6 @@ class Product extends Model
         return $this->belongsTo(SizeGuide::class);
     }
 
-    // Product.php
     public function attributeValues()
     {
         return $this->belongsToMany(
@@ -104,6 +105,4 @@ class Product extends Model
         return optional($this->mainImage ?? $this->images->first())->full_url
             ?? asset('assets/img/placeholder.svg');
     }
-
-
 }
