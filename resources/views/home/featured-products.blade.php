@@ -145,8 +145,10 @@
 
               {{-- Ціна + кнопка переходу --}}
               <div class="d-flex align-items-center justify-content-between">
-                <div class="h5 lh-1 mb-0" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                  {{ rtrim(rtrim(number_format($price, 2, '.', ' '), '0'), '.') }} {{ $currencyLabel }}
+                <div class="h5 lh-1 mb-0 price-block" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                  <span class="fw-semibold">
+                    {{ rtrim(rtrim(number_format($price, 2, '.', ' '), '0'), '.') }} {{ $currencyLabel }}
+                  </span>
                   @if($hasDiscount)
                     <del class="text-body-tertiary fs-sm fw-normal">
                       {{ rtrim(rtrim(number_format($oldPrice, 2, '.', ' '), '0'), '.') }} {{ $currencyLabel }}
@@ -280,6 +282,22 @@
     display:block;
     font-size:14px;
     margin-top:4px;
+  }
+
+  /* Price block stacking on mobile */
+  .price-block{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .price-block del{ line-height:1; }
+  @media (max-width: 576px){
+    .price-block{
+      flex-direction:column;
+      align-items:flex-start;
+      gap:2px;
+    }
   }
   @media (max-width: 576px){
     .bf-badge{
