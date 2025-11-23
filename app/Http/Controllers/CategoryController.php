@@ -138,7 +138,7 @@ class CategoryController extends Controller
         }
 
         $products = $productsQuery
-            ->paginate(12);
+            ->paginate(30);
 
         // 9) Пагінація — базовий шлях із нормалізованим filters
         $basePath = $normalizedPath
