@@ -211,8 +211,8 @@
     top:10px;
     left:50%;
     transform:translateX(-50%);
-    width:12px;
-    height:12px;
+    width:8px;
+    height:8px;
     border-radius:50%;
     background:#fff;
     box-shadow:0 0 0 2px #000;
@@ -225,7 +225,7 @@
   @media (max-width: 576px){
     .bf-badge{
       width:40px;
-      padding:26px 0 3px;
+      padding:23px 0 3px;
       top:3px;
       right:3px;
       font-size: 8px;
