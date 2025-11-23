@@ -241,34 +241,33 @@
     border-style:dashed;
   }
 
-  /* 🔥 Наліпка Black Friday */
-  .bf-badge{
-    position:absolute;
-    top:6px;
-    right:6px;
-    width:60px;
+  .bf-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 51px;
     /* height: 76px; */
-    background:#000;
-    color:#fff;
-    font-size:12px;
-    font-weight:800;
-    line-height:1.2;
-    text-align:center;
-    text-transform:uppercase;
-    letter-spacing:0.02em;
-    z-index:30;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:25px 8px 10px;
+    background: #000;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 8px 6px;
     clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
-    border-radius:10px;
-  }
+    border-radius: 10px;
+}
   .bf-badge::before{
     content:'';
     position:absolute;
-    top:8px;
+    top:10px;
     left:50%;
     transform:translateX(-50%);
     width:8px;
@@ -279,7 +278,7 @@
   }
   .bf-badge strong{
     display:block;
-    font-size:18px;
+    font-size:14px;
     margin-top:4px;
   }
   @media (max-width: 576px){

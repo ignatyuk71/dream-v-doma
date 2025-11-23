@@ -102,6 +102,27 @@
     @endforelse
   </div>
 
+  <!-- Prev button -->
+  <div class="position-absolute top-50 start-0 z-2 translate-middle-y ms-sm-2 ms-lg-3">
+    <button
+      type="button"
+      class="btn btn-prev btn-icon btn-outline-secondary bg-body rounded-circle animate-slide-start"
+      aria-label="Prev"
+    >
+      <i class="ci-chevron-left fs-lg animate-target"></i>
+    </button>
+  </div>
+
+  <!-- Next button -->
+  <div class="position-absolute top-50 end-0 z-2 translate-middle-y me-sm-2 me-lg-3">
+    <button
+      type="button"
+      class="btn btn-next btn-icon btn-outline-secondary bg-body rounded-circle animate-slide-end"
+      aria-label="Next"
+    >
+      <i class="ci-chevron-right fs-lg animate-target"></i>
+    </button>
+  </div>
 </div>
 
 <!-- Thumbnails -->
@@ -161,29 +182,29 @@
   }
 
   /* Black Friday badge */
-  .bf-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 51px;
-    /* height: 76px; */
-    background: #000;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 800;
-    line-height: 1.2;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px 8px 6px;
+  .bf-badge{
+    position:absolute;
+    top:8px;
+    right:8px;
+    width:78px;
+    background:#000;
+    color:#fff;
+    font-size:15px;
+    font-weight:800;
+    line-height:1.2;
+    text-align:center;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    z-index:30;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:30px 7px 9px;
     clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
-    border-radius: 10px;
-}
+    border-radius:7px;
+    opacity:0.9;
+  }
   .bf-badge::before{
     content:'';
     position:absolute;
@@ -198,13 +219,13 @@
   }
   .bf-badge strong{
     display:block;
-    font-size:14px;
+    font-size:25px;
     margin-top:4px;
   }
   @media (max-width: 576px){
     .bf-badge{
       width:40px;
-      padding:23px 0 3px;
+      padding:24px 0 3px;
       top:3px;
       right:3px;
       font-size: 8px;
