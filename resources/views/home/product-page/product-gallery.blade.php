@@ -161,29 +161,29 @@
   }
 
   /* Black Friday badge */
-  .bf-badge{
-    position:absolute;
-    top:8px;
-    right:8px;
-    width:78px;
-    background:#000;
-    color:#fff;
-    font-size:15px;
-    font-weight:800;
-    line-height:1.2;
-    text-align:center;
-    text-transform:uppercase;
-    letter-spacing:0.02em;
-    z-index:30;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:30px 7px 9px;
+  .bf-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 51px;
+    /* height: 76px; */
+    background: #000;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 8px 6px;
     clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
-    border-radius:7px;
-    opacity:0.9;
-  }
+    border-radius: 10px;
+}
   .bf-badge::before{
     content:'';
     position:absolute;
@@ -198,7 +198,7 @@
   }
   .bf-badge strong{
     display:block;
-    font-size:25px;
+    font-size:14px;
     margin-top:4px;
   }
   @media (max-width: 576px){
