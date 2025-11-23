@@ -103,7 +103,7 @@
   </div>
 
   <!-- Prev button -->
-  <div class="position-absolute top-50 start-0 z-2 translate-middle-y ms-sm-2 ms-lg-3">
+  <div class="position-absolute top-50 start-0 z-2 translate-middle-y ms-sm-2 ms-lg-3 d-none d-md-block">
     <button
       type="button"
       class="btn btn-prev btn-icon btn-outline-secondary bg-body rounded-circle animate-slide-start"
@@ -114,7 +114,7 @@
   </div>
 
   <!-- Next button -->
-  <div class="position-absolute top-50 end-0 z-2 translate-middle-y me-sm-2 me-lg-3">
+  <div class="position-absolute top-50 end-0 z-2 translate-middle-y me-sm-2 me-lg-3 d-none d-md-block">
     <button
       type="button"
       class="btn btn-next btn-icon btn-outline-secondary bg-body rounded-circle animate-slide-end"
