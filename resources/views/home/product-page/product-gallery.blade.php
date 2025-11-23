@@ -76,9 +76,11 @@
     @forelse($images as $image)
       <div class="swiper-slide">
         <div class="image-wrapper">
-          <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
-            Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
-          </span>
+          @if($hasDiscount)
+            <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
+              Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
+            </span>
+          @endif
           <img
             src="{{ $toPublicUrl($image->url ?? null) }}"
             class="swiper-thumb-img"
