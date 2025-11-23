@@ -260,9 +260,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px 8px 6px;
+    padding: 21px 8px 6px;
     clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
-    border-radius: 10px;
+    border-radius: 6px;
 }
   .bf-badge::before{
     content:'';
