@@ -60,9 +60,11 @@
 
           <div class="position-relative">
             <a class="d-block rounded-top overflow-hidden" href="{{ $productUrl }}" itemprop="url">
-              <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
-                Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
-              </span>
+              @if($hasDiscount)
+                <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
+                  Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
+                </span>
+              @endif
               @if($hasDiscount)
                 <span class="badge bg-danger position-absolute top-0 start-0 mt-2 ms-2 mt-lg-3 ms-lg-3">
                   -{{ $discountPct }}%
