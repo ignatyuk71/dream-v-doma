@@ -225,7 +225,7 @@
   @media (max-width: 576px){
     .bf-badge{
       width:40px;
-      padding:21px 0 3px;
+      padding:26px 0 3px;
       top:3px;
       right:3px;
       font-size: 8px;
