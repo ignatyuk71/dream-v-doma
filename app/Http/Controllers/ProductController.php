@@ -42,7 +42,7 @@ class ProductController extends Controller
             ])
             ->where('status', true)
             ->latest()
-            ->limit(12)
+            ->limit(30)
             ->get();
 
         return response()->json($products);
