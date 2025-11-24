@@ -27,8 +27,11 @@
     $desc   = $product->translations->firstWhere('locale', $locale)?->description ?? '';
     $blocks = $desc ? json_decode($desc, true) : [];
 
-    // ГАЛЕРЕЯ
-    $images = $product->images; // за потреби: ->sortBy('position')
+    // ГАЛЕРЕЯ: пропускаємо лого (is_main = 1), сортуємо за position; якщо після фільтра пусто — показуємо все
+    $images = $product->images->where('is_main', '!=', 1)->sortBy('position')->values();
+    if ($images->isEmpty()) {
+        $images = $product->images->sortBy('position')->values();
+    }
     $imagesCount = $images->count();
 
     // loop лише коли є достатньо слайдів
