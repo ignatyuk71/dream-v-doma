@@ -55,8 +55,11 @@
           href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
   </noscript>
 
-  <!-- ICONS (Cartzilla) — ПОВЕРНУЛИ -->
-  <link rel="stylesheet" href="/assets/icons/cartzilla-icons.min.css">
+  <!-- ICONS (Cartzilla) — preload + неблокуюче підключення -->
+  <link rel="preload" href="/assets/icons/cartzilla-icons.min.css" as="style">
+  <link rel="stylesheet"
+        href="/assets/icons/cartzilla-icons.min.css"
+        media="print" onload="this.media='all'">
   
   <!-- Vendor CSS -->
   <link rel="preload" href="/assets/vendor/swiper/swiper-bundle.min.css" as="style">
