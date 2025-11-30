@@ -80,9 +80,12 @@
       <div class="swiper-slide">
         <div class="image-wrapper">
           @if($hasDiscount)
-            <span class="bf-badge" aria-label="Black Friday -{{ $badgeDiscount }}%">
-              Black Friday<br><strong>-{{ $badgeDiscount }}%</strong>
-            </span>
+            <span
+              class="xmas-tag"
+              aria-label="{{ $badgeDiscount ? ('Різдвяна знижка '.$badgeDiscount.'%') : 'Різдвяна знижка' }}"
+              data-discount="-{{ $badgeDiscount }}%"
+              data-label="Різдвяна знижка"
+            ></span>
           @endif
           <img
             src="{{ $toPublicUrl($image->url ?? null) }}"
@@ -184,60 +187,59 @@
       object-position: center;
   }
 
-  /* Black Friday badge */
-  .bf-badge{
+  /* Christmas discount tag */
+  .xmas-tag{
     position:absolute;
-    top:8px;
-    right:8px;
-    width:78px;
-    background:#000;
-    color:#fff;
-    font-size:15px;
-    font-weight:800;
-    line-height:1.2;
-    text-align:center;
-    text-transform:uppercase;
-    letter-spacing:0.02em;
-    z-index:30;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:30px 7px 9px;
-    clip-path: polygon(50% 0%, 100% 18%, 100% 100%, 0% 100%, 0% 18%);
-    border-radius:7px;
-    opacity:0.9;
-  }
-  .bf-badge::before{
-    content:'';
-    position:absolute;
-    top:10px;
-    left:50%;
-    transform:translateX(-50%);
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:#fff;
-    box-shadow:0 0 0 2px #000;
-  }
-  .bf-badge strong{
+    top:0;
+    right:0;
+    width:80px;
+    aspect-ratio: 300 / 450;
+    background-image:url('/assets/img/christmas-tag.webp');
+    background-size:contain;
+    background-repeat:no-repeat;
+    background-position:center;
     display:block;
-    font-size:25px;
-    margin-top:4px;
+    z-index:30;
+  }
+  .xmas-tag::after{
+    content: attr(data-discount);
+    position:absolute;
+    left:52%;
+    top:52%;
+    transform:translate(-50%, -50%);
+    font-size:17px;
+    font-weight:700;
+    color:#fff;
+    line-height:1;
+  }
+  .xmas-tag::before{
+    content: attr(data-label);
+    position:absolute;
+    left:50%;
+    bottom:19%;
+    transform:translateX(-50%);
+    font-size:9px;
+    line-height:1.1;
+    text-align:center;
+    font-weight:700;
+    color:#fff;
+    text-transform:uppercase;
+    width:80%;
   }
   @media (max-width: 576px){
-    .bf-badge{
-      width:40px;
-      padding:24px 0 3px;
-      top:3px;
-      right:3px;
-      font-size: 8px;
-      border-radius:5px;
-      opacity:0.7;
+    .xmas-tag{
+      width:64px;
+      top:0;
+      right:0;
     }
-    .bf-badge strong{
-      font-size:10px;
-      margin-top:1px;
+    .xmas-tag::after{
+      font-size:16px;
+      top:52%;
+      left:52%;
+    }
+    .xmas-tag::before{
+      font-size:8px;
+      bottom:19%;
     }
   }
 
