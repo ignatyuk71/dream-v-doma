@@ -249,8 +249,8 @@
   /* Christmas discount tag */
   .xmas-tag{
     position:absolute;
-    top:0px;
-    right:6px;
+    top:0;
+    right:0;
     width:80px;
     aspect-ratio: 300 / 450;
     background-image:url('/assets/img/christmas-tag.webp');
@@ -288,8 +288,8 @@
   @media (max-width: 576px){
     .xmas-tag{
       width:64px;
-      top:2px;
-      right:2px;
+      top:0;
+      right:0;
     }
     .xmas-tag::after{
       font-size:16px;
