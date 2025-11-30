@@ -297,8 +297,8 @@
       left:52%;
     }
     .xmas-tag::before{
-      font-size:9px;
-      bottom:17%;
+      font-size:8px;
+      bottom:19%;
     }
   }
 
