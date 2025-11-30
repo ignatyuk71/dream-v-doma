@@ -292,13 +292,13 @@
       right:2px;
     }
     .xmas-tag::after{
-      font-size:14px;
-      top:50%;
+      font-size:16px;
+      top:52%;
       left:52%;
     }
     .xmas-tag::before{
-      font-size:8px;
-      bottom:18%;
+      font-size:9px;
+      bottom:17%;
     }
   }
 
