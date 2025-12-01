@@ -228,17 +228,17 @@
   }
   @media (max-width: 576px){
     .xmas-tag{
-      width:64px;
+      width:52px;
       top:0;
       right:0;
     }
     .xmas-tag::after{
-      font-size:16px;
+      font-size:14px;
       top:52%;
       left:52%;
     }
     .xmas-tag::before{
-      font-size:8px;
+      font-size:7px;
       bottom:19%;
     }
   }

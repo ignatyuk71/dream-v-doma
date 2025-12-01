@@ -287,18 +287,18 @@
   }
   @media (max-width: 576px){
     .xmas-tag{
-      width:64px;
+      width:40px;
       top:0;
       right:0;
     }
     .xmas-tag::after{
-      font-size:16px;
-      top:52%;
+      font-size:10px;
+      top:53%;
       left:52%;
     }
     .xmas-tag::before{
-      font-size:8px;
-      bottom:19%;
+      font-size:5px;
+      bottom:18%;
     }
   }
 
